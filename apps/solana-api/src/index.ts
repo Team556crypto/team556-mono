@@ -10,17 +10,17 @@ import path from 'path'
 dotenv.config({ path: path.resolve(__dirname, '../../.env') })
 
 const app = express()
-const port = process.env.PORT || 4000
-const isProduction = process.env.NODE_ENV === 'production'
+const port = process.env.SOLANA_API__PORT || 4000
+const isProduction = process.env.SOLANA_API__NODE_ENV === 'production'
 
 // Middleware
 app.use(helmet())
 
 // Configure CORS based on environment
 if (isProduction) {
-  const allowedOrigin = process.env.REQUEST_ORIGIN
+  const allowedOrigin = process.env.SOLANA_API__REQUEST_ORIGIN
   if (!allowedOrigin) {
-    console.warn('WARNING: REQUEST_ORIGIN environment variable not set in production mode')
+    console.warn('WARNING: SOLANA_API__REQUEST_ORIGIN environment variable not set in production mode')
   }
 
   app.use(

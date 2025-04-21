@@ -1,4 +1,3 @@
-import './_global-env'
 import { DarkTheme, ThemeProvider } from '@react-navigation/native'
 import { useFonts } from 'expo-font'
 import { Stack } from 'expo-router'
@@ -80,6 +79,8 @@ export default function RootLayout() {
     setDrawerMinHeight(options?.minHeight)
     setIsDrawerVisible(true)
   }
+
+  console.log(process.env.EXPO_PUBLIC_TEST)
 
   const closeDrawer = () => {
     setIsDrawerVisible(false)

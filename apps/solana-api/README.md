@@ -12,14 +12,14 @@ A basic Express API for Solana blockchain integration.
 
 ## Environment Variables
 
-- `PORT` - Port for the server to listen on (default: 3001)
-- `NODE_ENV` - Environment mode ('development' or 'production')
-- `REQUEST_ORIGIN` - Allowed origin for CORS in production mode (required in production)
+- `SOLANA_API__PORT` - Port for the server to listen on (default: 3001)
+- `SOLANA_API__NODE_ENV` - Environment mode ('development' or 'production')
+- `SOLANA_API__REQUEST_ORIGIN` - Allowed origin for CORS in production mode (required in production)
 
 ## CORS Configuration
 
-- In development mode (`NODE_ENV` is not 'production'): Accepts requests from any origin
-- In production mode (`NODE_ENV === 'production'`): Only accepts requests from the origin specified in the `REQUEST_ORIGIN` environment variable
+- In development mode (`SOLANA_API__NODE_ENV` is not 'production'): Accepts requests from any origin
+- In production mode (`SOLANA_API__NODE_ENV === 'production'`): Only accepts requests from the origin specified in the `SOLANA_API__REQUEST_ORIGIN` environment variable
 
 ## Available Scripts
 

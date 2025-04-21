@@ -1,4 +1,3 @@
-import './_global-env'
 import React, { ReactNode, useEffect, createContext, useState, useCallback } from 'react'
 import { DarkTheme, ThemeProvider } from '@react-navigation/native'
 import { useFonts } from 'expo-font'

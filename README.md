@@ -1,84 +1,105 @@
-# Turborepo starter
+# Team556 Monorepo
 
-This Turborepo starter is maintained by the Turborepo core team.
-
-## Using this example
-
-Run the following command:
-
-```sh
-npx create-turbo@latest
-```
+Welcome to the Team556 monorepo! This repository contains various applications and shared packages managed using Turborepo.
 
 ## What's inside?
 
-This Turborepo includes the following packages/apps:
+This Turborepo includes the following apps and packages:
 
-### Apps and Packages
+### Apps
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+-   `main-api`: The main backend API service.
+-   `pos`: Point-of-Sale application.
+-   `prototype`: Prototyping application.
+-   `solana-api`: API service interacting with the Solana blockchain.
+-   `wallet`: Wallet application.
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+### Packages
 
-### Utilities
+-   `@repo/ui`: Shared React component library.
+-   `@repo/eslint-config`: Shared ESLint configurations.
+-   `@repo/typescript-config`: Shared `tsconfig.json` configurations used throughout the monorepo.
 
-This Turborepo has some additional tools already setup for you:
+Each package and app is written in TypeScript where applicable.
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+## Getting Started
+
+1.  **Clone the repository:**
+    ```sh
+    git clone <your-repo-url>
+    cd team556-mono
+    ```
+
+2.  **Install dependencies:**
+    This project uses `yarn` as the package manager. Make sure you have it installed.
+    ```sh
+    yarn install
+    ```
+
+3.  **Environment Variables:**
+    Create a `.env` file in the root directory by copying the example if one exists, or configure it based on the required variables for the different apps (e.g., database connections, API keys). Refer to the `.env.example` or specific app documentation if available.
+    *Note: The `main-api` currently loads `.env` from the monorepo root.* (See MEMORY[169cd4f6-1b7b-46d4-aa36-4fd43aabb9b7])
+
+## Development Workflow
 
 ### Build
 
-To build all apps and packages, run the following command:
+To build all apps and packages, run the following command from the root directory:
 
+```sh
+yarn build
 ```
-cd my-turborepo
-pnpm build
+
+To build a specific app or package, use the `--filter` flag:
+
+```sh
+yarn turbo run build --filter=<app-or-package-name>...
+# Example: Build only the main-api
+yarn turbo run build --filter=main-api...
+# Example: Build the ui package and the wallet app
+yarn turbo run build --filter=@repo/ui... --filter=wallet...
 ```
 
 ### Develop
 
-To develop all apps and packages, run the following command:
+To run all apps and packages in development mode (usually with hot-reloading), run the following command from the root directory:
 
-```
-cd my-turborepo
-pnpm dev
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turbo.build/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-npx turbo login
+```sh
+yarn dev
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+To run a specific app in development mode:
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+```sh
+yarn turbo run dev --filter=<app-name>...
+# Example: Run only the wallet app
+yarn turbo run dev --filter=wallet...
+```
 
-```
-npx turbo link
-```
+### Other Commands
+
+-   **Lint:** `yarn lint`
+-   **Format:** `yarn format` (if configured)
+-   **Clean:** `yarn clean` (often removes `node_modules` and build artifacts)
+
+Check the root `package.json` and `turbo.json` for all available scripts and pipeline configurations.
+
+## Utilities
+
+This Turborepo utilizes:
+
+-   [TypeScript](https://www.typescriptlang.org/) for static type checking.
+-   [ESLint](https://eslint.org/) for code linting (using shared configurations from `@repo/eslint-config`).
+-   [Prettier](https://prettier.io) (likely configured) for code formatting.
 
 ## Useful Links
 
-Learn more about the power of Turborepo:
+Learn more about Turborepo:
 
-- [Tasks](https://turbo.build/docs/core-concepts/monorepos/running-tasks)
-- [Caching](https://turbo.build/docs/core-concepts/caching)
-- [Remote Caching](https://turbo.build/docs/core-concepts/remote-caching)
-- [Filtering](https://turbo.build/docs/core-concepts/monorepos/filtering)
-- [Configuration Options](https://turbo.build/docs/reference/configuration)
-- [CLI Usage](https://turbo.build/docs/reference/command-line-reference)
+-   [Turborepo Documentation](https://turbo.build/docs)
+-   [Tasks](https://turbo.build/docs/core-concepts/monorepos/running-tasks)
+-   [Caching](https://turbo.build/docs/core-concepts/caching)
+-   [Remote Caching](https://turbo.build/docs/core-concepts/remote-caching)
+-   [Filtering](https://turbo.build/docs/core-concepts/monorepos/filtering)
+-   [Configuration Options](https://turbo.build/docs/reference/configuration)
+-   [CLI Usage](https://turbo.build/docs/reference/command-line-reference)

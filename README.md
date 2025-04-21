@@ -2,6 +2,15 @@
 
 Welcome to the Team556 monorepo! This repository contains various applications and shared packages managed using Turborepo.
 
+## Table of Contents
+
+-   [What's inside?](#whats-inside)
+-   [Getting Started](#getting-started)
+-   [Development Workflow](#development-workflow)
+-   [Utilities](#utilities)
+-   [Useful Links](#useful-links)
+-   [Contributing](#contributing)
+
 ## What's inside?
 
 This Turborepo includes the following apps and packages:
@@ -103,3 +112,70 @@ Learn more about Turborepo:
 -   [Filtering](https://turbo.build/docs/core-concepts/monorepos/filtering)
 -   [Configuration Options](https://turbo.build/docs/reference/configuration)
 -   [CLI Usage](https://turbo.build/docs/reference/command-line-reference)
+
+## Contributing
+
+We welcome contributions! Here's a guide for getting started, especially if you're new or using AI assistance:
+
+1.  **Find an Issue:**
+    -   Look through the [Issues tab](https://github.com/your-org/your-repo/issues) on GitHub (replace with your actual repo link if possible).
+    -   Choose an issue you'd like to work on. If it's not assigned, feel free to ask if you can take it by commenting on the issue.
+
+2.  **Start with the Base Prompt (AI Assistance):**
+    -   Each issue created from a template includes a "**Base Prompt**" section at the bottom.
+    -   Copy this entire section.
+    -   Paste it as the *very first message* to your AI coding assistant (like Cascade!). This gives the AI the necessary context to help you effectively with that specific issue.
+
+3.  **Create a Branch:**
+    -   Make sure you have the latest code from the main branch (usually `main` or `master`):
+        ```sh
+        git checkout main
+        git pull origin main
+        ```
+    -   Create a new branch specifically for the issue you're working on. Use a descriptive name, often including the issue number:
+        ```sh
+        # Example: git checkout -b feat/123-add-login-button
+        git checkout -b <type>/<issue-number>-<short-description>
+        ```
+        Common types include `feat` (feature), `fix` (bug fix), `docs` (documentation), `refactor`.
+
+4.  **Make Changes:**
+    -   Work on the code changes required to address the issue. Your AI assistant can help you with writing, testing, and debugging code.
+    -   Remember to follow the project's coding style and guidelines.
+    -   Run linters and tests as needed (`yarn lint`, `yarn test` if configured).
+
+5.  **Commit Your Changes:**
+    -   Stage the files you've changed:
+        ```sh
+        git add .
+        # or git add <specific-file-path>
+        ```
+    -   Commit the changes with a clear and concise message, often referencing the issue number:
+        ```sh
+        # Example: git commit -m "feat: Add login button (#123)"
+        git commit -m "<type>: <description> (#<issue-number>)"
+        ```
+
+6.  **Push Your Branch:**
+    -   Push your new branch to the remote repository (GitHub):
+        ```sh
+        git push -u origin <your-branch-name>
+        ```
+        The `-u` flag sets the upstream branch, so next time you can just use `git push`.
+
+7.  **Create a Pull Request (PR):**
+    -   Go to the repository page on GitHub.
+    -   You should see a prompt to create a Pull Request from your recently pushed branch. Click it.
+    -   If not, go to the "Pull requests" tab and click "New pull request". Select your branch to compare against the `main` branch.
+    -   Fill out the PR template:
+        -   Give it a clear title.
+        -   Describe the changes you made and *why*.
+        -   Link the issue it resolves (e.g., "Closes #123").
+    -   Submit the Pull Request.
+
+8.  **Review and Merge:**
+    -   Project maintainers will review your PR. They might request changes.
+    -   Make any requested changes, commit them, and push them to your branch (the PR will update automatically).
+    -   Once approved, a maintainer will merge your PR into the main branch.
+
+Congratulations, you've contributed! 🎉

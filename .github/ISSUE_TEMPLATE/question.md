@@ -1,10 +1,9 @@
 ---
 name: Question
 about: Ask a question about the project
-title: "[QUESTION] "
+title: '[QUESTION] '
 labels: question
 assignees: ''
-
 ---
 
 **What is your question?**
@@ -15,3 +14,5 @@ Describe any steps you've taken to find the answer yourself (e.g., checked docum
 
 **Relevant context (optional)**
 Provide any relevant code snippets, error messages, or environment details.
+
+**Base Prompt**

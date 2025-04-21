@@ -1,10 +1,9 @@
 ---
 name: Documentation issue
 about: Report an issue or suggest an improvement for the documentation
-title: "[DOCS] "
+title: '[DOCS] '
 labels: documentation
 assignees: ''
-
 ---
 
 **Describe the issue or suggestion**
@@ -21,3 +20,5 @@ Explain the reason for the change (e.g., incorrect information, unclear explanat
 
 **Additional context**
 Add any other context or screenshots about the documentation issue here.
+
+**Base Prompt**

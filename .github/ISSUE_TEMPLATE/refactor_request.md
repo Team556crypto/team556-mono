@@ -1,10 +1,9 @@
 ---
 name: Refactor request
 about: Suggest code improvements or technical debt cleanup
-title: "[REFACTOR] "
+title: '[REFACTOR] '
 labels: refactor, tech-debt
 assignees: ''
-
 ---
 
 **What part of the codebase needs refactoring?**
@@ -21,3 +20,5 @@ What are the expected outcomes of this refactoring (e.g., improved readability, 
 
 **Additional context**
 Add any other context or relevant information here.
+
+**Base Prompt**

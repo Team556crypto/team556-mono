@@ -1,0 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+
+# Your rule content
+
+**Client Apps**: All requests are made to the 'main-api' Go server.
+**Main API**: This is the main api that communicates with the database. If a request must communicate with solana or the chain in any way, this main server should make that request to the 'solana-api' Express server.
+**Solana API**: This processes the Solana related logic. Should only accept requests from the 'main-api' server.

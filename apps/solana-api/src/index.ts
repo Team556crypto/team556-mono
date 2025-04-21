@@ -1,0 +1,54 @@
+import './_global-env'
+import express from 'express'
+import cors from 'cors'
+import helmet from 'helmet'
+import dotenv from 'dotenv'
+import routes from './routes'
+
+// Load environment variables from root
+import path from 'path'
+dotenv.config({ path: path.resolve(__dirname, '../../.env') })
+
+const app = express()
+const port = process.env.PORT || 4000
+const isProduction = process.env.NODE_ENV === 'production'
+
+// Middleware
+app.use(helmet())
+
+// Configure CORS based on environment
+if (isProduction) {
+  const allowedOrigin = process.env.REQUEST_ORIGIN
+  if (!allowedOrigin) {
+    console.warn('WARNING: REQUEST_ORIGIN environment variable not set in production mode')
+  }
+
+  app.use(
+    cors({
+      origin: allowedOrigin || false, // Fallback to no origins if not specified
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      credentials: true
+    })
+  )
+} else {
+  // In development, accept any origin
+  app.use(cors())
+}
+
+app.use(express.json())
+
+// Routes
+app.use('/api', routes)
+
+// Health check endpoint
+app.get('/health', (req: express.Request, res: express.Response) => {
+  res.status(200).json({ status: 'healthy' })
+})
+
+// Start server
+app.listen(port, () => {
+  console.log(`✅ Solana API server running on port ${port}`)
+  console.log(
+    `🔒 CORS: ${isProduction ? 'Production mode - restricted origins' : 'Development mode - all origins allowed'}`
+  )
+})

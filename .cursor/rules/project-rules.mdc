@@ -1,0 +1,13 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+
+- When building react native components must be responsive
+- All apps will use a dark mode theme
+- This is a turborepo project. All apps are in apps/
+- Use Zustand for state management in Expo apps
+- API requests that communicate with solana must go to the 'solana-api' project. All other normal database CRUD request should go to the 'main-api'

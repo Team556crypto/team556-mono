@@ -23,7 +23,7 @@ func main() {
 	router.SetupRoutes(app)
 
 	// Get port from environment or default
-	port := config.GetEnv("MAIN_API_PORT", "3000") // Example: Add port config
+	port := config.GetEnv("MAIN_API__PORT", "3000")
 
 	log.Printf("Starting server on port %s...", port)
 	// Start server

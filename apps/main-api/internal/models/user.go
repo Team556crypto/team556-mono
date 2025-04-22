@@ -3,8 +3,9 @@ package models
 import "gorm.io/gorm"
 
 // Product defines the structure for product data in the database.
-type Product struct {
+type User struct {
 	gorm.Model
-	Code  string `gorm:"unique"` // Example: Added unique constraint
-	Price uint
+	Name     string
+	Email    string
+	Password string
 }

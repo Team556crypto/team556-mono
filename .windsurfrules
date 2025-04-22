@@ -1,0 +1,26 @@
+# Project Structure
+
+- This is a monorepo (Turborepo) project with multiple apps and shared packages
+- The root .env file is shared for all apps
+
+# Backend Apps
+
+- apps/main-api: The main api is a Go Fiber server
+- apps/solana-api: The solana api is a NodeJS / Express server
+- Supabase (PostgreSQL) is used for database with GORM for the ORM
+
+# Frontend Apps
+
+- apps/wallet: DeFi wallet React Native / Expo app
+- apps/pos: Point of sale React Native / Expo app
+- apps/prototype: Prototype React Native / Expo app only used for developing new generic components for the other Expo apps
+- Use Zustand for state management
+
+# Shared Packages
+
+- @repo/ui: Shared React component library
+
+# Utilities
+
+- `yarn` is the package manager
+- `concurrently` is used for running multiple scripts in parallel

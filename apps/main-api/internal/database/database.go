@@ -19,6 +19,7 @@ func InitDatabase() {
 		log.Fatal("Error: MAIN_API__DB_POOLER environment variable not set.")
 	}
 
+	// Connect to the database
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Error connecting to database: %v", err)
@@ -26,11 +27,10 @@ func InitDatabase() {
 	log.Println("Database connection successful!")
 
 	// Auto-migrate models
-	err = DB.AutoMigrate(&models.Product{}) // Add other models here
+	err = DB.AutoMigrate(&models.User{}) // Add other models here
 	if err != nil {
-		// Log as a warning instead of fatal, as existing tables are expected
-		log.Printf("Warning during database migration: %v", err) 
+		log.Printf("Warning during database migration: %v", err)
 	} else {
-	    log.Println("Database migration successful!")
+		log.Println("Database migration successful!")
 	}
 }

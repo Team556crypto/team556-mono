@@ -22,6 +22,7 @@ export default function SettingsScreen() {
       // Always perform client-side logout actions
       clearAuthStore()
       router.replace('/login')
+      console.log('hello world')
     }
   }
 

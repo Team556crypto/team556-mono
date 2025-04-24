@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Do not create your own components without checking first that shared components do not exsist in packages/ui

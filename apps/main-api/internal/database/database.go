@@ -2,35 +2,57 @@ package database
 
 import (
 	"log"
+	"time"
 
-	"github.com/team556-mono/server/internal/config"
-	"github.com/team556-mono/server/internal/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+
+	"github.com/team556-mono/server/internal/models"
 )
 
-var DB *gorm.DB
-
-// InitDatabase connects to the database and performs auto-migration.
-func InitDatabase() {
+// InitDB initializes the database connection using the provided URL.
+func InitDB(databaseURL string) (*gorm.DB, error) {
 	var err error
-	dsn := config.GetEnv("MAIN_API__DB_POOLER", "") // Use pooler by default
-	if dsn == "" {
-		log.Fatal("Error: MAIN_API__DB_POOLER environment variable not set.")
+	logLevel := logger.Silent // Default log level
+	// Consider making log level configurable via env var later
+
+	db, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{
+		Logger: logger.Default.LogMode(logLevel),
+	})
+
+	if err != nil {
+		log.Printf("Failed to connect to database: %v", err)
+		return nil, err // Return error
 	}
 
-	// Connect to the database
-	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		log.Fatalf("Error connecting to database: %v", err)
-	}
-	log.Println("Database connection successful!")
+	log.Println("Database connection established successfully.")
 
-	// Auto-migrate models
-	err = DB.AutoMigrate(&models.User{}) // Add other models here
+	// Configure connection pool settings (optional)
+	sqlDB, err := db.DB()
 	if err != nil {
-		log.Printf("Warning during database migration: %v", err)
-	} else {
-		log.Println("Database migration successful!")
+		log.Printf("Failed to get underlying sql.DB: %v", err)
+		return nil, err // Return error
 	}
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetMaxOpenConns(100)
+	sqlDB.SetConnMaxLifetime(time.Hour)
+
+	log.Println("Running database migrations...")
+	// Perform migrations
+	err = db.AutoMigrate(
+		&models.User{},
+		&models.Wallet{},
+	)
+	if err != nil {
+		// Log migration errors but don't necessarily make it fatal
+		// unless schema integrity is absolutely critical for startup.
+		log.Printf("Warning: AutoMigrate failed for some models: %v", err)
+		// Decide if this should return an error or just log a warning
+		// For development, logging might be sufficient.
+		// return nil, err // Optionally return error if migration failure is critical
+	}
+	log.Println("Database migrations completed (or attempted).")
+
+	return db, nil // Return the db instance and nil error
 }

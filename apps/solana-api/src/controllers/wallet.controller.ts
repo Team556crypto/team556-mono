@@ -1,38 +1,27 @@
 import { Request, Response } from 'express'
+import { Keypair } from '@solana/web3.js'
+import * as bip39 from 'bip39'
 
-export const getWalletBalance = (req: Request, res: Response) => {
-  const { address } = req.params
+export const createWallet = async (req: Request, res: Response) => {
+  try {
+    // Generate a new mnemonic phrase
+    const mnemonic = bip39.generateMnemonic()
 
-  // This is a placeholder - in a real implementation,
-  // you would connect to Solana blockchain here
-  res.json({
-    address,
-    balance: '10.5 SOL',
-    usdValue: '$315.00',
-    timestamp: new Date().toISOString()
-  })
-}
+    // Create a seed buffer from the mnemonic
+    // Use an empty passphrase for standard derivation
+    const seed = bip39.mnemonicToSeedSync(mnemonic, '')
 
-export const getWalletTransactions = (req: Request, res: Response) => {
-  const { address } = req.params
-  const { limit = 10, offset = 0 } = req.query
+    // Generate a keypair from the first 32 bytes of the seed
+    const keypair = Keypair.fromSeed(seed.slice(0, 32))
 
-  // Mock data for demonstration
-  const transactions = Array.from({ length: Number(limit) }, (_, i) => ({
-    id: `tx_${i + Number(offset)}`,
-    type: Math.random() > 0.5 ? 'send' : 'receive',
-    amount: (Math.random() * 2).toFixed(2),
-    timestamp: new Date(Date.now() - i * 3600000).toISOString(),
-    status: 'confirmed'
-  }))
-
-  res.json({
-    address,
-    transactions,
-    pagination: {
-      total: 100,
-      limit: Number(limit),
-      offset: Number(offset)
-    }
-  })
+    res.status(201).json({
+      publicKey: keypair.publicKey.toBase58(),
+      mnemonic: mnemonic
+    })
+  } catch (error) {
+    console.error('Error creating Solana wallet:', error)
+    res
+      .status(500)
+      .json({ message: 'Failed to create wallet', error: error instanceof Error ? error.message : 'Unknown error' })
+  }
 }

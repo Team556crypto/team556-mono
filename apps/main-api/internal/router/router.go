@@ -2,14 +2,22 @@ package router
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/logger" // Added logger middleware
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/team556-mono/server/internal/config"
 	"github.com/team556-mono/server/internal/handlers"
+	"github.com/team556-mono/server/internal/middleware"
+	"gorm.io/gorm"
 )
 
 // SetupRoutes configures the Fiber application and defines API routes.
-func SetupRoutes(app *fiber.App) {
+func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config) {
 	// Middleware
 	app.Use(logger.New()) // Add request logging
+
+	// Create an instance of the handlers, passing the database connection
+	// We'll create the auth handlers next.
+	// h := handlers.New(db) // Placeholder for general handlers if needed
+	authHandler := handlers.NewAuthHandler(db, cfg.JWTSecret) // Instantiate AuthHandler
 
 	// Group API routes
 	api := app.Group("/api") // Example: Group routes under /api
@@ -17,7 +25,31 @@ func SetupRoutes(app *fiber.App) {
 	// Define routes
 	api.Get("/", handlers.HelloWorld) // Maps GET /api/ to HelloWorld handler
 
+	// Auth routes group
+	auth := api.Group("/auth")
+
+	// Define auth endpoints (handlers will be created next)
+	auth.Post("/register", authHandler.Register) // Connect Register handler
+	auth.Post("/login", authHandler.Login)       // Connect Login handler
+	auth.Post("/logout", authHandler.Logout)     // Connect Logout handler
+
+	// Add GET /me route, protected by AuthMiddleware
+	auth.Get("/me", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.GetMe)
+
+	// --- Wallet Routes (Protected) ---
+	wallets := api.Group("/wallets")
+	// Apply authentication middleware to this group
+	wallets.Use(middleware.AuthMiddleware(cfg.JWTSecret)) 
+
+	// Define wallet endpoints
+	wallets.Post("/create", handlers.CreateWalletHandler(db, cfg))
+
 	// Add more routes here...
 	// api.Get("/products", handlers.GetProducts)
 	// api.Post("/products", handlers.CreateProduct)
+	// Add other routes here (e.g., product routes, wallet routes)
+	// Example using a handler instance:
+	// products := api.Group("/products")
+	// products.Get("/", h.GetProducts)
+	// products.Post("/", h.CreateProduct)
 }

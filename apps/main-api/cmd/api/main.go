@@ -11,23 +11,29 @@ import (
 
 func main() {
 	// Load configuration
-	config.LoadConfig()
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
 
 	// Initialize database connection
-	database.InitDatabase()
+	db, err := database.InitDB(cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
 
 	// Create Fiber app
 	app := fiber.New()
 
 	// Setup routes
-	router.SetupRoutes(app)
+	router.SetupRoutes(app, db, cfg)
 
 	// Get port from environment or default
 	port := config.GetEnv("MAIN_API__PORT", "3000")
 
 	log.Printf("Starting server on port %s...", port)
 	// Start server
-	err := app.Listen(":" + port)
+	err = app.Listen(":" + port)
 	if err != nil {
 		log.Fatalf("Error starting server: %v", err)
 	}

@@ -80,8 +80,6 @@ export default function RootLayout() {
     setIsDrawerVisible(true)
   }
 
-  console.log(process.env.EXPO_PUBLIC_TEST)
-
   const closeDrawer = () => {
     setIsDrawerVisible(false)
   }

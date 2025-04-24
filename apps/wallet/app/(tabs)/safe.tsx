@@ -2,7 +2,7 @@ import React from 'react'
 import { SafeAreaView, StyleSheet, ScrollView } from 'react-native'
 import { Colors } from '@/constants/Colors'
 
-export default function CleanScreen() {
+export default function SafeScreen() {
   return (
     <>
       <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }}>
@@ -11,3 +11,5 @@ export default function CleanScreen() {
     </>
   )
 }
+
+const styles = StyleSheet.create({})

@@ -1,199 +1,129 @@
-import React, { ReactNode, useEffect, createContext, useState, useCallback } from 'react'
-import { DarkTheme, ThemeProvider } from '@react-navigation/native'
-import { useFonts } from 'expo-font'
-import { Stack } from 'expo-router'
-import * as SplashScreen from 'expo-splash-screen'
-import { StatusBar } from 'expo-status-bar'
-import 'react-native-reanimated'
-import { GestureHandlerRootView } from 'react-native-gesture-handler'
-import { StyleSheet } from 'react-native'
-import { Drawer, StepForm, setAppTheme } from '@team556/ui'
-import { Colors } from '../constants/Colors'
+import React, { useEffect } from 'react';
+import { DarkTheme, ThemeProvider } from '@react-navigation/native';
+import { useFonts } from 'expo-font';
+import { Stack, useRouter, useSegments } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
+import 'react-native-reanimated';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { StyleSheet, View, ActivityIndicator } from 'react-native';
+import { setAppTheme } from '@team556/ui';
+import { Colors } from '../constants/Colors';
+import { useAuthStore } from '@/store/authStore';
 
 // Configure shared UI components to use the app's colors
-setAppTheme(Colors)
+setAppTheme(Colors);
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync()
+SplashScreen.preventAutoHideAsync();
 
-// Create a context for the drawer
-interface DrawerContextType {
-  openDrawer: (content: ReactNode, options?: { maxHeight?: number; minHeight?: number }) => void
-  closeDrawer: () => void
-  isDrawerVisible: boolean
-}
-
-export const DrawerContext = createContext<DrawerContextType>({
-  openDrawer: () => {},
-  closeDrawer: () => {},
-  isDrawerVisible: false
-})
-
-// Create a context for the step form
-interface StepFormContextType {
-  openStepForm: (
-    steps: Array<{ title?: string; content: ReactNode }>,
-    options?: {
-      initialStep?: number
-      onComplete?: () => void
-      completeButtonText?: string
-    }
-  ) => void
-  closeStepForm: () => void
-  goToNextStep: () => void
-  goToPreviousStep: () => void
-  isStepFormVisible: boolean
-  currentStep: number
-}
-
-export const StepFormContext = createContext<StepFormContextType>({
-  openStepForm: () => {},
-  closeStepForm: () => {},
-  goToNextStep: () => {},
-  goToPreviousStep: () => {},
-  isStepFormVisible: false,
-  currentStep: 0
-})
-
-export default function RootLayout() {
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf')
-  })
-
-  // Drawer state
-  const [isDrawerVisible, setIsDrawerVisible] = useState(false)
-  const [drawerContent, setDrawerContent] = useState<ReactNode>(null)
-  const [drawerMaxHeight, setDrawerMaxHeight] = useState<number | undefined>(undefined)
-  const [drawerMinHeight, setDrawerMinHeight] = useState<number | undefined>(undefined)
-
-  // StepForm state
-  const [isStepFormVisible, setIsStepFormVisible] = useState(false)
-  const [stepFormSteps, setStepFormSteps] = useState<Array<{ title?: string; content: ReactNode }>>([])
-  const [currentStep, setCurrentStep] = useState(0)
-  const [onCompleteCallback, setOnCompleteCallback] = useState<(() => void) | undefined>(undefined)
-  const [completeButtonText, setCompleteButtonText] = useState<string | undefined>(undefined)
-
-  const openDrawer = (content: ReactNode, options?: { maxHeight?: number; minHeight?: number }) => {
-    setDrawerContent(content)
-    setDrawerMaxHeight(options?.maxHeight)
-    setDrawerMinHeight(options?.minHeight)
-    setIsDrawerVisible(true)
-  }
-
-  const closeDrawer = () => {
-    setIsDrawerVisible(false)
-  }
-
-  const openStepForm = useCallback(
-    (
-      steps: Array<{ title?: string; content: ReactNode }>,
-      options?: {
-        initialStep?: number
-        onComplete?: () => void
-        completeButtonText?: string
-      }
-    ) => {
-      // Reset the step form state
-      setCurrentStep(options?.initialStep || 0)
-      setStepFormSteps(steps)
-      setOnCompleteCallback(() => options?.onComplete)
-      setCompleteButtonText(options?.completeButtonText)
-      setIsStepFormVisible(true)
-    },
-    []
-  )
-
-  const closeStepForm = useCallback(() => {
-    setIsStepFormVisible(false)
-    // Clear form state after closing
-    setTimeout(() => {
-      setCurrentStep(0)
-      setStepFormSteps([])
-      setOnCompleteCallback(undefined)
-    }, 300) // Small delay to allow animation to finish
-  }, [])
-
-  const goToNextStep = useCallback(() => {
-    if (currentStep < stepFormSteps.length - 1) {
-      // If not the last step, just advance to the next step
-      setCurrentStep(prev => prev + 1)
-    }
-  }, [currentStep, stepFormSteps.length])
-
-  const handleFormComplete = useCallback(() => {
-    // Only call the completion callback when explicitly completed
-    if (onCompleteCallback) {
-      onCompleteCallback()
-    }
-    // Don't auto-close, let the callback handle it if needed
-  }, [onCompleteCallback])
-
-  const goToPreviousStep = useCallback(() => {
-    if (currentStep > 0) {
-      setCurrentStep(prev => prev - 1)
-    }
-  }, [currentStep])
+function InitialLayout() {
+  const router = useRouter();
+  const segments = useSegments();
+  const { isAuthenticated, isLoading, user, initializeAuth } = useAuthStore();
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync()
-    }
-  }, [loaded])
+    // Initialize auth state from secure storage
+    initializeAuth();
+  }, []);
 
-  if (!loaded) {
-    return null
+  useEffect(() => {
+    // Wait for both loading state to resolve and auth state to be determined
+    if (isLoading) return;
+
+    const inAuthGroup = segments[0] === '(tabs)';
+    const inOnboarding = segments[0] === 'onboarding';
+    const inLogin = segments[0] === 'login';
+
+    console.log('[Layout] Auth State:', isAuthenticated, 'Is Loading:', isLoading, 'User:', user ? user.id : null, 'Wallets:', user?.wallets?.length, 'Segments:', segments);
+
+    if (isAuthenticated) {
+      // Ensure user object is loaded before checking wallets
+      if (user) {
+        const hasWallets = user.wallets && user.wallets.length > 0;
+
+        if (hasWallets && !inAuthGroup) {
+          console.log('[Layout] User has wallets, redirecting to / (tabs)');
+          // Cast to 'any' still potentially needed if type issues persist after TS/Dev server restart
+          router.replace('/(tabs)/' as any); 
+        } else if (!hasWallets && !inOnboarding) {
+          console.log('[Layout] User has NO wallets, redirecting to /onboarding');
+          router.replace('/onboarding');
+        } else {
+          // Already in the correct authenticated route (tabs or onboarding)
+          console.log('[Layout] User authenticated and in correct route:', segments[0]);
+        }
+      }
+    } else if (!isAuthenticated && !inLogin) {
+      // If not authenticated and not on the login screen, redirect to login
+      console.log('[Layout] Not authenticated, redirecting to /login');
+      router.replace('/login');
+    }
+
+    // Depend on user object as well to re-run when user data (including wallets) might update
+  }, [isAuthenticated, isLoading, user, segments]);
+
+  // While loading the auth state, show a loading indicator or splash screen
+  if (isLoading) {
+    // Return a loading component instead of null
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.tint} />
+      </View>
+    );
   }
 
+  // Once loading is complete, render the main stack navigator
   return (
-    <StepFormContext.Provider
-      value={{
-        openStepForm,
-        closeStepForm,
-        goToNextStep,
-        goToPreviousStep,
-        isStepFormVisible,
-        currentStep
-      }}
-    >
-      <DrawerContext.Provider value={{ openDrawer, closeDrawer, isDrawerVisible }}>
-        <GestureHandlerRootView style={styles.container}>
-          <ThemeProvider value={DarkTheme}>
-            <Stack>
-              <Stack.Screen name='(tabs)' options={{ headerShown: false }} />
-              <Stack.Screen name='+not-found' />
-            </Stack>
-            <StatusBar style='light' />
+    <Stack>
+      <Stack.Screen name='login' options={{ headerShown: false }} />
+      <Stack.Screen name='(tabs)' options={{ headerShown: false }} />
+      <Stack.Screen name='onboarding' options={{ headerShown: false }} /> 
+      <Stack.Screen name='+not-found' />
+    </Stack>
+  );
+}
 
-            {/* Drawer positioned at the root level */}
-            <Drawer
-              isVisible={isDrawerVisible}
-              onClose={closeDrawer}
-              maxHeight={drawerMaxHeight}
-              minHeight={drawerMinHeight}
-            >
-              {drawerContent}
-            </Drawer>
+export default function RootLayout() {
+  const [loaded, error] = useFonts({
+    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+  });
 
-            {/* StepForm positioned at the root level */}
-            {isStepFormVisible && stepFormSteps.length > 0 && (
-              <StepForm
-                steps={stepFormSteps}
-                currentStep={currentStep}
-                onNextStep={goToNextStep}
-                onPreviousStep={goToPreviousStep}
-                onComplete={handleFormComplete}
-                completeButtonText={completeButtonText}
-              />
-            )}
-          </ThemeProvider>
-        </GestureHandlerRootView>
-      </DrawerContext.Provider>
-    </StepFormContext.Provider>
-  )
+  useEffect(() => {
+    if (error) throw error; // Handle font loading error
+  }, [error]);
+
+  useEffect(() => {
+    // Hide splash screen only when fonts are loaded
+    if (loaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded]);
+
+  // Prevent rendering until fonts are loaded
+  if (!loaded) {
+    return null; // Keep returning null (splash screen should still be visible)
+  }
+
+  // Render the initial layout which handles auth logic
+  return (
+    <GestureHandlerRootView style={styles.container}>
+      <ThemeProvider value={DarkTheme}>
+        <InitialLayout />
+        <StatusBar style='light' />
+      </ThemeProvider>
+    </GestureHandlerRootView>
+  );
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background, // Use app's background color
+  },
   container: {
-    flex: 1
-  }
-})
+    flex: 1,
+  },
+});

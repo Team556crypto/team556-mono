@@ -11,13 +11,7 @@ router.get('/', (req: Request, res: Response) => {
   })
 })
 
-// Health check endpoint
-router.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({ status: 'healthy' })
-})
-
 // Wallet routes
-router.get('/wallet/balance/:address', walletController.getWalletBalance)
-router.get('/wallet/transactions/:address', walletController.getWalletTransactions)
+router.post('/wallet/create', walletController.createWallet)
 
 export default router

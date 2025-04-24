@@ -1,9 +1,9 @@
 import { Tabs } from 'expo-router'
 import React from 'react'
 
-import { IconSymbol } from '@team556/ui'
 import { CustomTabBar } from '@/components/CustomTabBar'
 import { Colors } from '@/constants/Colors'
+import { Entypo, Ionicons } from '@expo/vector-icons'
 
 export default function TabLayout() {
   return (
@@ -17,15 +17,22 @@ export default function TabLayout() {
       <Tabs.Screen
         name='index'
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name='house.fill' color={color} />
+          title: 'Wallet',
+          tabBarIcon: ({ color }) => <Entypo name='wallet' size={28} color={color} />
         }}
       />
       <Tabs.Screen
-        name='clean'
+        name='safe'
         options={{
-          title: 'Clean',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name='list.bullet.rectangle' color={color} />
+          title: 'Safe',
+          tabBarIcon: ({ color }) => <Entypo name='lock' size={28} color={color} />
+        }}
+      />
+      <Tabs.Screen
+        name='settings'
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ color }) => <Ionicons name='settings' size={28} color={color} />
         }}
       />
     </Tabs>

@@ -27,7 +27,8 @@
     "prototype:build:prod": "yarn workspace prototype eas build --profile production",
     "solana-api:dev": "yarn workspace solana-api dev",
     "solana-api:build": "yarn workspace solana-api build",
-    "solana-api:start": "yarn workspace solana-api start"
+    "solana-api:start": "yarn workspace solana-api start",
+    "token:build": "yarn workspace token-core build"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

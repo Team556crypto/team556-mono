@@ -28,18 +28,10 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config) {
 		// AllowCredentials: true, // Uncomment if needed
 	}))
 
-	// Create an instance of the handlers, passing the database connection
-	// We'll create the auth handlers next.
-	// h := handlers.New(db) // Placeholder for general handlers if needed
 	authHandler := handlers.NewAuthHandler(db, cfg.JWTSecret) // Instantiate AuthHandler
 
-	// Group API routes
-	api := app.Group("/api") // Example: Group routes under /api
-
-	// Define routes
-	api.Get("/", handlers.HelloWorld) // Maps GET /api/ to HelloWorld handler
-
-	// Auth routes group
+	// Group
+	api := app.Group("/api")
 	auth := api.Group("/auth")
 
 	// Define auth endpoints (handlers will be created next)
@@ -66,13 +58,4 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config) {
 
 	// Define wallet endpoints
 	wallets.Post("/create", handlers.CreateWalletHandler(db, cfg))
-
-	// Add more routes here...
-	// api.Get("/products", handlers.GetProducts)
-	// api.Post("/products", handlers.CreateProduct)
-	// Add other routes here (e.g., product routes, wallet routes)
-	// Example using a handler instance:
-	// products := api.Group("/products")
-	// products.Get("/", h.GetProducts)
-	// products.Post("/", h.CreateProduct)
 }

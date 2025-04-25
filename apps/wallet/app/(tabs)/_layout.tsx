@@ -13,11 +13,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors.tint,
-        headerShown: false,
-        tabBarStyle: {
-          // Hide default tab bar on web
-          display: isWeb ? 'none' : undefined
-        }
+        headerShown: false
       }}
       // Use our responsive navigation component that handles both sidebar and bottom tabs
       tabBar={props => <ResponsiveNavigation {...props} />}

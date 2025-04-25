@@ -15,6 +15,7 @@ export interface User {
   first_name?: string // Make optional if not always present
   last_name?: string // Make optional if not always present
   wallets?: Wallet[] // Add wallets array (optional because preload might fail)
+  redeem_wallet?: Wallet
   // Add other fields as needed
 }
 

@@ -14,11 +14,11 @@ import (
 // InitDB initializes the database connection using the provided URL.
 func InitDB(databaseURL string) (*gorm.DB, error) {
 	var err error
-	logLevel := logger.Silent // Default log level
-	// Consider making log level configurable via env var later
+	logLevel := logger.Info // Default log level
 
 	db, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{
-		Logger: logger.Default.LogMode(logLevel),
+		Logger:                                   logger.Default.LogMode(logLevel),
+		DisableForeignKeyConstraintWhenMigrating: false, // Prevent GORM from managing constraints
 	})
 
 	if err != nil {
@@ -43,6 +43,7 @@ func InitDB(databaseURL string) (*gorm.DB, error) {
 	err = db.AutoMigrate(
 		&models.User{},
 		&models.Wallet{},
+		&models.PresaleCode{},
 	)
 	if err != nil {
 		// Log migration errors but don't necessarily make it fatal

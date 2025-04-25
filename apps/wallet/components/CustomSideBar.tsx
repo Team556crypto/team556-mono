@@ -24,7 +24,7 @@ export function CustomSideBar({ state, descriptors, navigation }: BottomTabBarPr
       ]}
     >
       <View style={styles.header}>
-        <LogoWideSvg width={120} height={30} style={styles.logo} />
+        <LogoWideSvg width={160} height={30} style={styles.logo} />
       </View>
       <View style={styles.navContainer}>
         {state.routes.map((route, index) => {
@@ -95,7 +95,12 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     bottom: 0,
-    width: 220
+    width: 220,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 5
     // borderRadius: 10
   },
   header: {
@@ -115,9 +120,9 @@ const styles = StyleSheet.create({
   navButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 6,
     paddingHorizontal: 16,
-    marginBottom: 8
+    marginBottom: 12
   },
   navButtonActive: {
     // backgroundColor: Colors.background,

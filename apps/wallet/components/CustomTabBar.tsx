@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   },
   tabBarInner: {
     flexDirection: 'row',
-    height: 60,
+    height: 64,
     width: '100%'
   },
   tabButton: {

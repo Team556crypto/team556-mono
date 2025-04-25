@@ -32,27 +32,56 @@ function InitialLayout() {
     // Wait for both loading state to resolve and auth state to be determined
     if (isLoading) return
 
-    const inAuthGroup = segments[0] === '(tabs)'
-    const inOnboarding = segments[0] === 'onboarding'
-    const inLogin = segments[0] === 'login'
+    const currentSegment = segments[0] // Get the top-level segment
+    const inAuthGroup = currentSegment === '(tabs)'
+    const inOnboarding = currentSegment === 'onboarding'
+    const inLogin = currentSegment === 'login'
+    const allowedStandaloneRoutes = ['privacy', 'terms'] // Explicitly allow these
+    const inAllowedStandalone = allowedStandaloneRoutes.includes(currentSegment)
 
     if (isAuthenticated) {
       // Ensure user object is loaded before checking wallets
       if (user) {
         const hasWallets = user.wallets && user.wallets.length > 0
 
-        if (hasWallets && !inAuthGroup) {
-          router.replace('/(tabs)/' as any)
-        } else if (!hasWallets && !inOnboarding) {
-          router.replace('/onboarding')
+        if (hasWallets) {
+          // User has wallets. Should be in tabs or allowed standalone.
+          // Redirect if they are NOT in tabs AND NOT in an allowed standalone route.
+          if (!inAuthGroup && !inAllowedStandalone) {
+            console.log(
+              `[Layout] Redirecting auth user with wallets from ${currentSegment} to (tabs)`
+            )
+            router.replace('/(tabs)/' as any)
+          } else {
+            console.log(`[Layout] Auth user with wallets in allowed route: ${currentSegment}`)
+          }
         } else {
-          console.log('[Layout] User authenticated and in correct route:', segments[0])
+          // User has no wallets, should be in onboarding
+          if (!inOnboarding) {
+            console.log(
+              `[Layout] Redirecting auth user without wallets from ${currentSegment} to onboarding`
+            )
+            router.replace('/onboarding')
+          } else {
+            console.log(`[Layout] Auth user without wallets in onboarding: ${currentSegment}`)
+          }
         }
+      } else {
+        // User object might still be loading after isAuthenticated is true
+        console.log('[Layout] Authenticated but user object not yet available.')
       }
-    } else if (!isAuthenticated && !inLogin) {
-      router.replace('/login')
+    } else {
+      // Not authenticated
+      // Redirect to login if not already there
+      if (!inLogin) {
+        console.log(`[Layout] Redirecting unauthenticated user from ${currentSegment} to login`)
+        router.replace('/login')
+      } else {
+        console.log('[Layout] Unauthenticated user in login route.')
+      }
     }
-  }, [isAuthenticated, isLoading, user, segments])
+    // Add router to dependency array as it's used inside the effect
+  }, [isAuthenticated, isLoading, user, segments, router])
 
   // While loading the auth state, show a loading indicator or splash screen
   if (isLoading) {
@@ -70,6 +99,8 @@ function InitialLayout() {
       <Stack.Screen name='login' options={{ headerShown: false }} />
       <Stack.Screen name='(tabs)' options={{ headerShown: false }} />
       <Stack.Screen name='onboarding' options={{ headerShown: false }} />
+      <Stack.Screen name='privacy' options={{ headerShown: false }} />
+      <Stack.Screen name='terms' options={{ headerShown: false }} />
       <Stack.Screen name='+not-found' />
     </Stack>
   )
@@ -93,7 +124,11 @@ export default function RootLayout() {
 
   // Prevent rendering until fonts are loaded
   if (!loaded) {
-    return null // Keep returning null (splash screen should still be visible)
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size='large' color={Colors.tint} />
+      </View>
+    )
   }
 
   // Render the initial layout which handles auth logic

@@ -1,5 +1,3 @@
-import { useAuthStore } from '@/store/authStore'
-
 // Type for Wallet data from API
 export interface Wallet {
   id: number
@@ -122,18 +120,15 @@ export async function signupUser(credentials: UserCredentials): Promise<LoginRes
 
 /**
  * Makes a POST request to the logout endpoint.
+ * @param token - The authentication token.
  * @returns A promise that resolves if logout is successful on the server.
  * @throws An error if the logout fails or the request is unsuccessful.
  */
-export async function logoutUser(): Promise<void> {
+export async function logoutUser(token: string | null): Promise<void> {
   if (!process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL) {
     throw new Error('API URL is not configured.')
   }
 
-  // Get the token from the Zustand store using getState for non-hook access
-  const token = useAuthStore.getState().token
-
-  // If no token, we can consider the user effectively logged out client-side
   if (!token) {
     console.warn('Logout attempted without an authentication token. Skipping server call.')
     return
@@ -192,7 +187,7 @@ export async function logoutUser(): Promise<void> {
  * @returns A promise that resolves with the create wallet response (message and mnemonic).
  * @throws An error if the request fails.
  */
-export async function createWallet(token: string): Promise<CreateWalletResponse> {
+export async function createWallet(token: string | null): Promise<CreateWalletResponse> {
   if (!process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL) {
     throw new Error('API URL is not configured.')
   }
@@ -234,10 +229,11 @@ export async function createWallet(token: string): Promise<CreateWalletResponse>
  * @returns A promise that resolves with the user's profile data.
  * @throws An error if the request fails or the user is not authenticated.
  */
-export async function getUserProfile(token: string): Promise<User> {
+export async function getUserProfile(token: string | null): Promise<User> {
   if (!process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL) {
     throw new Error('API URL is not configured.')
   }
+
   if (!token) {
     throw new Error('Authentication token is required to fetch user profile.')
   }

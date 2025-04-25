@@ -13,7 +13,8 @@
       "outputs": [
         ".next/**",
         "!.next/cache/**",
-        "web-build/**"
+        "web-build/**",
+        "packages/target/**"
       ]
     },
     "lint": {
@@ -37,6 +38,9 @@
       "outputs": [
         "web-build/**"
       ]
+    },
+    "clean": {
+      "cache": false
     }
   }
 }

@@ -40,4 +40,5 @@ yarn-error.log*
 # Token Core
 apps/token-core/mainnet-test-wallets
 apps/token-core/wallets
+apps/token-core/target
 

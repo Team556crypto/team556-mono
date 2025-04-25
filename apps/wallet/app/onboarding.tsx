@@ -21,15 +21,18 @@ export default function OnboardingScreen() {
   const handleCreateWallet = async () => {
     setIsLoading(true)
     setError(null)
+    const token = useAuthStore.getState().token
+
     if (!token) {
-      setError('Authentication token not found. Please log in again.')
+      setError('Authentication required. Please login again.')
       setIsLoading(false)
       return
     }
+
     try {
       const response = await createWallet(token)
       setMnemonic(response.mnemonic)
-      setCurrentStep(1)
+      setCurrentStep(prev => prev + 1)
     } catch (err: any) {
       console.error('Failed to create wallet:', err)
       setError(err.message || 'Failed to create wallet. Please try again.')
@@ -174,11 +177,7 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: Colors.backgroundDark,
     borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
-    elevation: 2
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
   },
   mnemonicLabel: {
     fontSize: 16,

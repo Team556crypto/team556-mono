@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/team556-mono/server/internal/config"
 	"github.com/team556-mono/server/internal/handlers"
@@ -13,6 +14,19 @@ import (
 func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config) {
 	// Middleware
 	app.Use(logger.New()) // Add request logging
+
+	// Add CORS Middleware
+	app.Use(cors.New(cors.Config{
+		// Allow specific origins - adjust for your development/production needs
+		// Using localhost:8081 as the default Expo web dev server port
+		AllowOrigins: "http://localhost:8082",
+		// Allow specific headers
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+		// Allow specific methods
+		AllowMethods: "GET, POST, HEAD, PUT, DELETE, PATCH, OPTIONS",
+		// Allow credentials (cookies, authorization headers)
+		// AllowCredentials: true, // Uncomment if needed
+	}))
 
 	// Create an instance of the handlers, passing the database connection
 	// We'll create the auth handlers next.
@@ -39,7 +53,7 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config) {
 	// --- Wallet Routes (Protected) ---
 	wallets := api.Group("/wallets")
 	// Apply authentication middleware to this group
-	wallets.Use(middleware.AuthMiddleware(cfg.JWTSecret)) 
+	wallets.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 
 	// Define wallet endpoints
 	wallets.Post("/create", handlers.CreateWalletHandler(db, cfg))

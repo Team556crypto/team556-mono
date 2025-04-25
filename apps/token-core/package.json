@@ -1,9 +1,18 @@
 {
   "type": "module",
+  "name": "token-core",
+  "version": "0.1.0",
+  "private": false,
+  "main": "../../packages/target/idl/team.json",
+  "types": "../../packages/target/types/team.ts",
+  "files": [
+    "package.json"
+  ],
   "scripts": {
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
-    "build": "anchor build"
+    "build": "node ../../scripts/sync-expo-env.js && anchor build && mkdir -p ../../packages/target/idl && mkdir -p ../../packages/target/types && mkdir -p ../../packages/target/deploy && mv target/idl/team.json ../../packages/target/idl/ && mv target/types/team.ts ../../packages/target/types/ && mv target/deploy/team.so ../../packages/target/deploy/ && rm -rf target",
+    "clean": "rm -rf target ../../packages/target"
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.29.0",

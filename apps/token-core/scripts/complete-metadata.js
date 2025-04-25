@@ -7,9 +7,9 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
-// Check if MAINNET_RPC_URL is set
-if (!process.env.MAINNET_RPC_URL) {
-  console.error("ERROR: MAINNET_RPC_URL not set in environment variables");
+// Check if GLOBAL__MAINNET_RPC_URL is set
+if (!process.env.GLOBAL__MAINNET_RPC_URL) {
+  console.error("ERROR: GLOBAL__MAINNET_RPC_URL not set in environment variables");
   process.exit(1);
 }
 
@@ -17,7 +17,7 @@ async function setTokenMetadata() {
   try {
     // Connect to Solana
     console.log("Connecting to Mainnet...");
-    const connection = new Connection(process.env.MAINNET_RPC_URL, "confirmed");
+    const connection = new Connection(process.env.GLOBAL__MAINNET_RPC_URL, "confirmed");
 
     // Load your keypair
     console.log("Loading wallet keypair...");

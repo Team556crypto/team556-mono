@@ -277,13 +277,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     zIndex: 999999,
     elevation: 999999,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -3
-    },
-    shadowOpacity: 0.27,
-    shadowRadius: 4.65
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
   },
   handleBarContainer: {
     width: '100%',

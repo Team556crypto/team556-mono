@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { TextInput, View, StyleSheet, Text as RNText, TextInputProps, Pressable } from 'react-native'
+import { TextInput, View, StyleSheet, Text as RNText, TextInputProps, Pressable, Platform } from 'react-native'
 import { DefaultColors, ThemeColors } from '../constants/Colors'
 import MaterialIcons from '@expo/vector-icons/MaterialIcons'
 import { useTheme } from './ThemeContext'
@@ -102,7 +102,13 @@ export default function Input({
       >
         {leftIcon && <View style={styles.leftIconContainer}>{leftIcon}</View>}
         <TextInput
-          style={[styles.input, { color: colors.text }, otherStyleProps]}
+          style={[
+            styles.input,
+            { color: colors.text },
+            otherStyleProps,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            Platform.OS === 'web' ? ({ outlineWidth: 0 } as any) : {},
+          ]}
           placeholderTextColor='#888'
           value={value}
           onChangeText={onChangeText}

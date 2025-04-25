@@ -173,10 +173,7 @@ const styles = StyleSheet.create({
   thumb: {
     position: 'absolute',
     elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
   },
   disabledThumb: {
     backgroundColor: '#e0e0e0'

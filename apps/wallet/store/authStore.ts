@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import * as SecureStoreUtils from '@/utils/secureStore'
-import { loginUser, signupUser, getUserProfile, UserCredentials, User } from '@/services/api' // Assuming api service exports these
+import { loginUser, signupUser, getUserProfile, logoutUser, UserCredentials, User } from '@/services/api' // Assuming api service exports these
 import { router } from 'expo-router' // Import router
 
 interface AuthState {
@@ -85,6 +85,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Optional: Handle specific errors, e.g., clear auth if token is invalid (401 Unauthorized)
       if (error?.response?.status === 401) {
         console.warn('fetchAndUpdateUser: Token might be invalid, clearing auth state.');
+        // Note: logout() internally clears state but doesn't call the logoutUser API function by default.
+        // If it were to call logoutUser, it should pass the token: await logoutUser(token);
         get().logout(); // Call logout if token is invalid
       }
       // Keep existing error state or set a new one? Depends on desired behavior.
@@ -140,9 +142,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true })
     try {
       // TODO: Call backend logout endpoint if necessary
+      // Example if logoutUser API needed calling: await logoutUser(get().token);
       await SecureStoreUtils.deleteToken()
       set({ token: null, user: null, isAuthenticated: false, error: null })
-    } catch (error) {
+    } catch (error) { // Catches errors from SecureStore or potential API call
       console.error('Logout failed:', error)
       set({ error: 'Logout failed' })
     } finally {

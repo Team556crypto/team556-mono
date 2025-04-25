@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     flex: 1
   },
   stepContentContainer: {
-    paddingHorizontal: 20,
+    // paddingHorizontal: 20,
     paddingVertical: 10,
     flex: 1,
     alignItems: 'center'

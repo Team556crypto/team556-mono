@@ -50,6 +50,15 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config) {
 	// Add GET /me route, protected by AuthMiddleware
 	auth.Get("/me", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.GetMe)
 
+	// Wallet routes group
+	wallet := api.Group("/wallet")
+	wallet.Use(middleware.AuthMiddleware(cfg.JWTSecret)) // Protect all wallet routes
+
+	// Define wallet endpoints
+	wallet.Post("/create", handlers.CreateWalletHandler(db, cfg))
+	wallet.Get("/balance", handlers.GetWalletBalanceHandler(db, cfg))
+	wallet.Get("/balance/team", handlers.GetWalletTeamTokenBalanceHandler(db, cfg)) // For TEAM Token
+
 	// --- Wallet Routes (Protected) ---
 	wallets := api.Group("/wallets")
 	// Apply authentication middleware to this group

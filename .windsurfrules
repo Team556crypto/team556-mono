@@ -3,6 +3,9 @@
 - Never assume anything. If something is not explicitly stated, ask for clarification
 - Use the connected MCP servers when necessary to help you with the users requests. You have access to `context7` and `supabase`
 - Never leave code half completed, always finish the task at hand before moving on to the next.
+- Never hardcode colors. They will be found in the constants folder
+- Use the shared UI package for components wherever possible
+- Use Zustand for state management
 
 # Project Structure
 
@@ -14,13 +17,13 @@
 - apps/main-api: The main api is a Go Fiber server. This is the main backend API service where all the CRUD operations are handled.
 - apps/solana-api: The solana api is a NodeJS Express server. This is the backend API service that interacts with the Solana blockchain. This API should only accept requests from and communicate with the main API.
 - Supabase (PostgreSQL) is used for database with GORM for the ORM
+- apps/token-core: This is a Rust / Anchor Solana program
 
 ## Frontend Apps
 
 - apps/wallet: DeFi wallet React Native Expo app
 - apps/pos: Point of sale React Native Expo app
 - apps/prototype: Prototype React Native Expo app only used for developing new generic components for the other Expo apps
-- Use Zustand for state management
 
 ## Shared Packages
 

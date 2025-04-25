@@ -1,10 +1,10 @@
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TOKEN_KEY = 'authToken';
 
 export async function saveToken(token: string): Promise<void> {
   try {
-    await SecureStore.setItemAsync(TOKEN_KEY, token);
+    await AsyncStorage.setItem(TOKEN_KEY, token);
   } catch (error) {
     console.error('Error saving auth token:', error);
     // Handle saving error appropriately
@@ -13,7 +13,7 @@ export async function saveToken(token: string): Promise<void> {
 
 export async function getToken(): Promise<string | null> {
   try {
-    return await SecureStore.getItemAsync(TOKEN_KEY);
+    return await AsyncStorage.getItem(TOKEN_KEY);
   } catch (error) {
     console.error('Error getting auth token:', error);
     // Handle retrieval error appropriately
@@ -23,7 +23,7 @@ export async function getToken(): Promise<string | null> {
 
 export async function deleteToken(): Promise<void> {
   try {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
+    await AsyncStorage.removeItem(TOKEN_KEY);
   } catch (error) {
     console.error('Error deleting auth token:', error);
     // Handle deletion error appropriately

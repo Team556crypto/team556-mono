@@ -1,8 +1,9 @@
 package handlers
 
 import (
-	"errors"
+	"crypto/rand"
 	"log"
+	"math/big"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 
 	"github.com/team556-mono/server/internal/models"
 	"github.com/team556-mono/server/internal/middleware"
+	"errors"
 )
 
 // AuthHandler holds dependencies for authentication handlers
@@ -52,6 +54,22 @@ type LoginResponse struct {
 	User  models.User `json:"user"`
 }
 
+const codeChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+// generateUserCode creates a random alphanumeric string of the specified length.
+func generateUserCode(length int) (string, error) {
+	var builder strings.Builder
+	charSetLen := big.NewInt(int64(len(codeChars)))
+	for i := 0; i < length; i++ {
+		randomIndex, err := rand.Int(rand.Reader, charSetLen)
+		if err != nil {
+			return "", err // Return error if random number generation fails
+		}
+		builder.WriteByte(codeChars[randomIndex.Int64()])
+	}
+	return builder.String(), nil
+}
+
 // Register handles user registration
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	input := new(RegisterInput)
@@ -73,19 +91,27 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not process registration"})
 	}
 
+	// Generate User Code
+	userCode, err := generateUserCode(8) // Generate 8-character code
+	if err != nil {
+		log.Printf("Error generating user code: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not process registration due to code generation failure"})
+	}
+
 	// Create user model
 	user := models.User{
 		Email:     strings.ToLower(input.Email),
 		Password:  string(hashedPassword),
 		FirstName: input.FirstName,
 		LastName:  input.LastName,
+		UserCode:  userCode, // Assign generated code
 	}
 
 	// Save user to database
 	if result := h.DB.Create(&user); result.Error != nil {
 		log.Printf("Error creating user: %v", result.Error)
 		if strings.Contains(result.Error.Error(), "UNIQUE constraint failed") || strings.Contains(result.Error.Error(), "duplicate key value violates unique constraint") {
-			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "Email already registered"})
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "Email or generated code already exists"})
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Could not register user"})
 	}

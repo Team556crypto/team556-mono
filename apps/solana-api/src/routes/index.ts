@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express'
-import * as walletController from '../controllers/wallet.controller'
+import walletRoutes from './walletRoutes'
 
 const router = Router()
 
@@ -11,7 +11,7 @@ router.get('/', (req: Request, res: Response) => {
   })
 })
 
-// Wallet routes
-router.post('/wallet/create', walletController.createWallet)
+// Wallet routes - Mount the new router
+router.use('/wallet', walletRoutes)
 
 export default router

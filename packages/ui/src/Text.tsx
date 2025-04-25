@@ -57,53 +57,44 @@ function getPresetStyle(preset: TextPreset, colors: ThemeColors) {
     h1: {
       fontSize: 32,
       color: colors.text,
-      fontWeight: '700',
-      marginBottom: 16
+      fontWeight: '700'
     },
     h2: {
       fontSize: 28,
       color: colors.text,
-      fontWeight: '600',
-      marginBottom: 14
+      fontWeight: '600'
     },
     h3: {
       fontSize: 24,
       color: colors.text,
-      fontWeight: '600',
-      marginBottom: 12
+      fontWeight: '600'
     },
     h4: {
       fontSize: 20,
       color: colors.text,
-      fontWeight: '600',
-      marginBottom: 10
+      fontWeight: '600'
     },
     paragraph: {
       fontSize: 16,
       color: colors.text,
-      lineHeight: 24,
-      marginBottom: 16
+      lineHeight: 24
     },
     label: {
       fontSize: 16,
       color: colors.text,
-      fontWeight: '500',
-      marginBottom: 6
+      fontWeight: '500'
     },
     caption: {
       fontSize: 14,
-      color: 'rgba(255, 255, 255, 0.7)',
-      marginBottom: 8
+      color: 'rgba(255, 255, 255, 0.7)'
     },
     error: {
       fontSize: 14,
-      color: colors.error,
-      marginTop: 4
+      color: colors.error
     },
     success: {
       fontSize: 14,
-      color: colors.success,
-      marginTop: 4
+      color: colors.success
     },
     default: {
       fontSize: 16,

@@ -17,6 +17,7 @@ type User struct {
 	LastName  string `json:"last_name"`
 	Email     string `json:"email" gorm:"uniqueIndex;not null"`
 	Password  string `json:"-"` // Add hashed password field, exclude from JSON
-
+	UserCode  string `json:"user_code" gorm:"uniqueIndex;not null;size:8"` // Unique code for the user
+ 
 	Wallets []Wallet `json:"wallets,omitempty"` // One-to-many relationship
 }

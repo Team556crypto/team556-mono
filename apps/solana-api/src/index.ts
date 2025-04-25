@@ -37,6 +37,13 @@ if (isProduction) {
 
 app.use(express.json())
 
+// --- Debugging Middleware: Log all incoming requests ---
+app.use((req, res, next) => {
+  console.log(`---> Solana API Received: ${req.method} ${req.originalUrl}`)
+  next() // Pass control to the next middleware/router
+})
+// ----------------------------------------------------
+
 // Routes
 app.use('/api', routes)
 

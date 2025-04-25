@@ -3,11 +3,14 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/team556-mono/server/internal/config" 
+	"github.com/team556-mono/server/internal/config"
 	"github.com/team556-mono/server/internal/models"
 	"gorm.io/gorm"
 )
@@ -22,6 +25,18 @@ type SolanaWalletCreateResponse struct {
 type CreateWalletResponse struct {
 	Message  string `json:"message"`
 	Mnemonic string `json:"mnemonic"` // IMPORTANT: Only return this, don't store it
+}
+
+// Response structure from solana-api/wallet/balance/:address
+type SolanaWalletBalanceResponse struct {
+	Balance float64  `json:"balance"`
+	Price   *float64 `json:"price"` // Use pointer to handle potential null from solana-api
+}
+
+// Response body for our main-api get balance endpoint
+type GetWalletBalanceResponse struct {
+	Balance float64  `json:"balance"`
+	Price   *float64 `json:"price"` // Use pointer to handle potential null
 }
 
 // CreateWalletHandler handles the creation of a new Solana wallet for the authenticated user.
@@ -42,7 +57,13 @@ func CreateWalletHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 		log.Printf("User %d requesting wallet creation", userID)
 
 		// --- Call Solana API ---
-		solanaAPIURL := cfg.SolanaAPIURL // Get URL from config
+		// Get URL from config and normalize 'localhost' to '127.0.0.1'
+		solanaAPIURL := cfg.SolanaAPIURL
+		if strings.Contains(solanaAPIURL, "//localhost") { // Check if it contains localhost
+			solanaAPIURL = strings.Replace(solanaAPIURL, "//localhost", "//127.0.0.1", 1)
+			log.Printf("Normalized Solana API URL to use 127.0.0.1: %s", solanaAPIURL)
+		}
+
 		if solanaAPIURL == "" {
 			log.Println("Error: SOLANA_API_BASE_URL not configured")
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Configuration error: Solana API URL missing"})
@@ -110,5 +131,195 @@ func CreateWalletHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 			Message:  "Wallet created successfully. Secure your mnemonic phrase!",
 			Mnemonic: solanaResp.Mnemonic,
 		})
+	}
+}
+
+// GetWalletBalanceHandler handles fetching the SOL balance for the authenticated user's wallet.
+func GetWalletBalanceHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// --- Authentication ---
+		userIDInterface := c.Locals("userID")
+		if userIDInterface == nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized: User ID not found in context"})
+		}
+		userID, ok := userIDInterface.(uint)
+		if !ok {
+			log.Printf("Error: Invalid user ID type in context: %T", userIDInterface)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Internal server error: Invalid user ID type"})
+		}
+
+		log.Printf("User %d requesting wallet balance", userID)
+
+		// --- Get Wallet Address from DB ---
+		var wallet models.Wallet
+		// Assuming user has one primary wallet for now. Add logic if multiple wallets are possible.
+		result := db.Where("user_id = ?", userID).First(&wallet)
+		if result.Error != nil {
+			if result.Error == gorm.ErrRecordNotFound {
+				log.Printf("User %d has no wallet record", userID)
+				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Wallet not found for this user"})
+			}
+			log.Printf("Error fetching wallet for user %d: %v", userID, result.Error)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to retrieve wallet information"})
+		}
+		userWalletAddress := wallet.Address
+		log.Printf("Found wallet address %s for user %d", userWalletAddress, userID)
+
+		// --- Call Solana API ---
+		solanaAPIURL := cfg.SolanaAPIURL
+		if solanaAPIURL == "" {
+			log.Println("Error: SOLANA_API_BASE_URL not configured")
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Configuration error: Solana API URL missing"})
+		}
+		// Note: Ensure the solana-api route is exactly /api/wallet/balance/:address
+		getBalanceURL := fmt.Sprintf("%s/api/wallet/balance/%s", solanaAPIURL, userWalletAddress)
+
+		log.Printf("Calling Solana API: GET %s", getBalanceURL)
+		client := &http.Client{}
+		resp, err := client.Get(getBalanceURL)
+		if err != nil {
+			log.Printf("Error calling Solana API for balance: %v", err)
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "Failed to connect to Solana service for balance"})
+		}
+
+		// --- Read raw body for debugging ---
+		bodyBytes, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			log.Printf("Error reading Solana API balance response body: %v", readErr)
+			// We might still be able to proceed if status code was OK, but response is likely compromised
+			// For now, return server error if body read fails
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to read Solana service balance response"})
+		}
+		bodyString := string(bodyBytes)
+		log.Printf("Raw response body from Solana API (Balance): %s", bodyString)
+
+		if resp.StatusCode != http.StatusOK { // Expect 200 OK
+			var errorBody map[string]interface{}
+			// Try decoding the raw body we already read
+			_ = json.Unmarshal(bodyBytes, &errorBody)
+			log.Printf("Error from Solana API (Balance - Status %d): Body: %s, DecodedError: %v", resp.StatusCode, bodyString, errorBody)
+			// Forward the status code if it's a client error (4xx)
+			if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+				return c.Status(resp.StatusCode).JSON(fiber.Map{
+					"error":         "Error fetching balance from Solana service",
+					"upstreamError": errorBody,
+				})
+			}
+			// Otherwise, it's likely a server error on their end or ours
+			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
+				"error":         "Failed to get balance via Solana service",
+				"upstreamError": errorBody,
+			})
+		}
+
+		// --- Process Solana API Response ---
+		var solanaResp SolanaWalletBalanceResponse
+		// Decode the raw body we already read
+		if err := json.Unmarshal(bodyBytes, &solanaResp); err != nil {
+			log.Printf("Error decoding Solana API balance response JSON: %v. Raw Body: %s", err, bodyString)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to process Solana service balance response"})
+		}
+
+		// Log the decoded struct fields explicitly
+		log.Printf("Decoded Solana Response: Balance=%.9f, Price=%v", solanaResp.Balance, solanaResp.Price)
+
+		// --- Return Response to Client ---
+		return c.Status(fiber.StatusOK).JSON(GetWalletBalanceResponse{
+			Balance: solanaResp.Balance,
+			Price:   solanaResp.Price, // Pass along the price (or nil if fetch failed)
+		})
+	}
+}
+
+// GetWalletTeamTokenBalanceHandler fetches the TEAM token balance and price for the user's wallet
+func GetWalletTeamTokenBalanceHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// 1. Get user ID from context (set by middleware)
+		userIDInterface := c.Locals("userID")
+		if userIDInterface == nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized: User ID not found in context"})
+		}
+		userID, ok := userIDInterface.(uint)
+		if !ok {
+			log.Printf("Error: Invalid user ID type in context: %T", userIDInterface)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Internal server error: Invalid user ID type"})
+		}
+
+		log.Printf("User %d requesting wallet TEAM token balance", userID)
+
+		// 2. Find the wallet for the user
+		var wallet models.Wallet
+		// Assuming user has one primary wallet for now. Add logic if multiple wallets are possible.
+		result := db.Where("user_id = ?", userID).First(&wallet)
+		if result.Error != nil {
+			if result.Error == gorm.ErrRecordNotFound {
+				log.Printf("User %d has no wallet record", userID)
+				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Wallet not found for this user"})
+			}
+			log.Printf("Error fetching wallet for user %d: %v", userID, result.Error)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to retrieve wallet information"})
+		}
+		userWalletAddress := wallet.Address
+		log.Printf("Found wallet address %s for user %d", userWalletAddress, userID)
+
+		// 3. Call Solana API for TEAM token balance
+		solanaAPIURL := cfg.SolanaAPIURL
+		if solanaAPIURL == "" {
+			log.Println("Solana API URL is not configured")
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Server configuration error: Solana API URL missing"})
+		}
+
+		// Construct the URL for the TEAM token balance endpoint
+		url := fmt.Sprintf("%s/api/wallet/balance/team/%s", solanaAPIURL, userWalletAddress)
+		log.Printf("Calling Solana API for TEAM token balance: %s", url)
+
+		// Use a client with a timeout
+		apiClient := http.Client{Timeout: 10 * time.Second}
+		solanaRespRaw, err := apiClient.Get(url)
+		if err != nil {
+			log.Printf("Error calling Solana API for TEAM balance: %v", err)
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "Failed to connect to Solana service for TEAM balance"})
+		}
+		defer solanaRespRaw.Body.Close()
+
+		if solanaRespRaw.StatusCode != http.StatusOK {
+			bodyBytes, _ := io.ReadAll(solanaRespRaw.Body)
+			bodyString := string(bodyBytes)
+			log.Printf("Solana API (TEAM Balance) returned non-OK status: %d. Body: %s", solanaRespRaw.StatusCode, bodyString)
+			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
+				"error":         "Solana service returned error for TEAM balance: " + bodyString,
+				"upstreamError": bodyString,
+			})
+		}
+
+		// 4. Decode Solana API Response
+		bodyBytes, err := io.ReadAll(solanaRespRaw.Body)
+		if err != nil {
+			log.Printf("Error reading Solana API TEAM balance response body: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to read response body from Solana API (TEAM Balance)"})
+		}
+		bodyString := string(bodyBytes)
+		log.Printf("Raw response body from Solana API (TEAM Balance): %s", bodyString)
+
+		var solanaResp SolanaWalletBalanceResponse // Reuse the same struct
+		if err := json.Unmarshal(bodyBytes, &solanaResp); err != nil {
+			log.Printf("Error decoding Solana API TEAM balance response JSON: %v. Raw Body: %s", err, bodyString)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to decode Solana API TEAM balance response"})
+		}
+
+		// Log decoded values
+		priceLog := "nil"
+		if solanaResp.Price != nil {
+			priceLog = fmt.Sprintf("%.6f", *solanaResp.Price)
+		}
+		log.Printf("Decoded Solana TEAM Response: Balance=%.8f, Price=%s", solanaResp.Balance, priceLog)
+
+		// 5. Prepare and Send Response
+		resp := GetWalletBalanceResponse{
+			Balance: solanaResp.Balance,
+			Price:   solanaResp.Price,
+		}
+
+		return c.Status(fiber.StatusOK).JSON(resp)
 	}
 }

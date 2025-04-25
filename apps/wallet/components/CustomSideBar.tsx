@@ -18,11 +18,13 @@ export function CustomSideBar({ state, descriptors, navigation }: BottomTabBarPr
           paddingBottom: insets.bottom,
           paddingLeft: Platform.OS === 'web' ? 0 : insets.left,
           backgroundColor: Colors.backgroundDark
+          // borderWidth: 1,
+          // borderColor: Colors.backgroundDarker
         }
       ]}
     >
       <View style={styles.header}>
-        <LogoWideSvg width={160} height={50} style={styles.logo} />
+        <LogoWideSvg width={120} height={30} style={styles.logo} />
       </View>
       <View style={styles.navContainer}>
         {state.routes.map((route, index) => {
@@ -93,16 +95,13 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     bottom: 0,
-    width: 220,
-    height: '100%',
-    borderRightWidth: 1,
-    borderRightColor: 'rgba(255, 255, 255, 0.1)'
+    width: 220
+    // borderRadius: 10
   },
   header: {
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)'
+    paddingHorizontal: 22,
+    paddingVertical: 22,
+    marginTop: 6
   },
   logo: {},
   appTitle: {
@@ -116,19 +115,24 @@ const styles = StyleSheet.create({
   navButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 8
   },
   navButtonActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    // backgroundColor: Colors.background,
     borderLeftWidth: 3,
     borderLeftColor: Colors.tint
+    // borderRightWidth: 2,
+    // borderRightColor: Colors.backgroundDark,
+    // borderTopRightRadius: 10,
+    // borderBottomRightRadius: 10
   },
   navIconContainer: {
     width: 20,
     alignItems: 'center',
-    marginRight: 14
+    marginRight: 16,
+    marginLeft: 8
   },
   navText: {
     fontSize: 15,

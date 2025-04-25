@@ -138,130 +138,111 @@ export default function StepForm({
   })
 
   return (
-    <View style={styles.overlay}>
-      <View style={styles.modalOverlay}>
-        <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }, style]}>
-          <StatusBar barStyle='light-content' />
+    // Use SafeAreaView as the root, styled to fill the screen
+    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }, style]}>
+      <StatusBar barStyle='light-content' />
 
-          {/* Header with progress bar and title */}
-          <View style={[styles.header, { borderBottomColor: 'rgba(255, 255, 255, 0.1)' }, headerStyle]}>
-            {/* Progress indicator */}
-            <View style={styles.progressContainer}>
-              {/* Track (Background line) */}
-              <View style={[styles.progressTrack, { backgroundColor: themeColors.background }]} />
+      {/* Header with progress bar and title */}
+      <View style={[styles.header, { borderBottomColor: 'rgba(255, 255, 255, 0.1)' }, headerStyle]}>
+        {/* Progress indicator */}
+        <View style={styles.progressContainer}>
+          {/* Track (Background line) */}
+          <View style={[styles.progressTrack, { backgroundColor: themeColors.background }]} />
 
-              {/* Progress fill */}
-              <Animated.View
-                style={[styles.progressFill, { width: progressBarWidth, backgroundColor: themeColors.tint }]}
-              />
+          {/* Progress fill */}
+          <Animated.View
+            style={[styles.progressFill, { width: progressBarWidth, backgroundColor: themeColors.tint }]}
+          />
 
-              {/* Step circles */}
-              <View style={styles.stepsContainer}>
-                {steps.map((_, index) => (
-                  <View
-                    key={`step-${index}`}
-                    style={[
-                      styles.stepCircle,
-                      index <= currentStep && { borderColor: themeColors.tint },
-                      index < currentStep && styles.completedStepCircle,
-                      index === currentStep && styles.activeStepCircle,
-                      index === currentStep && { backgroundColor: themeColors.tint }
-                    ]}
-                  >
-                    {index < currentStep && <Text style={styles.checkmark}>✓</Text>}
-                  </View>
-                ))}
+          {/* Step circles */}
+          <View style={styles.stepsContainer}>
+            {steps.map((_, index) => (
+              <View
+                key={`step-${index}`}
+                style={[
+                  styles.stepCircle,
+                  index <= currentStep && { borderColor: themeColors.tint },
+                  index < currentStep && styles.completedStepCircle,
+                  index === currentStep && styles.activeStepCircle,
+                  index === currentStep && { backgroundColor: themeColors.tint }
+                ]}
+              >
+                {index < currentStep && <Text style={styles.checkmark}>✓</Text>}
               </View>
-            </View>
-
-            {currentStepTitle && (
-              <Text preset={titlePreset} style={styles.stepTitle}>
-                {currentStepTitle}
-              </Text>
-            )}
-
-            <Text style={[styles.stepText, { fontSize: stepTextSize, color: themeColors.text }]}>
-              Step {`${currentStep + 1}`} of {`${totalSteps}`}
-            </Text>
+            ))}
           </View>
+        </View>
 
-          {/* Main content area */}
-          <View style={[styles.contentContainer, contentContainerStyle]}>
-            <Fragment>{currentStepContent}</Fragment>
-          </View>
+        {currentStepTitle && (
+          <Text preset={titlePreset} style={styles.stepTitle}>
+            {currentStepTitle}
+          </Text>
+        )}
 
-          {/* Footer with navigation buttons */}
-          <View style={[styles.footer, { borderTopColor: 'rgba(255, 255, 255, 0.1)' }, footerStyle]}>
-            <View style={styles.buttonContainer}>
-              {!hidePreviousButton && !isFirstStep && (
-                <Button
-                  title={previousButtonText}
-                  variant={previousButtonVariant}
-                  disabled={disablePreviousButton}
-                  onPress={handlePrevious}
-                  style={styles.button}
-                  leftIcon={
-                    <View style={styles.buttonIconContainer}>
-                      <Text style={styles.buttonNavIcon}>←</Text>
-                    </View>
-                  }
-                />
-              )}
-
-              {!hideNextButton && (
-                <Button
-                  title={isLastStep ? completeButtonText : nextButtonText}
-                  variant={isLastStep ? completeButtonVariant : nextButtonVariant}
-                  disabled={disableNextButton}
-                  onPress={handleNext}
-                  style={[styles.button, !hidePreviousButton && !isFirstStep ? styles.buttonRight : styles.buttonFull]}
-                  rightIcon={
-                    !isLastStep ? (
-                      <View style={styles.buttonIconContainer}>
-                        <Text style={styles.buttonNavIcon}>→</Text>
-                      </View>
-                    ) : undefined
-                  }
-                />
-              )}
-            </View>
-          </View>
-        </SafeAreaView>
+        <Text style={[styles.stepText, { fontSize: stepTextSize, color: themeColors.text }]}>
+          Step {`${currentStep + 1}`} of {`${totalSteps}`}
+        </Text>
       </View>
-    </View>
+
+      {/* Main content area */}
+      <View style={[styles.contentContainer, contentContainerStyle]}>
+        <Fragment>{currentStepContent}</Fragment>
+      </View>
+
+      {/* Footer with navigation buttons */}
+      <View style={[styles.footer, { borderTopColor: 'rgba(255, 255, 255, 0.1)' }, footerStyle]}>
+        <View style={styles.buttonContainer}>
+          {!hidePreviousButton && !isFirstStep && (
+            <Button
+              title={previousButtonText}
+              variant={previousButtonVariant}
+              disabled={disablePreviousButton}
+              onPress={handlePrevious}
+              style={styles.button}
+              leftIcon={
+                <View style={styles.buttonIconContainer}>
+                  <Text style={styles.buttonNavIcon}>←</Text>
+                </View>
+              }
+            />
+          )}
+
+          {!hideNextButton && (
+            <Button
+              title={isLastStep ? completeButtonText : nextButtonText}
+              variant={isLastStep ? completeButtonVariant : nextButtonVariant}
+              disabled={disableNextButton}
+              onPress={handleNext}
+              style={[styles.button, !hidePreviousButton && !isFirstStep ? styles.buttonRight : styles.buttonFull]}
+              rightIcon={
+                !isLastStep ? (
+                  <View style={styles.buttonIconContainer}>
+                    <Text style={styles.buttonNavIcon}>→</Text>
+                  </View>
+                ) : undefined
+              }
+            />
+          )}
+        </View>
+      </View>
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
-    zIndex: 999,
-    elevation: 999
-  },
-  modalOverlay: {
-    ...StyleSheet.absoluteFillObject, // Fill the overlay
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    flex: 1,
-    justifyContent: 'center', // Center the modal vertically
-    alignItems: 'center' // Center the modal horizontally
-  },
   container: {
-    width: '90%', // Use percentage width for better fit on various screens
-    maxWidth: 600,
-    maxHeight: '90%',
-    borderRadius: 15,
+    flex: 1, // Make the container fill its parent vertically
+    justifyContent: 'space-between',
+    width: '100%', // Use percentage width for better fit on various screens
+    height: '100%', // Use percentage height for better fit on various screens
+    backgroundColor: 'white',
+    borderRadius: 0,
     overflow: 'hidden', // Ensures children adhere to border radius
-    elevation: 5, // Android shadow
+    elevation: 0, // Android shadow
     shadowColor: '#000', // iOS shadow
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
     flexDirection: 'column' // Explicitly column layout
     // Padding is applied to inner elements (header, content, footer)
   },
@@ -339,7 +320,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: horizontalPadding, // Use dynamic padding
-    paddingTop: verticalPadding / 2, // Less padding at the top
+    paddingTop: verticalPadding, // Less padding at the top
     paddingBottom: verticalPadding, // Standard vertical padding
     borderTopWidth: 1
   },

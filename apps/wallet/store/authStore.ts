@@ -157,4 +157,3 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 // Initialize auth state when the store is created/imported
 // Note: This runs when the app loads. Ensure this is the desired behavior.
 // Consider calling initializeAuth explicitly in your root layout component instead.
-// useAuthStore.getState().initializeAuth();

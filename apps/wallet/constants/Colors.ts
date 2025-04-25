@@ -11,9 +11,10 @@ export const Colors = {
   error: '#ff5252',
   success: '#4caf50',
   text: '#ECEDEE',
-  background: '#2B2B32',
-  backgroundDark: '#202026',
-  tint: '#7A8EE7',
+  background: '#23242A',
+  backgroundDark: '#1C1D21',
+  backgroundDarker: '#191A1D',
+  tint: '#7A9FE7',
   icon: '#9BA1A6',
   tabIconDefault: '#9BA1A6',
   tabIconSelected: '#fff'

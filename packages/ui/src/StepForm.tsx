@@ -97,8 +97,12 @@ export default function StepForm({
   const isLastStep = currentStep === totalSteps - 1
   const isFirstStep = currentStep === 0
 
-  // Progress calculation
-  const progress = totalSteps > 0 ? (currentStep + 1) / totalSteps : 0
+  // Calculate progress percentage for progress bar
+  // For three steps: step 0 = 0, step 1 = 0.5, step 2 = 1.0
+  let progress = 0
+  if (totalSteps > 1) {
+    progress = Math.min(currentStep / (totalSteps - 1), 1)
+  }
 
   // Animate progress bar on step change
   useEffect(() => {
@@ -131,7 +135,7 @@ export default function StepForm({
   const currentStepContent = steps[currentStep]?.content
   const currentStepTitle = steps[currentStep]?.title
 
-  // Progress bar animation
+  // Progress bar animation - calibrated to match step positions
   const progressBarWidth = progressAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0%', '100%']
@@ -147,7 +151,7 @@ export default function StepForm({
         {/* Progress indicator */}
         <View style={styles.progressContainer}>
           {/* Track (Background line) */}
-          <View style={[styles.progressTrack, { backgroundColor: themeColors.background }]} />
+          <View style={styles.progressTrack} />
 
           {/* Progress fill */}
           <Animated.View
@@ -156,20 +160,22 @@ export default function StepForm({
 
           {/* Step circles */}
           <View style={styles.stepsContainer}>
-            {steps.map((_, index) => (
-              <View
-                key={`step-${index}`}
-                style={[
-                  styles.stepCircle,
-                  index <= currentStep && { borderColor: themeColors.tint },
-                  index < currentStep && styles.completedStepCircle,
-                  index === currentStep && styles.activeStepCircle,
-                  index === currentStep && { backgroundColor: themeColors.tint }
-                ]}
-              >
-                {index < currentStep && <Text style={styles.checkmark}>✓</Text>}
-              </View>
-            ))}
+            {steps.map((_, index) => {
+              const isActive = index === currentStep
+              const isCompleted = index < currentStep
+
+              return (
+                <View
+                  key={`step-${index}`}
+                  style={[
+                    styles.stepCircle,
+                    { backgroundColor: isActive || isCompleted ? themeColors.tint : 'rgba(200, 200, 200, 1)' }
+                  ]}
+                >
+                  {isCompleted && <Text style={styles.checkmark}>✓</Text>}
+                </View>
+              )
+            })}
           </View>
         </View>
 
@@ -253,7 +259,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1
   },
   progressContainer: {
-    height: 20, // Total height for circles
+    height: 36, // Total height for circles
     marginBottom: 20,
     position: 'relative',
     justifyContent: 'center'
@@ -261,45 +267,51 @@ const styles = StyleSheet.create({
   progressTrack: {
     position: 'absolute',
     height: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    left: 0,
-    right: 0,
+    backgroundColor: 'rgba(200, 200, 200, 0.5)',
+    left: 24,
+    right: 24,
     top: '50%',
-    marginTop: -1
+    marginTop: -1,
+    zIndex: 1
   },
   progressFill: {
     position: 'absolute',
     height: 2,
-    left: 0,
+    left: 24,
     top: '50%',
-    marginTop: -1
+    marginTop: -1,
+    zIndex: 5
   },
   stepsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     position: 'relative',
-    zIndex: 2
+    zIndex: 2,
+    paddingHorizontal: 0,
+    width: '100%'
   },
   stepCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 0,
+    backgroundColor: 'rgba(200, 200, 200, 0.5)',
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+    overflow: 'hidden',
+    zIndex: 10
   },
   activeStepCircle: {
-    borderWidth: 0
+    transform: [{ scale: 1.1 }]
   },
   completedStepCircle: {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)'
+    backgroundColor: 'transparent' // Color will be applied dynamically
   },
   checkmark: {
     color: '#fff',
     fontSize: 14,
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    textAlign: 'center'
   },
   stepTitle: {
     marginBottom: 8,

@@ -40,30 +40,43 @@ function InitialLayout() {
     const inAllowedStandalone = allowedStandaloneRoutes.includes(currentSegment)
 
     if (isAuthenticated) {
-      // Ensure user object is loaded before checking wallets
+      // Ensure user object is loaded before checking verification or wallets
       if (user) {
-        const hasWallets = user.wallets && user.wallets.length > 0
-
-        if (hasWallets) {
-          // User has wallets. Should be in tabs or allowed standalone.
-          // Redirect if they are NOT in tabs AND NOT in an allowed standalone route.
-          if (!inAuthGroup && !inAllowedStandalone) {
-            console.log(
-              `[Layout] Redirecting auth user with wallets from ${currentSegment} to (tabs)`
-            )
-            router.replace('/(tabs)/' as any)
-          } else {
-            console.log(`[Layout] Auth user with wallets in allowed route: ${currentSegment}`)
-          }
-        } else {
-          // User has no wallets, should be in onboarding
+        // Check email verification status FIRST
+        if (!user.emailVerified) {
+          // User's email is not verified, must go to onboarding
           if (!inOnboarding) {
             console.log(
-              `[Layout] Redirecting auth user without wallets from ${currentSegment} to onboarding`
+              `[Layout] Redirecting unverified user from ${currentSegment} to onboarding`
             )
             router.replace('/onboarding')
           } else {
-            console.log(`[Layout] Auth user without wallets in onboarding: ${currentSegment}`)
+            console.log(`[Layout] Unverified user already in onboarding: ${currentSegment}`)
+          }
+        } else {
+          // Email is verified, proceed with wallet check
+          const hasWallets = user.wallets && user.wallets.length > 0
+
+          if (hasWallets) {
+            // Verified user with wallets. Should be in tabs or allowed standalone.
+            if (!inAuthGroup && !inAllowedStandalone) {
+              console.log(
+                `[Layout] Redirecting verified user with wallets from ${currentSegment} to (tabs)`
+              )
+              router.replace('/(tabs)/' as any)
+            } else {
+              console.log(`[Layout] Verified user with wallets in allowed route: ${currentSegment}`)
+            }
+          } else {
+            // Verified user has no wallets, should be in onboarding
+            if (!inOnboarding) {
+              console.log(
+                `[Layout] Redirecting verified user without wallets from ${currentSegment} to onboarding`
+              )
+              router.replace('/onboarding')
+            } else {
+              console.log(`[Layout] Verified user without wallets in onboarding: ${currentSegment}`)
+            }
           }
         }
       } else {

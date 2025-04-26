@@ -11,7 +11,7 @@ import (
 
 // CustomClaims struct including standard claims and userID
 type CustomClaims struct {
-	UserID uint `json:"userID"`
+	UserID uint `json:"user_id"`
 	jwt.RegisteredClaims
 }
 

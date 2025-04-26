@@ -14,6 +14,7 @@ export interface User {
   email: string
   first_name?: string // Make optional if not always present
   last_name?: string // Make optional if not always present
+  emailVerified: boolean // Add email verification status
   wallets?: Wallet[] // Add wallets array (optional because preload might fail)
   redeem_wallet?: Wallet
   // Add other fields as needed
@@ -40,6 +41,16 @@ interface CreateWalletResponse {
 // Type for API error responses
 interface ApiErrorResponse {
   error: string
+}
+
+// Type for email verification request body
+interface VerifyEmailRequest {
+  verification_code: string // Match the backend Go struct tag
+}
+
+// Type for email verification success response
+interface VerifyEmailResponse {
+  message: string
 }
 
 /**
@@ -197,7 +208,7 @@ export async function createWallet(token: string | null): Promise<CreateWalletRe
     throw new Error('Authentication token is required to create a wallet.')
   }
 
-  const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/wallets/create`, {
+  const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/wallet/create`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -223,7 +234,6 @@ export async function createWallet(token: string | null): Promise<CreateWalletRe
   return data as CreateWalletResponse
 }
 
-// === Get User Profile ===
 /**
  * Fetches the current authenticated user's profile.
  * @param token - The authentication token.
@@ -254,6 +264,49 @@ export async function getUserProfile(token: string | null): Promise<User> {
 
   const user: User = await response.json()
   return user
+}
+
+/**
+ * Makes a POST request to the email verification endpoint.
+ * Requires authentication.
+ * @param token - The authentication token.
+ * @param code - The 6-digit verification code.
+ * @returns A promise that resolves with the success message.
+ * @throws An error if the request fails or verification is unsuccessful.
+ */
+export async function verifyEmail(token: string | null, code: string): Promise<VerifyEmailResponse> {
+  if (!process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL) {
+    throw new Error('API URL is not configured.')
+  }
+
+  if (!token) {
+    throw new Error('Authentication token is required for email verification.')
+  }
+
+  const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/auth/verify-email`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ verification_code: code } as VerifyEmailRequest)
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    const errorData = data as ApiErrorResponse
+    const errorMessage = errorData?.error || `Email verification failed with status: ${response.status}`
+    console.error('Verify Email API Error:', errorMessage, 'Status:', response.status)
+    const error = new Error(errorMessage) as any
+    error.response = {
+      data: errorData,
+      status: response.status
+    }
+    throw error
+  }
+
+  return data as VerifyEmailResponse
 }
 
 // Add other API functions here as needed (e.g., getUserProfile, etc.)

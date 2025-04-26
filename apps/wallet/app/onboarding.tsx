@@ -1,12 +1,13 @@
 import React, { useState } from 'react'
 import { View, StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable } from 'react-native'
-import { Text, StepForm } from '@team556/ui'
-import { createWallet } from '@/services/api'
+import { Text, StepForm, Input } from '@team556/ui'
+import { createWallet, verifyEmail } from '@/services/api'
 import { router } from 'expo-router'
 import * as Clipboard from 'expo-clipboard'
 import { Ionicons } from '@expo/vector-icons'
 import { useAuthStore } from '@/store/authStore'
 import { Colors } from '@/constants/Colors'
+import { genericStyles } from '@/constants/GenericStyles'
 
 export default function OnboardingScreen() {
   const [currentStep, setCurrentStep] = useState(0)
@@ -15,8 +16,48 @@ export default function OnboardingScreen() {
   const [error, setError] = useState<string | null>(null)
   const [confirmedSaved, setConfirmedSaved] = useState(false)
   const [showMnemonic, setShowMnemonic] = useState(false)
+
+  // Add state for email verification
+  const [verificationCode, setVerificationCode] = useState('')
+  const [isVerifying, setIsVerifying] = useState(false)
+  const [verificationError, setVerificationError] = useState<string | null>(null)
+
   const token = useAuthStore(state => state.token)
   const fetchAndUpdateUser = useAuthStore(state => state.fetchAndUpdateUser)
+
+  // Handler for submitting the verification code
+  const handleVerifyEmail = async () => {
+    if (!token) {
+      setVerificationError('Authentication required. Please login again.')
+      return
+    }
+    if (!verificationCode || verificationCode.length !== 6) {
+      setVerificationError('Please enter a valid 6-digit code.')
+      return
+    }
+
+    setIsVerifying(true)
+    setVerificationError(null)
+
+    try {
+      const response = await verifyEmail(token, verificationCode)
+      console.log('Verification successful:', response.message)
+
+      // Refresh user state to confirm verification status
+      await fetchAndUpdateUser()
+
+      // Proceed to the next step (wallet creation)
+      setCurrentStep(prev => prev + 1)
+    } catch (err: any) {
+      console.error('Email verification failed:', err)
+      const errorMessage =
+        err?.response?.data?.error || err.message || 'Failed to verify email. Please check the code and try again.'
+      setVerificationError(errorMessage)
+      Alert.alert('Verification Failed', errorMessage)
+    } finally {
+      setIsVerifying(false)
+    }
+  }
 
   const handleCreateWallet = async () => {
     setIsLoading(true)
@@ -66,6 +107,24 @@ export default function OnboardingScreen() {
   const toggleConfirmation = () => setConfirmedSaved(!confirmedSaved)
 
   const steps = [
+    {
+      title: 'Verify Email',
+      content: (
+        <View style={styles.stepContentContainer}>
+          <Text style={styles.description}>Please enter the 6-digit verification code sent to your email.</Text>
+          <Input
+            placeholder='Verification Code'
+            value={verificationCode}
+            onChangeText={setVerificationCode}
+            keyboardType='numeric'
+            maxLength={6}
+            style={styles.input}
+          />
+          {isVerifying && <ActivityIndicator size='large' color={Colors.tint} style={styles.loader} />}
+          {verificationError && !isVerifying && <Text style={styles.errorText}>{verificationError}</Text>}
+        </View>
+      )
+    },
     {
       title: 'Create Wallet',
       content: (
@@ -122,12 +181,29 @@ export default function OnboardingScreen() {
       <StepForm
         steps={steps}
         currentStep={currentStep}
-        onNextStep={currentStep === 0 ? handleCreateWallet : undefined} // Trigger create on step 0 'Next'
-        onComplete={handleComplete} // Use the combined handler for completion
-        nextButtonText={currentStep === 0 ? (isLoading ? 'Creating...' : 'Create Wallet') : 'Next'} // Dynamic text for step 0
-        completeButtonText={currentStep === 0 ? 'Continue' : 'Finish'}
-        hidePreviousButton={true} // Hide 'Back' on step 1
-        disableNextButton={isLoading || (currentStep === 1 && !confirmedSaved)} // Disable during load OR if not confirmed on step 2
+        // Call verify for step 0, create for step 1
+        onNextStep={currentStep === 0 ? handleVerifyEmail : currentStep === 1 ? handleCreateWallet : undefined}
+        onComplete={handleComplete} // Called on the final step
+        // Dynamic button text based on current step
+        nextButtonText={
+          currentStep === 0
+            ? isVerifying
+              ? 'Verifying...'
+              : 'Verify Email'
+            : currentStep === 1
+              ? isLoading
+                ? 'Creating...'
+                : 'Create Wallet'
+              : 'Next' // Default 'Next' for the last step (though 'Finish' is usually shown)
+        }
+        completeButtonText={'Finish'} // Show 'Finish' only on the last step (step 2)
+        hidePreviousButton={true} // Keep hidden for step 1 and 2
+        // Disable logic based on current step and loading states
+        disableNextButton={
+          (currentStep === 0 && (isVerifying || verificationCode.length !== 6)) ||
+          (currentStep === 1 && isLoading) ||
+          (currentStep === 2 && !confirmedSaved)
+        }
       />
     </KeyboardAvoidingView>
   )
@@ -152,7 +228,7 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 16,
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 20,
     lineHeight: 22
   },
   warning: {
@@ -170,6 +246,10 @@ const styles = StyleSheet.create({
     marginVertical: 15,
     minHeight: 20,
     marginTop: 40
+  },
+  input: {
+    ...genericStyles.input,
+    width: '80%'
   },
   mnemonicCard: {
     marginTop: 20,

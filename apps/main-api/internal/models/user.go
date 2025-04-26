@@ -20,5 +20,9 @@ type User struct {
 	UserCode     string `json:"user_code" gorm:"uniqueIndex;size:8"` // Unique code for the user
 	RedeemWallet string `json:"redeem_wallet"`
 
+	EmailVerified           bool           `gorm:"default:false" json:"emailVerified"`
+	EmailVerificationCode   *string        `gorm:"index" json:"-"` // Nullable, index for lookup
+	EmailVerificationExpiresAt *time.Time    `json:"-"`
+
 	Wallets []Wallet `json:"wallets,omitempty"` // One-to-many relationship
 }

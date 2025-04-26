@@ -118,23 +118,46 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true, error: null })
     try {
       // Call the signupUser function from the API service
-      const { token, user } = await signupUser(credentials)
+      console.log('Calling signupUser API...');
+      const responseData = await signupUser(credentials); // Get the raw response first
+      console.log('Signup API response received:', JSON.stringify(responseData, null, 2)); // Log the raw response
+
+      // Now destructure
+      const { token, user } = responseData;
+      console.log('Extracted Token:', token); // Log the token
+      console.log('Extracted User:', JSON.stringify(user, null, 2)); // Log the user object
+
+      // Check if token or user are undefined/null before proceeding
+      if (!token || !user) {
+         console.error('Signup Error: Token or User object is missing/invalid in API response.');
+         // Set specific error before throwing
+         set({ token: null, user: null, isAuthenticated: false, isLoading: false, error: 'Signup failed: Invalid response from server.' });
+         await SecureStoreUtils.deleteToken();
+         throw new Error('Signup failed: Invalid response from server.');
+      }
+
       // Automatically log in the user after successful signup
-      await SecureStoreUtils.saveToken(token)
-      set({ token, user, isAuthenticated: true, isLoading: false, error: null })
+      console.log('Attempting to save token to SecureStore...');
+      await SecureStoreUtils.saveToken(token);
+      console.log('Token saved to SecureStore.');
+
+      console.log('Attempting to update auth store state...');
+      set({ token, user, isAuthenticated: true, isLoading: false, error: null });
+      console.log('Auth store state updated successfully after signup.');
 
       // === REMOVED Navigation Logic ===
       // Navigation is now handled in _layout.tsx based on auth state and user wallets
       // ================================
     } catch (error: any) {
-      console.error('Signup failed:', error)
-      const errorMessage = error.response?.data?.error || error.message || 'Signup failed'
-      // Ensure state is reset correctly on failure
-      set({ token: null, user: null, isAuthenticated: false, isLoading: false, error: errorMessage })
-      // Don't save token on signup failure
-      await SecureStoreUtils.deleteToken()
+      // Check if the error was already handled by the token/user check above
+      if (!get().error) {
+        console.error('Signup failed inside authStore catch block:', error);
+        const errorMessage = error.response?.data?.error || error.message || 'Signup failed';
+        set({ token: null, user: null, isAuthenticated: false, isLoading: false, error: errorMessage });
+        await SecureStoreUtils.deleteToken();
+      }
       // Re-throw error to be caught by the component
-      throw error
+      throw error;
     }
   },
 

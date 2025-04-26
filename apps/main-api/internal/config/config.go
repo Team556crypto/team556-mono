@@ -13,6 +13,7 @@ type Config struct {
 	DatabaseURL  string
 	JWTSecret    string
 	SolanaAPIURL string
+	ResendAPIKey string
 }
 
 // LoadConfig loads environment variables from the .env file at the project root.
@@ -35,6 +36,7 @@ func LoadConfig() (*Config, error) {
 		DatabaseURL:  os.Getenv("MAIN_API__DB_DIRECT"),
 		JWTSecret:    os.Getenv("MAIN_API__JWT_SECRET"),
 		SolanaAPIURL: os.Getenv("MAIN_API__SOLANA_API_URL"),
+		ResendAPIKey: os.Getenv("GLOBAL__RESEND_API_KEY"),
 	}
 
 	if cfg.DatabaseURL == "" {

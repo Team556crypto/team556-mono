@@ -12,9 +12,10 @@ export interface Wallet {
 export interface User {
   id: number
   email: string
-  first_name?: string // Make optional if not always present
-  last_name?: string // Make optional if not always present
-  emailVerified: boolean // Add email verification status
+  first_name?: string
+  last_name?: string
+  email_verified: boolean // Correct field name from backend
+  has_redeemed_presale: boolean // Field indicating if user redeemed a presale code
   wallets?: Wallet[] // Add wallets array (optional because preload might fail)
   redeem_wallet?: Wallet
   // Add other fields as needed
@@ -50,6 +51,31 @@ interface VerifyEmailRequest {
 
 // Type for email verification success response
 interface VerifyEmailResponse {
+  message: string
+}
+
+// Type for resend verification email success response
+interface ResendVerificationResponse {
+  message: string
+}
+
+// Type for check presale code response
+interface CheckPresaleCodeResponse {
+  isValid: boolean
+  redeemed: boolean
+  type?: number // Present if isValid is true
+  message: string
+}
+
+// Type for redeem presale code request
+interface RedeemPresaleCodeRequest {
+  code: string
+  walletAddress?: string
+}
+
+// Type for redeem presale code response
+interface RedeemPresaleCodeResponse {
+  success: boolean
   message: string
 }
 
@@ -278,10 +304,14 @@ export async function verifyEmail(token: string | null, code: string): Promise<V
   if (!process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL) {
     throw new Error('API URL is not configured.')
   }
-
   if (!token) {
     throw new Error('Authentication token is required for email verification.')
   }
+  if (!code || code.length !== 6) {
+    throw new Error('A valid 6-digit verification code is required.')
+  }
+
+  const body: VerifyEmailRequest = { verification_code: code }
 
   const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/auth/verify-email`, {
     method: 'POST',
@@ -289,7 +319,7 @@ export async function verifyEmail(token: string | null, code: string): Promise<V
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`
     },
-    body: JSON.stringify({ verification_code: code } as VerifyEmailRequest)
+    body: JSON.stringify(body)
   })
 
   const data = await response.json()
@@ -297,7 +327,7 @@ export async function verifyEmail(token: string | null, code: string): Promise<V
   if (!response.ok) {
     const errorData = data as ApiErrorResponse
     const errorMessage = errorData?.error || `Email verification failed with status: ${response.status}`
-    console.error('Verify Email API Error:', errorMessage, 'Status:', response.status)
+    console.error('Email Verification API Error:', errorMessage, 'Status:', response.status)
     const error = new Error(errorMessage) as any
     error.response = {
       data: errorData,
@@ -307,6 +337,145 @@ export async function verifyEmail(token: string | null, code: string): Promise<V
   }
 
   return data as VerifyEmailResponse
+}
+
+/**
+ * Makes a POST request to resend the verification email.
+ * Requires authentication.
+ * @param token - The authentication token.
+ * @returns A promise that resolves with the success message.
+ * @throws An error if the request fails.
+ */
+export async function resendVerificationEmail(token: string | null): Promise<ResendVerificationResponse> {
+  if (!process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL) {
+    throw new Error('API URL is not configured.')
+  }
+  if (!token) {
+    throw new Error('Authentication token is required to resend verification email.')
+  }
+
+  const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/auth/resend-verification`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json', // Keep content-type even without body
+      Authorization: `Bearer ${token}`
+    }
+    // No body needed for this request
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    const errorData = data as ApiErrorResponse // Assume error structure is consistent
+    const errorMessage = errorData?.error || `Resend verification email failed with status: ${response.status}`
+    console.error('Resend Verification API Error:', errorMessage, 'Status:', response.status)
+    const error = new Error(errorMessage) as any
+    error.response = {
+      data: errorData,
+      status: response.status
+    }
+    throw error
+  }
+
+  return data as ResendVerificationResponse
+}
+
+// ==========================
+// Presale Code API Calls
+// ==========================
+
+/**
+ * Checks the validity and status of a presale code.
+ */
+export const checkPresaleCode = async (code: string, token: string | null): Promise<CheckPresaleCodeResponse> => {
+  if (!process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL) {
+    throw new Error('API URL is not configured.')
+  }
+
+  if (!token) {
+    // Return an error or throw if the token is missing, as it's required for this endpoint
+    // This check might be redundant if the calling code ensures the token exists
+    return { isValid: false, redeemed: false, message: 'Authentication token is missing.' }
+  }
+
+  try {
+    const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/wallet/check-presale-code`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}` // Add the Authorization header
+      },
+      body: JSON.stringify({ code })
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      const errorData = data as ApiErrorResponse
+      const errorMessage = errorData?.error || `Check presale code failed with status: ${response.status}`
+      console.error('Check Presale Code API Error:', errorMessage, 'Status:', response.status)
+      const error = new Error(errorMessage) as any
+      error.response = {
+        data: errorData,
+        status: response.status
+      }
+      throw error
+    }
+
+    return data as CheckPresaleCodeResponse
+  } catch (error: any) {
+    console.error('Error checking presale code:', error.response?.data || error.message)
+    const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to check code'
+    return { isValid: false, redeemed: false, message: errorMessage }
+  }
+}
+
+/**
+ * Redeems a presale code.
+ */
+export const redeemPresaleCode = async (
+  data: RedeemPresaleCodeRequest,
+  token: string | null
+): Promise<RedeemPresaleCodeResponse> => {
+  if (!process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL) {
+    throw new Error('API URL is not configured.')
+  }
+
+  if (!token) {
+    // Return an error or throw if the token is missing
+    return { success: false, message: 'Authentication token is missing.' }
+  }
+
+  try {
+    const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/wallet/redeem-presale-code`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}` // Add the Authorization header
+      },
+      body: JSON.stringify(data)
+    })
+
+    const responseJson = await response.json()
+
+    if (!response.ok) {
+      const errorData = responseJson as ApiErrorResponse
+      const errorMessage = errorData?.error || `Redeem presale code failed with status: ${response.status}`
+      console.error('Redeem Presale Code API Error:', errorMessage, 'Status:', response.status)
+      const error = new Error(errorMessage) as any
+      error.response = {
+        data: errorData,
+        status: response.status
+      }
+      throw error
+    }
+
+    return responseJson as RedeemPresaleCodeResponse
+  } catch (error: any) {
+    console.error('Error redeeming presale code:', error.response?.data || error.message)
+    const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to redeem code'
+    return { success: false, message: errorMessage }
+  }
 }
 
 // Add other API functions here as needed (e.g., getUserProfile, etc.)

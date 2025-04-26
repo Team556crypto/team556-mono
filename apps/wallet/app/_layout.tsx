@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { DarkTheme, ThemeProvider } from '@react-navigation/native'
 import { useFonts } from 'expo-font'
 import { Stack, useRouter, useSegments } from 'expo-router'
@@ -11,6 +11,8 @@ import { setAppTheme } from '@team556/ui'
 import { Colors } from '../constants/Colors'
 import { useAuthStore } from '@/store/authStore'
 import Toast from '@/components/Toast'
+import { Drawer } from '@repo/ui'
+import { useDrawerStore } from '@/store/drawerStore'
 
 // Configure shared UI components to use the app's colors
 setAppTheme(Colors)
@@ -43,7 +45,7 @@ function InitialLayout() {
       // Ensure user object is loaded before checking verification or wallets
       if (user) {
         // Check email verification status FIRST
-        if (!user.emailVerified) {
+        if (!user.email_verified) {
           // User's email is not verified, must go to onboarding
           if (!inOnboarding) {
             console.log(
@@ -124,6 +126,9 @@ export default function RootLayout() {
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf')
   })
 
+  // Drawer state - Now managed by Zustand
+  const { isVisible: isDrawerVisible, content: drawerContent, maxHeight: drawerMaxHeight, minHeight: drawerMinHeight, closeDrawer } = useDrawerStore()
+
   useEffect(() => {
     if (error) throw error // Handle font loading error
   }, [error])
@@ -150,6 +155,16 @@ export default function RootLayout() {
       <ThemeProvider value={DarkTheme}>
         <InitialLayout />
         <Toast />
+        {/* Drawer positioned at the root level, state from Zustand */}
+        <Drawer
+          isVisible={isDrawerVisible}
+          onClose={closeDrawer} // closeDrawer action from Zustand store
+          maxHeight={drawerMaxHeight}
+          minHeight={drawerMinHeight}
+          colors={Colors} // Pass colors if your Drawer uses them
+        >
+          {drawerContent}
+        </Drawer>
         <StatusBar style='light' />
       </ThemeProvider>
     </GestureHandlerRootView>

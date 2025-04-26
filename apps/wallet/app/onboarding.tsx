@@ -1,7 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { View, StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable } from 'react-native'
 import { Text, StepForm, Input } from '@team556/ui'
-import { createWallet, verifyEmail } from '@/services/api'
+import { createWallet, verifyEmail, resendVerificationEmail } from '@/services/api'
 import { router } from 'expo-router'
 import * as Clipboard from 'expo-clipboard'
 import { Ionicons } from '@expo/vector-icons'
@@ -22,11 +22,32 @@ export default function OnboardingScreen() {
   const [isVerifying, setIsVerifying] = useState(false)
   const [verificationError, setVerificationError] = useState<string | null>(null)
 
+  // Add state for resending email
+  const [isResending, setIsResending] = useState(false)
+  const [resendError, setResendError] = useState<string | null>(null)
+  const [resendSuccessMessage, setResendSuccessMessage] = useState<string | null>(null)
+  const [resendCooldown, setResendCooldown] = useState(0)
+
   const token = useAuthStore(state => state.token)
   const fetchAndUpdateUser = useAuthStore(state => state.fetchAndUpdateUser)
 
+  // Timer effect for cooldown
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null
+    if (resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown((prev) => prev - 1)
+      }, 1000)
+    } else if (timer) {
+      clearInterval(timer)
+    }
+    return () => {
+      if (timer) clearInterval(timer)
+    }
+  }, [resendCooldown])
+
   // Handler for submitting the verification code
-  const handleVerifyEmail = async () => {
+  const handleVerifyEmail = useCallback(async () => {
     if (!token) {
       setVerificationError('Authentication required. Please login again.')
       return
@@ -57,9 +78,32 @@ export default function OnboardingScreen() {
     } finally {
       setIsVerifying(false)
     }
-  }
+  }, [verificationCode, token, fetchAndUpdateUser])
 
-  const handleCreateWallet = async () => {
+  // Handler for resending verification email
+  const handleResendVerification = useCallback(async () => {
+    setIsResending(true)
+    setResendError(null)
+    setResendSuccessMessage(null)
+
+    try {
+      const response = await resendVerificationEmail(token)
+      if (response.message === 'Verification email resent successfully') {
+        setResendSuccessMessage('New verification email sent!')
+        setResendCooldown(60) // Start 60-second cooldown
+      } else {
+        setResendSuccessMessage(response.message || 'Verification status updated.')
+      }
+    } catch (err: any) {
+      console.error('Resend Verification API error:', err)
+      const errorMessage = err?.response?.data?.error || err.message || 'An unknown error occurred while resending.'
+      setResendError(errorMessage)
+    } finally {
+      setIsResending(false)
+    }
+  }, [token])
+
+  const handleCreateWallet = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     const token = useAuthStore.getState().token
@@ -81,16 +125,16 @@ export default function OnboardingScreen() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [token])
 
-  const handleCopyToClipboard = async () => {
+  const handleCopyToClipboard = useCallback(async () => {
     if (mnemonic) {
       await Clipboard.setStringAsync(mnemonic)
       Alert.alert('Copied!', 'Recovery phrase copied to clipboard.')
     }
-  }
+  }, [mnemonic])
 
-  const handleComplete = async () => {
+  const handleComplete = useCallback(async () => {
     if (!confirmedSaved) {
       Alert.alert('Confirmation Required', 'Please confirm you have securely saved your recovery phrase.')
       return
@@ -102,9 +146,9 @@ export default function OnboardingScreen() {
       console.error('Error updating user before navigation:', error)
       router.replace('/(tabs)/' as any)
     }
-  }
+  }, [confirmedSaved, fetchAndUpdateUser])
 
-  const toggleConfirmation = () => setConfirmedSaved(!confirmedSaved)
+  const toggleConfirmation = useCallback(() => setConfirmedSaved(!confirmedSaved), [])
 
   const steps = [
     {
@@ -122,6 +166,21 @@ export default function OnboardingScreen() {
           />
           {isVerifying && <ActivityIndicator size='large' color={Colors.tint} style={styles.loader} />}
           {verificationError && !isVerifying && <Text style={styles.errorText}>{verificationError}</Text>}
+          <View style={styles.resendContainer}>
+            <Pressable
+              onPress={handleResendVerification}
+              style={[styles.resendButton, isResending || resendCooldown > 0 ? styles.disabledButton : {}]}
+              disabled={isResending || resendCooldown > 0}
+            >
+              <Text style={styles.resendButtonText}>
+                {isResending ? 'Sending...' : resendCooldown > 0 ? `Resend (${resendCooldown}s)` : 'Resend Email'}
+              </Text>
+            </Pressable>
+            {resendError && <Text style={[styles.errorText, styles.resendMessage]}>{resendError}</Text>}
+            {resendSuccessMessage && (
+              <Text style={[styles.successText, styles.resendMessage]}>{resendSuccessMessage}</Text>
+            )}
+          </View>
         </View>
       )
     },
@@ -297,5 +356,31 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     fontSize: 16,
     color: Colors.text
+  },
+  resendContainer: {
+    marginTop: 25,
+    alignItems: 'center'
+  },
+  resendButton: {
+    minWidth: 150,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    backgroundColor: Colors.tint,
+    alignItems: 'center'
+  },
+  resendButtonText: {
+    fontSize: 16,
+    color: '#fff'
+  },
+  disabledButton: {
+    opacity: 0.5
+  },
+  resendMessage: {
+    marginTop: 10,
+    textAlign: 'center'
+  },
+  successText: {
+    color: Colors.success
   }
 })

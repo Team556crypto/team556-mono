@@ -1,19 +1,179 @@
-import React from 'react'
-import { StyleSheet, View, TouchableOpacity, Pressable } from 'react-native'
+import React, { useState, useContext, useCallback } from 'react'
+import { StyleSheet, View, TouchableOpacity, Pressable, ActivityIndicator } from 'react-native'
 import { useRouter } from 'expo-router'
-import { Button, Text } from '@repo/ui'
-import { Colors } from '@/constants/Colors'
-import { useAuthStore } from '@/store/authStore'
-import { logoutUser } from '@/services/api'
-import { ScreenLayout } from '@/components/ScreenLayout'
+import { Button, Text, Input } from '@repo/ui'
 import { Ionicons } from '@expo/vector-icons'
 import { formatWalletAddress } from '@/utils/formatters'
 import { useWalletClipboard } from '@/hooks/useWalletClipboard'
+import { useAuthStore } from '@/store/authStore'
+import { logoutUser } from '@/services/api'
+import { ScreenLayout } from '@/components/ScreenLayout'
+import { Colors } from '@/constants/Colors'
+import { useDrawerStore } from '@/store/drawerStore'
+import { genericStyles } from '@/constants/GenericStyles'
+import { checkPresaleCode, redeemPresaleCode } from '@/services/api'
+
+interface RedeemPresaleDrawerContentProps {
+  onClose: () => void
+}
+
+const RedeemPresaleDrawerContent: React.FC<RedeemPresaleDrawerContentProps> = ({ onClose }) => {
+  const { token, fetchAndUpdateUser } = useAuthStore()
+  const [presaleCode, setPresaleCode] = useState('')
+  const [walletAddress, setWalletAddress] = useState('')
+  const [codeType, setCodeType] = useState<number | null>(null)
+  const [isWalletInputVisible, setIsWalletInputVisible] = useState(false)
+  const [canRedeem, setCanRedeem] = useState(false)
+  const [isChecking, setIsChecking] = useState(false)
+  const [isRedeeming, setIsRedeeming] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const [messageType, setMessageType] = useState<'success' | 'error' | null>(null)
+
+  const handleCheckCode = useCallback(async () => {
+    if (!presaleCode) {
+      setMessage('Please enter a presale code.')
+      setMessageType('error')
+      return
+    }
+
+    setIsChecking(true)
+    setMessage(null)
+    setMessageType(null)
+    setCanRedeem(false)
+    setIsWalletInputVisible(false)
+    setCodeType(null)
+
+    const response = await checkPresaleCode(presaleCode.toUpperCase(), token)
+
+    if (response.isValid && !response.redeemed) {
+      setMessage(response.message)
+      setMessageType('success')
+      setCanRedeem(true)
+      setCodeType(response.type ?? null)
+      if (response.type === 2) {
+        setIsWalletInputVisible(true)
+      }
+    } else {
+      setMessage(response.message)
+      setMessageType('error')
+      setCanRedeem(false)
+    }
+
+    setIsChecking(false)
+  }, [presaleCode, token])
+
+  const handleRedeemCode = useCallback(async () => {
+    if (!presaleCode || !canRedeem) return
+
+    if (codeType === 2 && !walletAddress) {
+      setMessage('Please enter the wallet address for this code type.')
+      setMessageType('error')
+      return
+    }
+
+    setIsRedeeming(true)
+    setMessage(null)
+    setMessageType(null)
+
+    const response = await redeemPresaleCode(
+      {
+        code: presaleCode.toUpperCase(),
+        walletAddress: codeType === 2 ? walletAddress : undefined
+      },
+      token
+    )
+
+    if (response.success) {
+      setMessage(response.message)
+      await fetchAndUpdateUser()
+      setMessageType('success')
+      setCanRedeem(false) // Disable further attempts in the drawer
+      // Fetch the updated user profile to reflect the change immediately
+      setTimeout(() => {
+        onClose()
+        // Optionally reset all state fields here if needed upon re-opening
+        setPresaleCode('')
+        setWalletAddress('')
+        setCodeType(null)
+        setIsWalletInputVisible(false)
+        setCanRedeem(false)
+        setMessage(null)
+        setMessageType(null)
+      }, 1500)
+    } else {
+      setMessage(response.message)
+      setMessageType('error')
+    }
+
+    setIsRedeeming(false)
+  }, [presaleCode, walletAddress, canRedeem, codeType, token, fetchAndUpdateUser, onClose])
+
+  return (
+    <View style={styles.sheetContentContainer}>
+      <Text preset='h4' style={styles.sheetTitle}>
+        Redeem Presale Code
+      </Text>
+      <View style={styles.inputContainer}>
+        <Input
+          placeholder='Enter your presale code'
+          value={presaleCode}
+          onChangeText={setPresaleCode}
+          autoCapitalize='characters'
+          style={[genericStyles.input, styles.input]}
+          leftIcon={<Ionicons name='ticket-outline' size={20} color={Colors.icon} />}
+        />
+      </View>
+      {isWalletInputVisible && (
+        <View style={styles.inputContainer}>
+          <Text preset='label'>Redeem to wallet</Text>
+          <Input
+            placeholder='Redeem Wallet'
+            value={walletAddress}
+            onChangeText={setWalletAddress}
+            style={[genericStyles.input, styles.input]}
+            leftIcon={<Ionicons name='wallet-outline' size={20} color={Colors.icon} />}
+            editable={!isRedeeming} // Disable if redeeming
+          />
+        </View>
+      )}
+      {message && (
+        <Text style={[styles.messageText, messageType === 'success' ? styles.successText : styles.errorText]}>
+          {message}
+        </Text>
+      )}
+      <View style={styles.buttonContainer}>
+        {canRedeem ? (
+          <Button
+            title='Redeem Code'
+            onPress={handleRedeemCode}
+            fullWidth
+            disabled={isRedeeming || isChecking}
+            loading={isRedeeming}
+          />
+        ) : (
+          <Button
+            title='Check Code'
+            onPress={handleCheckCode}
+            fullWidth
+            disabled={isChecking || isRedeeming}
+            loading={isChecking}
+          />
+        )}
+      </View>
+    </View>
+  )
+}
+
+const handleOpenRedeemDashboard = () => {
+  console.log('Navigate to Redeem Dashboard (Not Implemented)')
+  // TODO: Implement navigation or action for Redeem Dashboard
+}
 
 export default function SettingsScreen() {
   const router = useRouter()
-  const { logout: clearAuthStore, token, user } = useAuthStore()
   const { copyAddressToClipboard } = useWalletClipboard()
+  const { logout: clearAuthStore, token, user, fetchAndUpdateUser } = useAuthStore()
+  const { openDrawer, closeDrawer } = useDrawerStore()
 
   const handleLogout = async () => {
     try {
@@ -30,19 +190,22 @@ export default function SettingsScreen() {
     }
   }
 
-  // Format wallet address to show first and last few characters
-  const walletAddress = user?.wallets && user.wallets.length > 0 ? user.wallets[0].address : 'No wallet linked'
+  const handleOpenSheet = () => {
+    openDrawer(<RedeemPresaleDrawerContent onClose={closeDrawer} />)
+  }
 
   const handleCopyAddress = () => {
-    copyAddressToClipboard(walletAddress)
+    if (user?.wallets && user.wallets.length > 0) {
+      copyAddressToClipboard(user.wallets[0].address)
+    }
   }
+
+  const walletAddress = user?.wallets && user.wallets.length > 0 ? user.wallets[0].address : 'No wallet linked'
 
   return (
     <ScreenLayout title='Settings' headerIcon={<Ionicons name='settings' size={24} color={Colors.tint} />}>
-      {/* Profile Section */}
       {user ? (
         <View style={styles.container}>
-          {/* Account Card */}
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <Text preset='h4'>Account</Text>
@@ -56,25 +219,32 @@ export default function SettingsScreen() {
                 </Text>
               </View>
 
-              <View style={styles.divider} />
-
-              <Pressable style={styles.infoRow} onPress={handleCopyAddress}>
-                <Text preset='label'>Wallet</Text>
-                <View style={styles.walletContainer}>
-                  <Text preset='paragraph' color={Colors.icon} selectable={true}>
-                    {formatWalletAddress(walletAddress)}
+              {user?.wallets && user.wallets.length > 0 ? (
+                <>
+                  <View style={styles.divider} />
+                  <Pressable style={styles.infoRow} onPress={handleCopyAddress}>
+                    <Text preset='label'>Wallet</Text>
+                    <View style={styles.walletContainer}>
+                      <Text preset='paragraph' color={Colors.icon} selectable={true}>
+                        {formatWalletAddress(user.wallets[0].address)}
+                      </Text>
+                      <TouchableOpacity style={styles.copyButton} onPress={handleCopyAddress}>
+                        <Ionicons name='copy-outline' size={16} color={Colors.tint} />
+                      </TouchableOpacity>
+                    </View>
+                  </Pressable>
+                </>
+              ) : (
+                <View style={styles.infoRow}>
+                  <Text preset='label'>Wallet</Text>
+                  <Text preset='paragraph' color={Colors.icon}>
+                    No wallet linked
                   </Text>
-                  {walletAddress !== 'No wallet linked' && (
-                    <TouchableOpacity style={styles.copyButton} onPress={handleCopyAddress}>
-                      <Ionicons name='copy-outline' size={16} color={Colors.tint} />
-                    </TouchableOpacity>
-                  )}
                 </View>
-              </Pressable>
+              )}
             </View>
           </View>
 
-          {/* Security Card */}
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <Text preset='h4'>Security</Text>
@@ -94,7 +264,6 @@ export default function SettingsScreen() {
             </View>
           </View>
 
-          {/* About Card */}
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <Text preset='h4'>About</Text>
@@ -142,6 +311,38 @@ export default function SettingsScreen() {
                   Version 1.0.0
                 </Text>
               </View>
+            </View>
+          </View>
+
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text preset='h4'>Redeem</Text>
+            </View>
+
+            <View style={styles.cardContent}>
+              {user?.has_redeemed_presale ? (
+                <TouchableOpacity style={styles.menuItem} onPress={handleOpenRedeemDashboard}>
+                  <View style={styles.menuItemIcon}>
+                    <Ionicons name='speedometer-outline' size={22} color={Colors.text} />
+                  </View>
+                  <View style={styles.menuItemContent}>
+                    <Text preset='label'>Redeem Dashboard</Text>
+                    <Text preset='caption'>View your redemption details</Text>
+                  </View>
+                  <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={styles.menuItem} onPress={handleOpenSheet}>
+                  <View style={styles.menuItemIcon}>
+                    <Ionicons name='ticket-outline' size={22} color={Colors.text} />
+                  </View>
+                  <View style={styles.menuItemContent}>
+                    <Text preset='label'>Redeem Presale</Text>
+                    <Text preset='caption'>Redeem presale with code</Text>
+                  </View>
+                  <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 
@@ -240,5 +441,35 @@ const styles = StyleSheet.create({
     marginTop: 20,
     paddingHorizontal: 4,
     paddingBottom: 20
+  },
+  sheetContentContainer: {
+    padding: 20,
+    alignItems: 'center'
+  },
+  sheetTitle: {
+    marginBottom: 20
+  },
+  input: {
+    backgroundColor: Colors.background
+  },
+  inputContainer: {
+    marginBottom: 20,
+    gap: 8,
+    width: '100%'
+  },
+  buttonContainer: {
+    width: '100%',
+    marginTop: 10 // Add some space above the button
+  },
+  messageText: {
+    marginBottom: 15,
+    textAlign: 'center',
+    fontSize: 14
+  },
+  successText: {
+    color: Colors.success
+  },
+  errorText: {
+    color: Colors.error
   }
 })

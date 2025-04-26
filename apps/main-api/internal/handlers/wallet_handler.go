@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -37,6 +38,31 @@ type SolanaWalletBalanceResponse struct {
 type GetWalletBalanceResponse struct {
 	Balance float64  `json:"balance"`
 	Price   *float64 `json:"price"` // Use pointer to handle potential null
+}
+
+// CheckPresaleCodeRequest defines the structure for the presale code check request
+type CheckPresaleCodeRequest struct {
+	Code string `json:"code" validate:"required"`
+}
+
+// CheckPresaleCodeResponse defines the structure for the presale code check response
+type CheckPresaleCodeResponse struct {
+	IsValid  bool   `json:"isValid"`
+	Redeemed bool   `json:"redeemed"`
+	Type     int    `json:"type,omitempty"` // Only included if IsValid is true
+	Message  string `json:"message"`
+}
+
+// RedeemPresaleCodeRequest defines the structure for the presale code redeem request
+type RedeemPresaleCodeRequest struct {
+	Code          string  `json:"code" validate:"required"`
+	WalletAddress *string `json:"walletAddress,omitempty"` // Required only for Type 2 codes
+}
+
+// RedeemPresaleCodeResponse defines the structure for the presale code redeem response
+type RedeemPresaleCodeResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
 }
 
 // CreateWalletHandler handles the creation of a new Solana wallet for the authenticated user.
@@ -321,5 +347,185 @@ func GetWalletTeamTokenBalanceHandler(db *gorm.DB, cfg *config.Config) fiber.Han
 		}
 
 		return c.Status(fiber.StatusOK).JSON(resp)
+	}
+}
+
+// CheckPresaleCode checks the validity and status of a given presale code.
+func CheckPresaleCode(db *gorm.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		var req CheckPresaleCodeRequest
+
+		// Parse request body
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+				"error": "Cannot parse JSON",
+			})
+		}
+
+		// Basic validation (e.g., presence)
+		if req.Code == "" {
+			return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+				"error": "Presale code is required",
+			})
+		}
+
+		// Validate format (P1-XXXXXXX or P2-XXXXXXX)
+		parts := strings.Split(req.Code, "-")
+		if len(parts) != 2 || (parts[0] != "P1" && parts[0] != "P2") || len(parts[1]) == 0 {
+			return c.Status(http.StatusBadRequest).JSON(CheckPresaleCodeResponse{
+				IsValid: false,
+				Message: "Invalid code format. Use P1-XXXXXXX or P2-XXXXXXX.",
+			})
+		}
+
+		// Query database
+		var presaleCode models.PresaleCode
+		result := db.First(&presaleCode, "code = ?", req.Code)
+
+		if result.Error != nil {
+			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+				return c.Status(http.StatusNotFound).JSON(CheckPresaleCodeResponse{
+					IsValid: false,
+					Message: "Presale code not found.",
+				})
+			}
+			// Handle other potential database errors
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Database error checking code",
+			})
+		}
+
+		// Check if redeemed
+		if presaleCode.Redeemed {
+			return c.Status(http.StatusOK).JSON(CheckPresaleCodeResponse{
+				IsValid:  true,
+				Redeemed: true,
+				Type:     presaleCode.Type,
+				Message:  "This presale code has already been redeemed.",
+			})
+		}
+
+		// Code is valid and not redeemed
+		return c.Status(http.StatusOK).JSON(CheckPresaleCodeResponse{
+			IsValid:  true,
+			Redeemed: false,
+			Type:     presaleCode.Type,
+			Message:  "Presale code is valid.",
+		})
+	}
+}
+
+// RedeemPresaleCode handles the redemption of a valid, non-redeemed presale code.
+func RedeemPresaleCode(db *gorm.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		var req RedeemPresaleCodeRequest
+
+		// Get authenticated user ID from context (set by auth middleware)
+		userID, ok := c.Locals("userID").(uint)
+		if !ok || userID == 0 {
+			return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "User not authenticated or invalid user ID"})
+		}
+
+		// Parse request body
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON"})
+		}
+
+		// Validate presence of code
+		if req.Code == "" {
+			return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Presale code is required"})
+		}
+
+		// Find the presale code
+		var presaleCode models.PresaleCode
+		result := db.First(&presaleCode, "code = ?", req.Code)
+
+		if result.Error != nil {
+			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+				return c.Status(http.StatusNotFound).JSON(RedeemPresaleCodeResponse{
+					Success: false,
+					Message: "Presale code not found.",
+				})
+			}
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Database error finding code"})
+		}
+
+		// Check if already redeemed
+		if presaleCode.Redeemed {
+			return c.Status(http.StatusConflict).JSON(RedeemPresaleCodeResponse{
+				Success: false,
+				Message: "This presale code has already been redeemed.",
+			})
+		}
+
+		// Validate wallet address for Type 2 codes
+		if presaleCode.Type == 2 {
+			if req.WalletAddress == nil || *req.WalletAddress == "" {
+				return c.Status(http.StatusBadRequest).JSON(RedeemPresaleCodeResponse{
+					Success: false,
+					Message: "Wallet address is required for this type of presale code.",
+				})
+			}
+		}
+
+		// --- Start Transaction ---
+		tx := db.Begin()
+		if tx.Error != nil {
+			log.Printf("Error starting transaction: %v", tx.Error)
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Could not process redemption"})
+		}
+
+		// Associate the user ID with the presale code
+		presaleCode.UserID = &userID
+		presaleCode.Redeemed = true
+
+		// Handle WalletAddress based on Type
+		if presaleCode.Type == 1 {
+			// For Type 1, find the user's primary wallet address
+			var userWallet models.Wallet // Assuming models.Wallet exists
+			if err := tx.Where("user_id = ?", userID).First(&userWallet).Error; err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					tx.Rollback()
+					log.Printf("User %d does not have a wallet", userID)
+					return c.Status(http.StatusNotFound).JSON(fiber.Map{"error": "User wallet not found"})
+				} else {
+					tx.Rollback()
+					log.Printf("Error fetching user wallet for user %d: %v", userID, err)
+					return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Could not fetch user wallet"})
+				}
+			}
+			presaleCode.WalletAddress = &userWallet.Address // Set the fetched address
+
+		} else if presaleCode.Type == 2 {
+			// For Type 2, use the provided wallet address (validate if provided)
+			if req.WalletAddress == nil || *req.WalletAddress == "" {
+				tx.Rollback()
+				return c.Status(http.StatusBadRequest).JSON(RedeemPresaleCodeResponse{
+					Success: false,
+					Message: "Wallet address is required for Type 2 presale code",
+				})
+			}
+			presaleCode.WalletAddress = req.WalletAddress
+		}
+
+		// Save the updated presale code within the transaction
+		if err := tx.Save(&presaleCode).Error; err != nil {
+			tx.Rollback() // Rollback transaction on error
+			log.Printf("Error redeeming presale code %s: %v", req.Code, err)
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Could not redeem presale code"})
+		}
+
+		// Commit the transaction
+		if err := tx.Commit().Error; err != nil {
+			tx.Rollback() // Ensure rollback if commit fails
+			log.Printf("Error committing transaction for presale code %s: %v", req.Code, err)
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to finalize redemption"})
+		}
+
+		// Successfully redeemed
+		return c.Status(http.StatusOK).JSON(RedeemPresaleCodeResponse{
+			Success: true,
+			Message: "Presale code successfully redeemed.",
+		})
 	}
 }

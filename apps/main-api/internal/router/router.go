@@ -37,10 +37,14 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	auth.Post("/logout", authHandler.Logout)
 	auth.Get("/me", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.GetMe)
 	auth.Post("/verify-email", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.VerifyEmail)
+	auth.Post("/resend-verification", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.ResendVerificationEmail) // New route
 
 	// Wallet Routes
 	wallet.Use(middleware.AuthMiddleware(cfg.JWTSecret)) // Protect all wallet routes
+	// TODO: Need to refactor these handlers to not need cfg passed if possible or pass it correctly
 	wallet.Post("/create", handlers.CreateWalletHandler(db, cfg))
 	wallet.Get("/balance", handlers.GetWalletBalanceHandler(db, cfg))
 	wallet.Get("/balance/team", handlers.GetWalletTeamTokenBalanceHandler(db, cfg))
+	wallet.Post("/check-presale-code", handlers.CheckPresaleCode(db))
+	wallet.Post("/redeem-presale-code", handlers.RedeemPresaleCode(db))
 }

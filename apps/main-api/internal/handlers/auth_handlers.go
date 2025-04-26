@@ -57,6 +57,18 @@ type LoginResponse struct {
 	User  models.User `json:"user"`
 }
 
+// GetMeResponse defines the structure for the /me endpoint response
+type GetMeResponse struct {
+	ID                uint           `json:"id"`
+	FirstName         string        `json:"first_name"`
+	LastName          string        `json:"last_name"`
+	Email             string         `json:"email"`
+	EmailVerified     bool           `json:"email_verified"` // Changed tag to match User model/frontend expectation
+	HasRedeemedPresale bool           `json:"has_redeemed_presale"`
+	Wallets           []models.Wallet `json:"wallets,omitempty"`
+	// Add other user fields you want to expose as needed
+}
+
 // generateVerificationCode creates a random numeric string of the specified length.
 func generateVerificationCode(length int) (string, error) {
 	var builder strings.Builder
@@ -168,8 +180,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		log.Printf("Error signing JWT token after registration for %s: %v", user.Email, err)
 		// Don't fail the whole request, but maybe log or monitor this
 		// Return the user object without the token in this edge case?
-		// For now, let's return the user but maybe signal token error?
-		// Let's proceed with returning success but maybe log it significantly.
+		// For now, let's return the user but maybe log it significantly.
 		// Decided to return 500 as token generation is critical for login flow
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate authentication token after registration"})
 	}
@@ -258,7 +269,7 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Logout successful"})
 }
 
-// GetMe handles retrieving the currently authenticated user's details.
+// GetMe retrieves the authenticated user's details.
 func (h *AuthHandler) GetMe(c *fiber.Ctx) error {
 	// Retrieve user ID from JWT claims (set by AuthMiddleware)
 	userID, ok := c.Locals("userID").(uint) // Assuming middleware sets uint ID
@@ -267,7 +278,7 @@ func (h *AuthHandler) GetMe(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "User ID not found in token or invalid"})
 	}
 
-	// Fetch user details from DB using the ID
+	// Fetch the full user details, preloading wallets
 	var user models.User
 	if err := h.DB.Preload("Wallets").First(&user, userID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -278,17 +289,23 @@ func (h *AuthHandler) GetMe(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database error fetching user details", "details": err.Error()})
 	}
 
-	// Return user details, ensuring sensitive info is excluded
-	return c.JSON(fiber.Map{
-		"id":            user.ID,
-		"email":         user.Email,
-		"emailVerified": user.EmailVerified, // Include verification status
-		"wallets":       user.Wallets,
-		"firstName":     user.FirstName,
-		"lastName":      user.LastName,
-		"createdAt":     user.CreatedAt,
-		"updatedAt":     user.UpdatedAt,
-	})
+	// Check if the user has redeemed a presale code
+	var redeemedCount int64
+	h.DB.Model(&models.PresaleCode{}).Where("user_id = ? AND redeemed = ?", userID, true).Count(&redeemedCount)
+
+	// Prepare response
+	response := GetMeResponse{
+		ID:                user.ID,
+		FirstName:         user.FirstName,
+		LastName:          user.LastName,
+		Email:             user.Email,
+		EmailVerified:     user.EmailVerified,
+		HasRedeemedPresale: redeemedCount > 0,
+		Wallets:           user.Wallets, // Include wallets
+	}
+
+	// Return user details
+	return c.JSON(response)
 }
 
 func formatValidationErrors(errors validator.ValidationErrors) string {
@@ -394,4 +411,63 @@ func FormatValidationErrors(err error) map[string]string {
 		errorsMap[fieldName] = fmt.Sprintf("Field validation for '%s' failed on the '%s' tag", fieldName, tag)
 	}
 	return errorsMap
+}
+
+// ResendVerificationEmail handles requests to resend the verification email.
+func (h *AuthHandler) ResendVerificationEmail(c *fiber.Ctx) error {
+	// 1. Get User ID from middleware context
+	userIDInterface := c.Locals("userID")
+	if userIDInterface == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized: User ID not found in context"})
+	}
+	userID, ok := userIDInterface.(uint)
+	if !ok {
+		log.Printf("Error: Invalid user ID type in context for resend: %T", userIDInterface)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Internal server error: Invalid user ID type"})
+	}
+
+	// 2. Find the user in the database
+	var user models.User
+	if err := h.DB.First(&user, userID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Printf("Error: User %d not found for resend verification request", userID)
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+		}
+		log.Printf("Error fetching user %d for resend verification: %v", userID, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database error retrieving user"})
+	}
+
+	// 3. Check if user is already verified
+	if user.EmailVerified {
+		log.Printf("User %d requested verification resend, but email is already verified.", userID)
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Email is already verified"})
+	}
+
+	// 4. Generate new verification code and expiry
+	verificationCode, err := generateVerificationCode(6)
+	if err != nil {
+		log.Printf("Error generating verification code for user %d resend: %v", userID, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate verification code"})
+	}
+	codePtr := &verificationCode
+	expiresAt := time.Now().Add(15 * time.Minute) // New 15 min expiry
+	expiresAtPtr := &expiresAt
+
+	// 5. Update user record with new code and expiry
+	user.EmailVerificationCode = codePtr
+	user.EmailVerificationExpiresAt = expiresAtPtr
+	if err := h.DB.Save(&user).Error; err != nil {
+		log.Printf("Error updating user %d verification code for resend: %v", userID, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update verification details"})
+	}
+
+	// 6. Send verification email asynchronously
+	go func(email, code string) {
+		if err := h.EmailClient.SendVerificationEmail(email, code); err != nil {
+			log.Printf("Error resending verification email in background to %s: %v\n", email, err)
+		}
+	}(user.Email, verificationCode)
+
+	log.Printf("Successfully resent verification email to user %d (%s)", userID, user.Email)
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Verification email resent successfully"})
 }

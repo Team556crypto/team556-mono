@@ -1,14 +1,11 @@
 import { Tabs } from 'expo-router'
 import React from 'react'
-import { Platform } from 'react-native'
 
 import { ResponsiveNavigation } from '@/components/ResponsiveNavigation'
 import { Colors } from '@/constants/Colors'
 import { Entypo, Ionicons } from '@expo/vector-icons'
 
 export default function TabLayout() {
-  const isWeb = Platform.OS === 'web'
-
   return (
     <Tabs
       screenOptions={{

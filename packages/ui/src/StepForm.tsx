@@ -14,7 +14,7 @@ import { DefaultColors, ThemeColors } from '../constants/Colors'
 import Button from './Button'
 import Text, { TextPreset } from './Text'
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
+const { width: SCREEN_WIDTH } = Dimensions.get('window')
 
 // --- Responsive Design Values ---
 const basePadding = 20
@@ -82,8 +82,6 @@ export default function StepForm({
   contentContainerStyle,
   headerStyle,
   footerStyle,
-  progressBarStyle,
-  progressBarFilledStyle,
   colors = {}
 }: StepFormProps): JSX.Element {
   // Merge provided colors with defaults
@@ -237,29 +235,28 @@ export default function StepForm({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, // Make the container fill its parent vertically
+    flex: 1,
     justifyContent: 'space-between',
-    width: '100%', // Use percentage width for better fit on various screens
-    height: '100%', // Use percentage height for better fit on various screens
+    width: '100%',
+    height: '100%',
     backgroundColor: 'white',
     borderRadius: 0,
-    overflow: 'hidden', // Ensures children adhere to border radius
-    elevation: 0, // Android shadow
-    shadowColor: '#000', // iOS shadow
+    overflow: 'hidden',
+    elevation: 0,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0,
     shadowRadius: 0,
-    flexDirection: 'column' // Explicitly column layout
-    // Padding is applied to inner elements (header, content, footer)
+    flexDirection: 'column'
   },
   header: {
-    paddingHorizontal: horizontalPadding, // Use dynamic padding
+    paddingHorizontal: horizontalPadding,
     paddingTop: verticalPadding,
-    paddingBottom: verticalPadding / 2, // Smaller bottom padding
+    paddingBottom: verticalPadding / 2,
     borderBottomWidth: 1
   },
   progressContainer: {
-    height: 36, // Total height for circles
+    height: 36,
     marginBottom: 20,
     position: 'relative',
     justifyContent: 'center'
@@ -305,7 +302,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.1 }]
   },
   completedStepCircle: {
-    backgroundColor: 'transparent' // Color will be applied dynamically
+    backgroundColor: 'transparent'
   },
   checkmark: {
     color: '#fff',
@@ -321,19 +318,18 @@ const styles = StyleSheet.create({
   },
   stepText: {
     textAlign: 'center',
-    // fontSize and color applied dynamically inline
-    marginBottom: 10 // Keep bottom margin
+    marginBottom: 10
   },
   contentContainer: {
-    flex: 1, // Takes remaining vertical space
-    paddingHorizontal: horizontalPadding, // Use dynamic padding
-    paddingTop: verticalPadding, // Standard vertical padding
-    paddingBottom: verticalPadding / 2 // Less padding at the bottom before footer
+    flex: 1,
+    paddingHorizontal: horizontalPadding,
+    paddingTop: verticalPadding,
+    paddingBottom: verticalPadding / 2
   },
   footer: {
-    paddingHorizontal: horizontalPadding, // Use dynamic padding
-    paddingTop: verticalPadding, // Less padding at the top
-    paddingBottom: verticalPadding, // Standard vertical padding
+    paddingHorizontal: horizontalPadding,
+    paddingTop: verticalPadding,
+    paddingBottom: verticalPadding,
     borderTopWidth: 1
   },
   buttonContainer: {

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/datatypes"
 )
 
 // Wallet represents a user's wallet in the database
@@ -18,4 +19,8 @@ type Wallet struct {
 	Name    string `json:"name" gorm:"not null"` // e.g., "My Main Wallet"
 	// Balance could be stored here or derived from transactions/external sources
 	// Balance decimal.Decimal `json:"balance" gorm:"type:numeric;default:0"`
+
+	// Server-side encryption fields
+	EncryptedMnemonic  string          `json:"-"` // Store as base64 encoded string, exclude from default JSON responses
+	EncryptionMetadata datatypes.JSON `json:"-"` // Store salt, nonce, params, exclude from default JSON responses
 }

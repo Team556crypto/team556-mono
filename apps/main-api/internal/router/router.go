@@ -46,4 +46,5 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	wallet.Get("/balance/team", handlers.GetWalletTeamTokenBalanceHandler(db, cfg))
 	wallet.Post("/check-presale-code", handlers.CheckPresaleCode(db))
 	wallet.Post("/redeem-presale-code", handlers.RedeemPresaleCode(db))
+	wallet.Post("/sign", handlers.SignTransactionHandler(db, cfg)) // Route for transaction signing
 }

@@ -1,3 +1,5 @@
+// import '@/shim'; // <-- MUST be the first import -- Temporarily commented out
+
 import React, { useEffect, useState, useCallback } from 'react'
 import { DarkTheme, ThemeProvider } from '@react-navigation/native'
 import { useFonts } from 'expo-font'

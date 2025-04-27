@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/team556-mono/server/internal/config"
 	"github.com/team556-mono/server/internal/models"
+	"github.com/team556-mono/server/internal/crypto"
 	"gorm.io/gorm"
 )
 
@@ -65,9 +67,36 @@ type RedeemPresaleCodeResponse struct {
 	Message string `json:"message"`
 }
 
+// Request body for creating an encrypted wallet
+type CreateWalletRequest struct {
+	Password string `json:"password" validate:"required,min=8"` // Require user's password for encryption
+}
+
+// SignTransactionRequest defines the structure for the transaction signing request
+type SignTransactionRequest struct {
+	Password             string `json:"password" validate:"required"`
+	UnsignedTransaction  string `json:"unsignedTransaction" validate:"required"` // Assume base64 encoded transaction
+	// WalletAddress string `json:"walletAddress,omitempty"` // Optional: if user can have multiple wallets, specify which one
+}
+
+// SignTransactionResponse defines the structure for the transaction signing response
+type SignTransactionResponse struct {
+	SignedTransaction string `json:"signedTransaction"` // Base64 encoded signed transaction
+}
+
+// --- Structs for Internal Solana API Communication ---
+type SolanaSignRequest struct {
+	Mnemonic            string `json:"mnemonic"`
+	UnsignedTransaction string `json:"unsignedTransaction"` // Base64 encoded
+}
+
+type SolanaSignResponse struct {
+	SignedTransaction string `json:"signedTransaction"` // Base64 encoded
+}
+
 // CreateWalletHandler handles the creation of a new Solana wallet for the authenticated user.
 func CreateWalletHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c *fiber.Ctx) error { // TODO: Add input validation
 		// --- Authentication ---
 		// Assuming an auth middleware sets the user ID in locals
 		userIDInterface := c.Locals("userID")
@@ -81,6 +110,17 @@ func CreateWalletHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 		}
 
 		log.Printf("User %d requesting wallet creation", userID)
+
+		// --- Parse Request Body ---
+		var req CreateWalletRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body: " + err.Error()})
+		}
+		// Basic validation (more robust validation can be added)
+		if req.Password == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Password is required"})
+		}
+		// Add more password strength checks if desired
 
 		// --- Call Solana API ---
 		// Get URL from config and normalize 'localhost' to '127.0.0.1'
@@ -132,11 +172,20 @@ func CreateWalletHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 
 		log.Printf("Received PublicKey: %s from Solana API", solanaResp.PublicKey)
 
+		// --- Encrypt Mnemonic ---
+		encryptedMnemonic, metadata, err := crypto.EncryptMnemonic(solanaResp.Mnemonic, req.Password)
+		if err != nil {
+			log.Printf("Error encrypting mnemonic for user %d: %v", userID, err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to secure wallet information"})
+		}
+
 		// --- Save Wallet to Database ---
 		newWallet := models.Wallet{
-			UserID:  userID,
-			Address: solanaResp.PublicKey,
-			Name:    "Primary Wallet", // Default name
+			UserID:           userID,
+			Address:          solanaResp.PublicKey,
+			Name:             "Primary Wallet", // Default name
+			EncryptedMnemonic: encryptedMnemonic,
+			EncryptionMetadata: metadata,
 		}
 
 		// Use a transaction for safety if needed, but simple create is often fine here
@@ -526,6 +575,118 @@ func RedeemPresaleCode(db *gorm.DB) fiber.Handler {
 		return c.Status(http.StatusOK).JSON(RedeemPresaleCodeResponse{
 			Success: true,
 			Message: "Presale code successfully redeemed.",
+		})
+	}
+}
+
+// SignTransactionHandler handles decrypting the user's mnemonic and requesting the solana-api to sign a transaction.
+func SignTransactionHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// --- Authentication ---
+		userIDInterface := c.Locals("userID")
+		if userIDInterface == nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized: User ID not found in context"})
+		}
+		userID, ok := userIDInterface.(uint)
+		if !ok {
+			log.Printf("Error: Invalid user ID type in context: %T", userIDInterface)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Internal server error: Invalid user ID type"})
+		}
+
+		// --- Parse Request Body ---
+		var req SignTransactionRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body: " + err.Error()})
+		}
+		if req.Password == "" || req.UnsignedTransaction == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Password and unsignedTransaction are required"})
+		}
+
+		// --- Get Wallet from DB ---
+		var wallet models.Wallet
+		// TODO: Add logic to select specific wallet if user can have multiple (using req.WalletAddress?)
+		result := db.Where("user_id = ?", userID).First(&wallet)
+		if result.Error != nil {
+			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+				log.Printf("User %d has no wallet record", userID)
+				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Wallet not found for this user"})
+			}
+			log.Printf("Error fetching wallet for user %d: %v", userID, result.Error)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to retrieve wallet information"})
+		}
+
+		// Check if mnemonic is actually encrypted (for backward compatibility or error states)
+		if wallet.EncryptedMnemonic == "" || wallet.EncryptionMetadata == nil || len(wallet.EncryptionMetadata) == 0 {
+			log.Printf("Error: Wallet %d for user %d does not have encrypted mnemonic data", wallet.ID, userID)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Wallet data is incomplete or not configured for signing"})
+		}
+
+		// --- Decrypt Mnemonic ---
+		mnemonic, err := crypto.DecryptMnemonic(wallet.EncryptedMnemonic, wallet.EncryptionMetadata, req.Password)
+		if err != nil {
+			// Log the generic error but return a user-friendly one (likely wrong password)
+			log.Printf("Failed to decrypt mnemonic for wallet %d (user %d): %v", wallet.ID, userID, err)
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Decryption failed. Please check your password."}) // 401 Unauthorized suggests password issue
+		}
+
+		// --- Call Solana API to Sign Transaction ---
+		solanaAPIURL := cfg.SolanaAPIURL
+		if strings.Contains(solanaAPIURL, "//localhost") { // Normalize localhost for local dev
+			solanaAPIURL = strings.Replace(solanaAPIURL, "//localhost", "//127.0.0.1", 1)
+		}
+		if solanaAPIURL == "" {
+			log.Println("Error: SOLANA_API_BASE_URL not configured")
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Configuration error: Solana API URL missing"})
+		}
+		signURL := fmt.Sprintf("%s/api/wallet/sign", solanaAPIURL)
+
+		// Prepare request body for solana-api
+		solanaReqBody := SolanaSignRequest{
+			Mnemonic:            mnemonic, // Use the decrypted mnemonic
+			UnsignedTransaction: req.UnsignedTransaction,
+		}
+		jsonReqBody, err := json.Marshal(solanaReqBody)
+		if err != nil {
+			log.Printf("Error marshaling request body for solana-api: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to prepare signing request"})
+		}
+
+		// Make the POST request
+		log.Printf("Calling Solana API Signer: POST %s", signURL)
+		httpClient := &http.Client{Timeout: 15 * time.Second} // Add a timeout
+		resp, err := httpClient.Post(signURL, "application/json", bytes.NewBuffer(jsonReqBody))
+		if err != nil {
+			log.Printf("Error calling Solana API Signer: %v", err)
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "Failed to connect to Solana signing service"})
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK { // Expect 200 OK for successful signing
+			bodyBytes, _ := io.ReadAll(resp.Body)
+			log.Printf("Error from Solana API Signer (Status %d): %s", resp.StatusCode, string(bodyBytes))
+			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
+				"error":         "Failed to sign transaction via Solana service",
+				"upstreamError": string(bodyBytes), // Provide upstream error if possible
+			})
+		}
+
+		// Decode the response from solana-api
+		var solanaResp SolanaSignResponse
+		if err := json.NewDecoder(resp.Body).Decode(&solanaResp); err != nil {
+			log.Printf("Error decoding Solana API Signer response: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to process Solana signing service response"})
+		}
+
+		if solanaResp.SignedTransaction == "" {
+			log.Println("Error: Invalid response from Solana API Signer - missing signedTransaction")
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Received invalid data from Solana signing service"})
+		}
+
+		log.Printf("Successfully received signed transaction from solana-api for wallet %d (user %d)", wallet.ID, userID)
+
+		// --- Return Signed Transaction ---
+		return c.Status(fiber.StatusOK).JSON(SignTransactionResponse{
+			SignedTransaction: solanaResp.SignedTransaction,
 		})
 	}
 }

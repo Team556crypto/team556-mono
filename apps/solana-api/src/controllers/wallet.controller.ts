@@ -1,5 +1,12 @@
 import { Request, Response } from 'express'
-import { Keypair, Connection, PublicKey, LAMPORTS_PER_SOL, ParsedAccountData } from '@solana/web3.js'
+import {
+  Keypair,
+  Connection,
+  PublicKey,
+  LAMPORTS_PER_SOL,
+  ParsedAccountData,
+  Transaction,
+} from '@solana/web3.js'
 import * as bip39 from 'bip39'
 import { z } from 'zod'
 import { Alchemy, Network, TokenPrice, GetTokenPriceByAddressResponse, TokenAddressRequest } from 'alchemy-sdk'
@@ -20,6 +27,12 @@ const addressSchema = z.object({
     },
     { message: 'Invalid Solana address format' }
   )
+})
+
+// --- Zod Schema for Sign Transaction ---
+const signTransactionSchema = z.object({
+  mnemonic: z.string().refine(bip39.validateMnemonic, { message: 'Invalid mnemonic phrase' }),
+  unsignedTransaction: z.string().min(1, { message: 'Unsigned transaction is required' }), // Expect base64 string
 })
 
 // --- Helper Functions ---
@@ -263,5 +276,47 @@ export const getTeamTokenBalance = async (req: Request, res: Response) => {
       error: 'Failed to process TEAM token balance request',
       details: error instanceof Error ? error.message : String(error)
     })
+  }
+}
+
+export const signTransaction = async (req: Request, res: Response) => {
+  try {
+    // 1. Validate Request Body
+    const validationResult = signTransactionSchema.safeParse(req.body)
+    if (!validationResult.success) {
+      console.warn('Invalid signTransaction request body:', { errors: validationResult.error.errors, body: req.body })
+      return res.status(400).json({ error: 'Invalid request body', details: validationResult.error.flatten() })
+    }
+
+    const { mnemonic, unsignedTransaction } = validationResult.data
+
+    // 2. Derive Keypair from Mnemonic
+    const seed = await bip39.mnemonicToSeed(mnemonic, '') // Use empty passphrase
+    const keypair = Keypair.fromSeed(seed.slice(0, 32))
+
+    // 3. Deserialize Unsigned Transaction
+    // The unsigned transaction is expected to be sent as a base64 encoded buffer
+    const transactionBuffer = Buffer.from(unsignedTransaction, 'base64')
+    const transaction = Transaction.from(transactionBuffer)
+
+    // 4. Sign the Transaction
+    // Note: For partially signed transactions, you might need connection.getLatestBlockhash()
+    // and set `recentBlockhash` on the transaction before signing if it's not already set.
+    // Assuming the unsigned tx provided by main-api already has a valid blockhash.
+    transaction.sign(keypair) // Sign with the derived keypair
+
+    // 5. Serialize Signed Transaction
+    const signedTxBuffer = transaction.serialize()
+    const signedTxBase64 = signedTxBuffer.toString('base64')
+
+    // 6. Return Signed Transaction
+    console.log(`Transaction signed successfully for public key: ${keypair.publicKey.toBase58()}`)
+    res.status(200).json({ signedTransaction: signedTxBase64 })
+  } catch (error: unknown) {
+    console.error('Error signing transaction:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error during signing'
+    // Provide more context if it's a Solana-specific error
+    // if (error instanceof SolanaJSONRPCError) { ... }
+    return res.status(500).json({ message: 'Failed to sign transaction', error: errorMessage })
   }
 }

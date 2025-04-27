@@ -34,6 +34,11 @@ interface LoginResponse {
   user: User
 }
 
+// Type for create wallet request (now requires password)
+interface CreateWalletRequest {
+  password: string
+}
+
 // Type for create wallet response
 interface CreateWalletResponse {
   message: string
@@ -78,6 +83,17 @@ interface RedeemPresaleCodeRequest {
 interface RedeemPresaleCodeResponse {
   success: boolean
   message: string
+}
+
+// Type for sign transaction request
+interface SignTransactionRequest {
+  password: string
+  unsignedTransaction: string // base64 encoded unsigned transaction
+}
+
+// Type for sign transaction response
+interface SignTransactionResponse {
+  signedTransaction: string // base64 encoded signed transaction
 }
 
 /**
@@ -221,10 +237,14 @@ export async function logoutUser(token: string | null): Promise<void> {
  * Makes a POST request to the create wallet endpoint.
  * Requires authentication.
  * @param token - The authentication token.
+ * @param password - The user's password for wallet creation.
  * @returns A promise that resolves with the create wallet response (message and mnemonic).
  * @throws An error if the request fails.
  */
-export async function createWallet(token: string | null): Promise<CreateWalletResponse> {
+export async function createWallet(
+  token: string | null,
+  password: string
+): Promise<CreateWalletResponse> {
   if (!process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL) {
     throw new Error('API URL is not configured.')
   }
@@ -237,9 +257,9 @@ export async function createWallet(token: string | null): Promise<CreateWalletRe
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    }
-    // No body needed for this endpoint
+      Authorization: `Bearer ${token}` // Include the token
+    },
+    body: JSON.stringify({ password } as CreateWalletRequest)
   })
 
   const data = await response.json()
@@ -446,7 +466,7 @@ export const redeemPresaleCode = async (
   }
 
   try {
-    const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/wallet/redeem-presale-code`, {
+    const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/api/wallet/redeem-presale-code`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -455,21 +475,18 @@ export const redeemPresaleCode = async (
       body: JSON.stringify(data)
     })
 
-    const responseJson = await response.json()
+    const responseData = await response.json()
 
     if (!response.ok) {
-      const errorData = responseJson as ApiErrorResponse
-      const errorMessage = errorData?.error || `Redeem presale code failed with status: ${response.status}`
+      const errorData = responseData as ApiErrorResponse
+      const errorMessage = errorData?.error || `Redeem presale code failed: ${response.status}`
       console.error('Redeem Presale Code API Error:', errorMessage, 'Status:', response.status)
       const error = new Error(errorMessage) as any
-      error.response = {
-        data: errorData,
-        status: response.status
-      }
+      error.response = { data: errorData, status: response.status }
       throw error
     }
 
-    return responseJson as RedeemPresaleCodeResponse
+    return responseData as RedeemPresaleCodeResponse
   } catch (error: any) {
     console.error('Error redeeming presale code:', error.response?.data || error.message)
     const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to redeem code'
@@ -477,4 +494,66 @@ export const redeemPresaleCode = async (
   }
 }
 
-// Add other API functions here as needed (e.g., getUserProfile, etc.)
+// ==========================
+// Transaction Signing
+// ==========================
+
+/**
+ * Makes a POST request to the sign transaction endpoint.
+ * Requires authentication.
+ * @param token - The authentication token.
+ * @param password - The user's password for mnemonic decryption.
+ * @param unsignedTransaction - The base64 encoded unsigned Solana transaction.
+ * @returns A promise that resolves with the base64 encoded signed transaction.
+ * @throws An error if the request fails.
+ */
+export async function signTransaction(
+  token: string | null,
+  password: string,
+  unsignedTransaction: string
+): Promise<SignTransactionResponse> {
+  if (!process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL) {
+    throw new Error('API URL is not configured.')
+  }
+  if (!token) {
+    throw new Error('Authentication required.')
+  }
+  if (!password || !unsignedTransaction) {
+    throw new Error('Password and unsigned transaction are required.')
+  }
+
+  const requestBody: SignTransactionRequest = {
+    password,
+    unsignedTransaction
+  }
+
+  const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/wallet/sign`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(requestBody)
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    const errorData = data as ApiErrorResponse
+    // Customize error message based on status if needed (e.g., 401 for bad password)
+    let errorMessage = errorData?.error
+    if (!errorMessage) {
+      errorMessage = `Signing failed with status: ${response.status}`
+    }
+    if (response.status === 401) {
+      errorMessage = 'Signing failed. Please check your password.' // More user-friendly for 401
+    }
+
+    console.error('Sign Transaction API Error:', errorMessage, 'Status:', response.status)
+    const error = new Error(errorMessage) as any
+    error.response = { data: errorData, status: response.status }
+    throw error
+  }
+
+  return data as SignTransactionResponse
+}

@@ -19,6 +19,8 @@ import { Colors } from '@/constants/Colors'
 import { genericStyles } from '@/constants/GenericStyles'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 
+const MIN_PASSWORD_LENGTH = 8
+
 export default function OnboardingScreen() {
   const { isTabletOrLarger } = useBreakpoint()
   const [currentStep, setCurrentStep] = useState(0)
@@ -38,6 +40,10 @@ export default function OnboardingScreen() {
   const [resendError, setResendError] = useState<string | null>(null)
   const [resendSuccessMessage, setResendSuccessMessage] = useState<string | null>(null)
   const [resendCooldown, setResendCooldown] = useState(0)
+
+  // Add state for password input during wallet creation
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
 
   const token = useAuthStore(state => state.token)
   const fetchAndUpdateUser = useAuthStore(state => state.fetchAndUpdateUser)
@@ -109,6 +115,17 @@ export default function OnboardingScreen() {
   }, [token])
 
   const handleCreateWallet = useCallback(async () => {
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.')
+      Alert.alert('Error', 'Passwords do not match.')
+      return
+    }
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters long.`)
+      Alert.alert('Error', `Password must be at least ${MIN_PASSWORD_LENGTH} characters long.`)
+      return
+    }
+
     setIsLoading(true)
     setError(null)
     const token = useAuthStore.getState().token
@@ -120,7 +137,7 @@ export default function OnboardingScreen() {
     }
 
     try {
-      const response = await createWallet(token)
+      const response = await createWallet(token, password)
       setMnemonic(response.mnemonic)
       setCurrentStep(prev => prev + 1)
     } catch (err: any) {
@@ -130,7 +147,7 @@ export default function OnboardingScreen() {
     } finally {
       setIsLoading(false)
     }
-  }, [token])
+  }, [password, confirmPassword, token])
 
   const handleCopyToClipboard = useCallback(async () => {
     if (mnemonic) {
@@ -200,6 +217,22 @@ export default function OnboardingScreen() {
             IMPORTANT: Write this phrase down and store it somewhere safe. It's the ONLY way to recover your wallet if
             you lose access. Do NOT share it with anyone.
           </Text>
+          <Input
+            placeholder='Enter Password'
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            style={styles.input}
+            autoCapitalize='none'
+          />
+          <Input
+            placeholder='Confirm Password'
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry
+            style={styles.input}
+            autoCapitalize='none'
+          />
           {isLoading && <ActivityIndicator size='large' color={Colors.tint} style={styles.loader} />}
           {error && !isLoading && <Text style={styles.errorText}>{error}</Text>}
         </View>

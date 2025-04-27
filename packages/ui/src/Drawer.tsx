@@ -6,7 +6,8 @@ import {
   StyleProp,
   ViewStyle,
   TouchableWithoutFeedback,
-  LayoutChangeEvent
+  LayoutChangeEvent,
+  Platform
 } from 'react-native'
 import Animated, {
   useSharedValue,
@@ -134,6 +135,12 @@ export default function Drawer({
 
   useEffect(() => {
     if (isVisible) {
+      // --- Scroll Lock for Web ---
+      if (Platform.OS === 'web') {
+        document.body.style.overflow = 'hidden'
+      }
+      // --- End Scroll Lock ---
+
       setShouldRender(true)
 
       // Only animate immediately if we already have a content height
@@ -152,6 +159,12 @@ export default function Drawer({
       // Show backdrop immediately
       backdropOpacityAnimated.value = withTiming(backdropOpacity, { duration: 150 })
     } else {
+      // --- Scroll Unlock for Web ---
+      if (Platform.OS === 'web') {
+        document.body.style.overflow = 'auto' // Unlock immediately
+      }
+      // --- End Scroll Unlock ---
+
       translateY.value = withSpring(SCREEN_HEIGHT, {
         damping: 20,
         stiffness: 100

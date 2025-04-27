@@ -76,11 +76,6 @@ export default function RedeemDashboard() {
   const { user } = useAuthStore()
   const [isLoading, setIsLoading] = useState(false)
 
-  // Log the user object to inspect its structure
-  useEffect(() => {
-    console.log('User object in RedeemDashboard:', JSON.stringify(user, null, 2))
-  }, [user])
-
   // Reference date for vesting calculations - April 27, 2025
   const baseDate = new Date(2025, 3, 27) // Month is 0-indexed (3 = April)
 
@@ -96,7 +91,6 @@ export default function RedeemDashboard() {
   const handleClaimTokens = (vestingIndex: number) => {
     setIsLoading(true)
     // In a real implementation, you would call an API here to claim tokens
-    console.log(`Claiming tokens for vesting index ${vestingIndex}`)
     setTimeout(() => {
       setIsLoading(false)
     }, 2000)
@@ -111,7 +105,7 @@ export default function RedeemDashboard() {
 
   return (
     <ScreenLayout
-      title='Redeem Dashboard'
+      title='Presale Dashboard'
       headerRightElement={headerElement}
       headerIcon={<Ionicons name='ticket' size={24} color={Colors.tint} />}
     >

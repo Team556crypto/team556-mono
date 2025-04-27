@@ -72,16 +72,10 @@ export default function OnboardingScreen() {
     setVerificationError(null)
 
     try {
-      const response = await verifyEmail(token, verificationCode)
-      console.log('Verification successful:', response.message)
-
-      // Refresh user state to confirm verification status
+      await verifyEmail(token, verificationCode)
       await fetchAndUpdateUser()
-
-      // Proceed to the next step (wallet creation)
       setCurrentStep(prev => prev + 1)
     } catch (err: any) {
-      console.error('Email verification failed:', err)
       const errorMessage =
         err?.response?.data?.error || err.message || 'Failed to verify email. Please check the code and try again.'
       setVerificationError(errorMessage)

@@ -48,9 +48,6 @@ function InitialLayout() {
         if (!user.email_verified) {
           // User's email is not verified, must go to onboarding
           if (!inOnboarding) {
-            console.log(
-              `[Layout] Redirecting unverified user from ${currentSegment} to onboarding`
-            )
             router.replace('/onboarding')
           } else {
             console.log(`[Layout] Unverified user already in onboarding: ${currentSegment}`)
@@ -62,9 +59,6 @@ function InitialLayout() {
           if (hasWallets) {
             // Verified user with wallets. Should be in tabs or allowed standalone.
             if (!inAuthGroup && !inAllowedStandalone) {
-              console.log(
-                `[Layout] Redirecting verified user with wallets from ${currentSegment} to (tabs)`
-              )
               router.replace('/(tabs)/' as any)
             } else {
               console.log(`[Layout] Verified user with wallets in allowed route: ${currentSegment}`)
@@ -72,9 +66,6 @@ function InitialLayout() {
           } else {
             // Verified user has no wallets, should be in onboarding
             if (!inOnboarding) {
-              console.log(
-                `[Layout] Redirecting verified user without wallets from ${currentSegment} to onboarding`
-              )
               router.replace('/onboarding')
             } else {
               console.log(`[Layout] Verified user without wallets in onboarding: ${currentSegment}`)
@@ -89,7 +80,6 @@ function InitialLayout() {
       // Not authenticated
       // Redirect to login if not already there
       if (!inLogin) {
-        console.log(`[Layout] Redirecting unauthenticated user from ${currentSegment} to login`)
         router.replace('/login')
       } else {
         console.log('[Layout] Unauthenticated user in login route.')
@@ -127,7 +117,13 @@ export default function RootLayout() {
   })
 
   // Drawer state - Now managed by Zustand
-  const { isVisible: isDrawerVisible, content: drawerContent, maxHeight: drawerMaxHeight, minHeight: drawerMinHeight, closeDrawer } = useDrawerStore()
+  const {
+    isVisible: isDrawerVisible,
+    content: drawerContent,
+    maxHeight: drawerMaxHeight,
+    minHeight: drawerMinHeight,
+    closeDrawer
+  } = useDrawerStore()
 
   useEffect(() => {
     if (error) throw error // Handle font loading error

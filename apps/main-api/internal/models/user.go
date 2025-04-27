@@ -13,17 +13,14 @@ type User struct {
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 
-	FirstName      string `json:"first_name"`
-	LastName       string `json:"last_name"`
-	Email          string `json:"email" gorm:"uniqueIndex;not null"`
-	Password       string `json:"-"`                                   // Add hashed password field, exclude from JSON
-	UserCode       string `json:"user_code" gorm:"uniqueIndex;size:8"` // Unique code for the user
-	RedeemWallet   string `json:"redeem_wallet"`
-	RedeemCodeUsed string `json:"redeem_code_used"`
-	PresaleType    *uint8 `json:"presale_type,omitempty" gorm:"index"` // Can be 1, 2, or null. Added omitempty back.
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Email     string `json:"email" gorm:"uniqueIndex;not null"`
+	Password  string `json:"-"`                                   // Add hashed password field, exclude from JSON
+	UserCode  string `json:"user_code" gorm:"uniqueIndex;size:8"` // Unique code for the user
 
 	EmailVerified              bool       `gorm:"default:false" json:"email_verified"` // Changed JSON tag to snake_case
-	EmailVerificationCode      *string    `gorm:"index" json:"-"` // Nullable, index for lookup
+	EmailVerificationCode      *string    `gorm:"index" json:"-"`                      // Nullable, index for lookup
 	EmailVerificationExpiresAt *time.Time `json:"-"`
 
 	Wallets []Wallet `json:"wallets,omitempty"` // One-to-many relationship

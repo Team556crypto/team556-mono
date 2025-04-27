@@ -54,7 +54,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
     // Only set loading if balance hasn't been fetched yet
     if (get().solBalance === null) {
-      set({ isSolLoading: true });
+      set({ isSolLoading: true })
     }
     set({ solError: null }) // Always clear previous error
 
@@ -79,9 +79,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
       set({
         solBalance: data.balance, // Update balance
-        solPrice: data.price ?? null,     // Update price
-        isSolLoading: false,      // Mark loading as complete
-        solError: null            // Clear any previous error
+        solPrice: data.price ?? null, // Update price
+        isSolLoading: false, // Mark loading as complete
+        solError: null // Clear any previous error
       })
 
       if (data.price === null) {
@@ -89,7 +89,6 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         // Optionally set a specific warning message if needed
         // set({ solError: 'Could not fetch current price.' })
       }
-
     } catch (err) {
       console.error('Failed to fetch balance/price from main-api (store):', err)
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch data'
@@ -109,9 +108,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
     // Only set loading if balance hasn't been fetched yet
     if (get().teamBalance === null) {
-      set({ isTeamLoading: true });
+      set({ isTeamLoading: true })
     }
-    set({ teamError: null }); // Always clear previous error
+    set({ teamError: null }) // Always clear previous error
 
     const apiUrl = process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL
 
@@ -134,9 +133,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
       set({
         teamBalance: data.balance, // Update balance
-        teamPrice: data.price ?? null,     // Update price
-        isTeamLoading: false,      // Mark loading as complete
-        teamError: null            // Clear any previous error
+        teamPrice: data.price ?? null, // Update price
+        isTeamLoading: false, // Mark loading as complete
+        teamError: null // Clear any previous error
       })
 
       if (data.price === null) {
@@ -144,7 +143,6 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         // Optionally set a specific warning message if needed
         // set({ teamError: 'Could not fetch current price.' })
       }
-
     } catch (err) {
       console.error('Failed to fetch balance/price from main-api (store):', err)
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch data'
@@ -158,11 +156,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
     // Prevent multiple intervals and ensure token exists
     if (pollingIntervalId || !token) {
-      console.log('Polling not started: already running or no token.')
       return
     }
-
-    console.log('Starting wallet balance polling...')
 
     // Fetch immediately first time
     fetchSolBalance()
@@ -170,13 +165,11 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
     // Start interval
     const intervalId = setInterval(() => {
-      console.log('Polling wallet balances...')
       const currentToken = useAuthStore.getState().token // Check token validity inside interval
       if (currentToken) {
         fetchSolBalance()
         fetchTeamBalance()
       } else {
-        console.log('Token expired or user logged out. Stopping polling.')
         get().stopPolling() // Stop if token becomes invalid
       }
     }, POLLING_INTERVAL_MS)
@@ -187,7 +180,6 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   stopPolling: () => {
     const { pollingIntervalId } = get()
     if (pollingIntervalId) {
-      console.log('Stopping wallet balance polling...')
       clearInterval(pollingIntervalId)
       set({ pollingIntervalId: null })
     }

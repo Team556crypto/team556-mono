@@ -41,7 +41,6 @@ async function insertCodes(codes: PresaleCode[]) {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    console.log(`Attempting to insert ${codes.length} codes...`)
 
     // Use a prepared statement for efficiency and security
     const insertQuery =
@@ -57,10 +56,6 @@ async function insertCodes(codes: PresaleCode[]) {
     }
 
     await client.query('COMMIT')
-    console.log(`Successfully inserted ${insertedCount} new codes.`)
-    if (insertedCount < codes.length) {
-      console.log(`${codes.length - insertedCount} codes already existed and were skipped.`)
-    }
   } catch (e) {
     await client.query('ROLLBACK')
     console.error('Error inserting codes:', e)
@@ -71,16 +66,12 @@ async function insertCodes(codes: PresaleCode[]) {
 }
 
 async function main() {
-  console.log('Generating presale codes...')
   const p1Codes = generateCodes('P1-', 172)
   const p2Codes = generateCodes('P2-', 100)
   const allCodes = [...p1Codes, ...p2Codes]
 
-  console.log(`Generated ${p1Codes.length} P1 codes and ${p2Codes.length} P2 codes.`)
-
   try {
     await insertCodes(allCodes)
-    console.log('Presale code generation finished.')
   } catch (error) {
     console.error('Failed to generate presale codes:', error)
   } finally {

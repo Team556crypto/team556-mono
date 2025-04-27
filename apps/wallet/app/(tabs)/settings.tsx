@@ -348,7 +348,7 @@ export default function SettingsScreen() {
                     <Ionicons name='speedometer-outline' size={22} color={Colors.text} />
                   </View>
                   <View style={styles.menuItemContent}>
-                    <Text preset='label'>Redeem Dashboard</Text>
+                    <Text preset='label'>Presale Dashboard</Text>
                     <Text preset='caption'>Your presale redeem dashboard</Text>
                   </View>
                   <Ionicons name='chevron-forward' size={18} color={Colors.icon} />

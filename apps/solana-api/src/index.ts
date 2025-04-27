@@ -7,10 +7,11 @@ import routes from './routes'
 
 // Load environment variables from root
 import path from 'path'
-dotenv.config({ path: path.resolve(__dirname, '../../.env') })
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
 
 const app = express()
-const port = process.env.SOLANA_API__PORT || 4000
+// Explicitly parse the port to a number
+const port = parseInt(process.env.SOLANA_API__PORT || '4000', 10)
 const isProduction = process.env.SOLANA_API__NODE_ENV === 'production'
 
 // Middleware
@@ -39,7 +40,6 @@ app.use(express.json())
 
 // --- Debugging Middleware: Log all incoming requests ---
 app.use((req, res, next) => {
-  console.log(`---> Solana API Received: ${req.method} ${req.originalUrl}`)
   next() // Pass control to the next middleware/router
 })
 // ----------------------------------------------------
@@ -53,8 +53,8 @@ app.get('/health', (req: express.Request, res: express.Response) => {
 })
 
 // Start server
-app.listen(port, () => {
-  console.log(`✅ Solana API server running on port ${port}`)
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Solana API server running at http://0.0.0.0:${port}`)
   console.log(
     `🔒 CORS: ${isProduction ? 'Production mode - restricted origins' : 'Development mode - all origins allowed'}`
   )

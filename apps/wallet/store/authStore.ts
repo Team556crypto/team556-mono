@@ -36,23 +36,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         // TODO: Optionally validate token with backend here
         // For now, assume stored token is valid
         // Set token/auth status first, assume valid until profile fetch fails
-        set({ token: storedToken, isAuthenticated: true, user: null });
+        set({ token: storedToken, isAuthenticated: true, user: null })
         try {
-          console.log('initializeAuth: Token found, fetching user profile...');
           // Call getUserProfile immediately using the stored token
-          const userProfile = await getUserProfile(storedToken);
-          set({ user: userProfile }); // Update user state
-          console.log('initializeAuth: User profile fetched successfully.');
+          const userProfile = await getUserProfile(storedToken)
+          set({ user: userProfile }) // Update user state
         } catch (fetchError: any) {
-          console.error('initializeAuth: Failed to fetch user profile with stored token:', fetchError);
           // Handle potentially invalid token (e.g., log out)
           if (fetchError?.response?.status === 401) {
-            console.warn('initializeAuth: Token invalid, logging out.');
-            await SecureStoreUtils.deleteToken();
-            set({ token: null, user: null, isAuthenticated: false, error: 'Invalid session' });
+            await SecureStoreUtils.deleteToken()
+            set({ token: null, user: null, isAuthenticated: false, error: 'Invalid session' })
           } else {
             // Keep authenticated but signal profile load failure?
-            set({ error: 'Failed to load profile' });
+            set({ error: 'Failed to load profile' })
             // Consider if we should logout even for non-401 errors if profile is essential
           }
         }
@@ -70,24 +66,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   fetchAndUpdateUser: async () => {
-    const token = get().token;
+    const token = get().token
     if (!token) {
-      console.log('fetchAndUpdateUser: No token found, skipping update.');
-      return; // No token, cannot fetch profile
+      return // No token, cannot fetch profile
     }
     try {
-      console.log('fetchAndUpdateUser: Fetching latest user profile...');
-      const updatedUser = await getUserProfile(token);
-      set({ user: updatedUser });
-      console.log('fetchAndUpdateUser: User state updated successfully.');
+      const updatedUser = await getUserProfile(token)
+      set({ user: updatedUser })
     } catch (error: any) {
-      console.error('fetchAndUpdateUser: Failed to fetch/update user profile:', error);
       // Optional: Handle specific errors, e.g., clear auth if token is invalid (401 Unauthorized)
       if (error?.response?.status === 401) {
-        console.warn('fetchAndUpdateUser: Token might be invalid, clearing auth state.');
-        // Note: logout() internally clears state but doesn't call the logoutUser API function by default.
-        // If it were to call logoutUser, it should pass the token: await logoutUser(token);
-        get().logout(); // Call logout if token is invalid
+        get().logout() // Call logout if token is invalid
       }
       // Keep existing error state or set a new one? Depends on desired behavior.
       // set({ error: 'Failed to update user profile' });
@@ -118,33 +107,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true, error: null })
     try {
       // Call the signupUser function from the API service
-      console.log('Calling signupUser API...');
-      // Pass only email/password credentials
-      const responseData = await signupUser(credentials);
-      console.log('Signup API response received:', JSON.stringify(responseData, null, 2)); // Log the raw response
+      const responseData = await signupUser(credentials)
 
       // Now destructure
-      const { token, user } = responseData;
-      console.log('Extracted Token:', token); // Log the token
-      console.log('Extracted User:', JSON.stringify(user, null, 2)); // Log the user object
+      const { token, user } = responseData
 
       // Check if token or user are undefined/null before proceeding
       if (!token || !user) {
-         console.error('Signup Error: Token or User object is missing/invalid in API response.');
-         // Set specific error before throwing
-         set({ token: null, user: null, isAuthenticated: false, isLoading: false, error: 'Signup failed: Invalid response from server.' });
-         await SecureStoreUtils.deleteToken();
-         throw new Error('Signup failed: Invalid response from server.');
+        set({
+          token: null,
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          error: 'Signup failed: Invalid response from server.'
+        })
+        await SecureStoreUtils.deleteToken()
+        throw new Error('Signup failed: Invalid response from server.')
       }
 
       // Automatically log in the user after successful signup
-      console.log('Attempting to save token to SecureStore...');
-      await SecureStoreUtils.saveToken(token);
-      console.log('Token saved to SecureStore.');
+      await SecureStoreUtils.saveToken(token)
 
-      console.log('Attempting to update auth store state...');
-      set({ token, user, isAuthenticated: true, isLoading: false, error: null });
-      console.log('Auth store state updated successfully after signup.');
+      set({ token, user, isAuthenticated: true, isLoading: false, error: null })
 
       // === REMOVED Navigation Logic ===
       // Navigation is now handled in _layout.tsx based on auth state and user wallets
@@ -152,19 +136,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error: any) {
       // Check if the error was already handled by the token/user check above
       if (!get().error) {
-        console.error('Signup failed inside authStore catch block:', error);
         // Check for specific 409 Conflict error
         if (error.response?.status === 409) {
-          set({ error: 'Email already registered. Please sign in.', isLoading: false });
+          set({ error: 'Email already registered. Please sign in.', isLoading: false })
         } else {
           // Handle other errors
-          const errorMessage = error.response?.data?.error || error.message || 'Signup failed';
-          set({ token: null, user: null, isAuthenticated: false, isLoading: false, error: errorMessage });
-          await SecureStoreUtils.deleteToken();
+          const errorMessage = error.response?.data?.error || error.message || 'Signup failed'
+          set({ token: null, user: null, isAuthenticated: false, isLoading: false, error: errorMessage })
+          await SecureStoreUtils.deleteToken()
         }
       }
       // Re-throw error to be caught by the component
-      throw error;
+      throw error
     }
   },
 
@@ -175,8 +158,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Example if logoutUser API needed calling: await logoutUser(get().token);
       await SecureStoreUtils.deleteToken()
       set({ token: null, user: null, isAuthenticated: false, error: null })
-    } catch (error) { // Catches errors from SecureStore or potential API call
-      console.error('Logout failed:', error)
+    } catch (error) {
+      // Catches errors from SecureStore or potential API call
       set({ error: 'Logout failed' })
     } finally {
       set({ isLoading: false })

@@ -208,11 +208,9 @@ export async function logoutUser(token: string | null): Promise<void> {
       }
     } else {
       // Optionally read success message if needed
-      const data = await response.json()
-      console.log('Server logout successful:', data.message || 'OK')
+      await response.json()
     }
   } catch (networkError) {
-    console.error('Logout network error:', networkError)
     // Re-throw the error so the UI can potentially inform the user,
     // but the calling function should still proceed with client-side logout.
     throw networkError

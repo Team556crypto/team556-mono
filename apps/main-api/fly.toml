@@ -1,0 +1,24 @@
+# fly.toml app configuration file generated for team556-main-api on 2025-04-26T17:48:31-07:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'team556-main-api'
+primary_region = 'lax'
+console_command = '/bin/sh'
+
+[build]
+  dockerfile = 'Dockerfile'
+
+[http_service]
+  internal_port = 3000 # Your app's internal listening port (set via MAIN_API__PORT secret)
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+[[vm]]
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 256

@@ -1,12 +1,5 @@
 import { Request, Response } from 'express'
-import {
-  Keypair,
-  Connection,
-  PublicKey,
-  LAMPORTS_PER_SOL,
-  ParsedAccountData,
-  Transaction,
-} from '@solana/web3.js'
+import { Keypair, Connection, PublicKey, LAMPORTS_PER_SOL, ParsedAccountData, Transaction } from '@solana/web3.js'
 import * as bip39 from 'bip39'
 import { z } from 'zod'
 import { Alchemy, Network, TokenPrice, GetTokenPriceByAddressResponse, TokenAddressRequest } from 'alchemy-sdk'
@@ -33,7 +26,7 @@ const addressSchema = z.object({
 // --- Zod Schema for Sign Transaction ---
 const signTransactionSchema = z.object({
   mnemonic: z.string().refine(bip39.validateMnemonic, { message: 'Invalid mnemonic phrase' }),
-  unsignedTransaction: z.string().min(1, { message: 'Unsigned transaction is required' }), // Expect base64 string
+  unsignedTransaction: z.string().min(1, { message: 'Unsigned transaction is required' }) // Expect base64 string
 })
 
 // --- Helper Functions ---
@@ -298,10 +291,14 @@ export const signTransaction = async (req: Request, res: Response) => {
     const { mnemonic, unsignedTransaction } = validationResult.data
 
     // 2. Derive Keypair from Mnemonic
+
     const seed = await bip39.mnemonicToSeed(mnemonic, '') // Use empty passphrase
-    const keypair = Keypair.fromSeed(seed.slice(0, 32))
+    // Use the same derivation path that was used when creating the wallet
+    const derivationPath = "m/44'/501'/0'/0'"
+    const derivedSeed = derivePath(derivationPath, seed.toString('hex')).key
+    const keypair = Keypair.fromSeed(derivedSeed)
     const derivedPublicKey = keypair.publicKey.toBase58()
-    console.log(`Derived PublicKey from Mnemonic: ${derivedPublicKey}`)
+    console.log(`Derived PublicKey from Mnemonic (path ${derivationPath}): ${derivedPublicKey}`)
 
     // 3. Deserialize Unsigned Transaction
     // The unsigned transaction is expected to be sent as a base64 encoded buffer
@@ -312,7 +309,9 @@ export const signTransaction = async (req: Request, res: Response) => {
     const expectedFeePayer = transaction.feePayer?.toBase58()
     console.log(`Transaction Fee Payer (expected signer): ${expectedFeePayer}`)
     if (derivedPublicKey !== expectedFeePayer) {
-      console.error(`SIGNER MISMATCH: Derived key ${derivedPublicKey} does not match expected fee payer ${expectedFeePayer}`)
+      console.error(
+        `SIGNER MISMATCH: Derived key ${derivedPublicKey} does not match expected fee payer ${expectedFeePayer}`
+      )
       // This is likely the cause of the 'unknown signer' error
     }
 

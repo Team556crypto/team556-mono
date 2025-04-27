@@ -16,6 +16,7 @@ import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useDrawerStore } from '@/store/drawerStore'
 import SendDrawerContent from '@/components/SendDrawerContent'
 import ReceiveDrawerContent from '@/components/ReceiveDrawerContent'
+import SwapDrawerContent from '@/components/SwapDrawerContent'
 
 const ComingSoonDrawerContent: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   return (
@@ -116,7 +117,15 @@ export default function HomeScreen() {
   }
 
   const handleSwapPress = () => {
-    openDrawer(<ComingSoonDrawerContent onClose={closeDrawer} />)
+    openDrawer(
+      <SwapDrawerContent
+        solBalance={solBalance}
+        teamBalance={teamBalance}
+        fetchSolBalance={fetchSolBalance}
+        fetchTeamBalance={fetchTeamBalance}
+        onClose={closeDrawer}
+      />
+    )
   }
 
   // Prepare the header right element
@@ -177,12 +186,12 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         {/* Swap Button */}
-        {/* <TouchableOpacity style={styles.actionButton} onPress={handleSwapPress}>
+        <TouchableOpacity style={styles.actionButton} onPress={handleSwapPress}>
           <View style={[styles.buttonContent, isTabletOrLarger && styles.buttonContentLarge]}>
             <Ionicons name='swap-horizontal-outline' size={24} color={Colors.tint} />
             <Text style={styles.buttonLabel}>Swap</Text>
           </View>
-        </TouchableOpacity> */}
+        </TouchableOpacity>
       </View>
     </ScreenLayout>
   )

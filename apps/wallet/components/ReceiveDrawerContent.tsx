@@ -35,7 +35,7 @@ export const ReceiveDrawerContent: React.FC<ReceiveDrawerProps> = ({
       
       {/* QR Code */}
       <View style={styles.qrContainer}>
-        <QRCode value={address} size={150} color='black' backgroundColor='white' />
+        <QRCode value={address} size={130} color='black' backgroundColor='white' />
       </View>
       
       {/* Address Display and Copy Button */}
@@ -63,23 +63,24 @@ export const ReceiveDrawerContent: React.FC<ReceiveDrawerProps> = ({
 const styles = StyleSheet.create({
   container: {
     padding: 4,
-    gap: 18
+    gap: 12
   },
   title: {
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
     fontWeight: 'bold'
   },
   description: {
     textAlign: 'center',
-    marginBottom: 10
+    marginBottom: 8,
+    fontSize: 14
   },
   qrContainer: {
     backgroundColor: 'white',
-    padding: 16,
+    padding: 12,
     borderRadius: 10,
     alignSelf: 'center',
-    marginVertical: 16,
+    marginVertical: 12,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -89,12 +90,13 @@ const styles = StyleSheet.create({
   addressSection: {
     backgroundColor: Colors.backgroundDark,
     borderRadius: 10,
-    padding: 12,
-    marginBottom: 20
+    padding: 10,
+    marginBottom: 12
   },
   addressLabel: {
     color: Colors.icon,
-    marginBottom: 8
+    marginBottom: 6,
+    fontSize: 13
   },
   addressContainer: {
     flexDirection: 'row',
@@ -102,18 +104,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: Colors.backgroundDarker,
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10
+    paddingHorizontal: 10,
+    paddingVertical: 8
   },
   addressText: {
     flex: 1,
     color: Colors.text,
-    fontSize: 16,
-    marginRight: 10
+    fontSize: 14,
+    marginRight: 8
   },
   copyButton: {
-    padding: 8,
-    borderRadius: 8,
+    padding: 6,
+    borderRadius: 6,
     backgroundColor: Colors.backgroundDark
   },
   actionButtonsContainer: {

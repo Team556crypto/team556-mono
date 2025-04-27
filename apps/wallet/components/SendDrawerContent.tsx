@@ -425,24 +425,24 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
 const styles = StyleSheet.create({
   container: {
     padding: 4,
-    gap: 18
+    gap: 12
   },
   title: {
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
     fontWeight: 'bold'
   },
   tokenSelectionContainer: {
     marginBottom: 6
   },
   balanceContainer: {
-    marginTop: 8,
+    marginTop: 6,
     marginBottom: 6,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
     backgroundColor: Colors.backgroundDark,
     borderRadius: 8
   },
@@ -493,10 +493,10 @@ const styles = StyleSheet.create({
   },
   percentageButton: {
     flex: 1, // Make buttons share space
-    marginHorizontal: 4, // Add small horizontal gap between buttons
-    paddingVertical: 10, // Adjust vertical padding for smaller buttons
+    marginHorizontal: 2, // Add small horizontal gap between buttons
+    paddingVertical: 8, // Adjust vertical padding for smaller buttons
     height: 'auto', // Let height be determined by content
-    minHeight: 38 // Ensure a minimum tap area
+    minHeight: 32 // Ensure a minimum tap area
   },
   // Styles for custom Segmented Control
   segmentContainer: {
@@ -512,16 +512,17 @@ const styles = StyleSheet.create({
   },
   segmentButton: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    backgroundColor: Colors.backgroundDarker
   },
   segmentButtonActive: {
     backgroundColor: Colors.tint // Active background color
   },
   segmentText: {
     color: Colors.icon, // Use icon color for inactive text
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600'
   },
   segmentTextActive: {
@@ -532,9 +533,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between'
   },
   confirmationSection: {
-    marginVertical: 10,
+    marginVertical: 8,
     backgroundColor: Colors.backgroundDark,
-    padding: 16,
+    padding: 12,
     borderRadius: 10,
     alignItems: 'center'
   },

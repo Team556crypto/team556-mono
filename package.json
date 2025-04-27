@@ -30,6 +30,7 @@
     "solana-api:start": "yarn workspace solana-api start",
     "token:build": "yarn workspace token-core build",
     "deploy:solana-api": "flyctl deploy -a team556-solana-api -c apps/solana-api/fly.toml",
+    "deploy:main-api": "flyctl deploy -a team556-main-api -c apps/main-api/fly.toml",
     "build:wallet-web": "cd apps/wallet && npx expo export --platform web --clear && cd ../..",
     "deploy:wallet-web": "cd apps/wallet && flyctl deploy && cd ../..",
     "deploy:wallet-web:full": "yarn build:wallet-web && yarn deploy:wallet-web"

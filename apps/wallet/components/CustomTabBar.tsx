@@ -3,15 +3,17 @@ import { View, TouchableOpacity, Text, StyleSheet, Dimensions, Platform } from '
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { excludedRoutes } from '@/constants/Global'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 import { Colors } from '@/constants/Colors'
 const { width } = Dimensions.get('window')
 
 export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets()
+  const { isTabletOrLarger } = useBreakpoint()
 
   const tabBarHeight = 60
-  const bottomInset = Platform.OS === 'ios' ? insets.bottom - 12 : 0
+  const bottomInset = Platform.OS === 'ios' && !isTabletOrLarger ? insets.bottom - 12 : 0
 
   return (
     <View

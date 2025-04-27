@@ -241,10 +241,7 @@ export async function logoutUser(token: string | null): Promise<void> {
  * @returns A promise that resolves with the create wallet response (message and mnemonic).
  * @throws An error if the request fails.
  */
-export async function createWallet(
-  token: string | null,
-  password: string
-): Promise<CreateWalletResponse> {
+export async function createWallet(token: string | null, password: string): Promise<CreateWalletResponse> {
   if (!process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL) {
     throw new Error('API URL is not configured.')
   }
@@ -304,7 +301,13 @@ export async function getUserProfile(token: string | null): Promise<User> {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({})) // Catch potential JSON parse errors
-    throw new Error(errorData?.error || `Failed to fetch user profile: ${response.statusText}`)
+    // Create a structured error object including the status code
+    const error = new Error(errorData?.error || `Failed to fetch user profile: ${response.statusText}`) as any // Use 'any' to add custom properties
+    error.response = {
+      data: errorData,
+      status: response.status // Include status code
+    }
+    throw error
   }
 
   const user: User = await response.json()

@@ -1,16 +1,10 @@
 import { Request, Response } from 'express'
-import {
-  Keypair,
-  Connection,
-  PublicKey,
-  LAMPORTS_PER_SOL,
-  ParsedAccountData,
-  Transaction,
-} from '@solana/web3.js'
+import { Keypair, Connection, PublicKey, LAMPORTS_PER_SOL, ParsedAccountData, Transaction } from '@solana/web3.js'
 import * as bip39 from 'bip39'
 import { z } from 'zod'
 import { Alchemy, Network, TokenPrice, GetTokenPriceByAddressResponse, TokenAddressRequest } from 'alchemy-sdk'
 import { Response as FetchResponse } from 'node-fetch'
+import { derivePath } from 'ed25519-hd-key'
 
 // --- Zod Schemas ---
 
@@ -32,7 +26,7 @@ const addressSchema = z.object({
 // --- Zod Schema for Sign Transaction ---
 const signTransactionSchema = z.object({
   mnemonic: z.string().refine(bip39.validateMnemonic, { message: 'Invalid mnemonic phrase' }),
-  unsignedTransaction: z.string().min(1, { message: 'Unsigned transaction is required' }), // Expect base64 string
+  unsignedTransaction: z.string().min(1, { message: 'Unsigned transaction is required' }) // Expect base64 string
 })
 
 // --- Helper Functions ---
@@ -154,8 +148,14 @@ export const createWallet = async (req: Request, res: Response) => {
     // Use an empty passphrase for standard derivation
     const seed = bip39.mnemonicToSeedSync(mnemonic, '')
 
-    // Generate a keypair from the first 32 bytes of the seed
-    const keypair = Keypair.fromSeed(seed.slice(0, 32))
+    // Define the standard Solana derivation path (SLIP-0010)
+    const derivationPath = `m/44'/501'/0'/0'`
+ 
+    // Derive the key using the standard path
+    const derivedSeed = derivePath(derivationPath, seed.toString('hex')).key
+
+    // Generate a keypair from the derived seed
+    const keypair = Keypair.fromSeed(derivedSeed)
 
     res.status(201).json({
       publicKey: keypair.publicKey.toBase58(),

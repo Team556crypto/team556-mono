@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import * as SecureStoreUtils from '@/utils/secureStore'
-import { loginUser, signupUser, getUserProfile, logoutUser, UserCredentials, User } from '@/services/api' // Assuming api service exports these
-import { router } from 'expo-router' // Import router
+import { loginUser, signupUser, getUserProfile, UserCredentials, User } from '@/services/api' // Assuming api service exports these
 
 interface AuthState {
   token: string | null
@@ -41,15 +40,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           // Call getUserProfile immediately using the stored token
           const userProfile = await getUserProfile(storedToken)
           set({ user: userProfile }) // Update user state
-        } catch (fetchError: any) {
-          // Handle potentially invalid token (e.g., log out)
-          if (fetchError?.response?.status === 401) {
-            await SecureStoreUtils.deleteToken()
-            set({ token: null, user: null, isAuthenticated: false, error: 'Invalid session' })
+        } catch (profileError: any) {
+          console.error('Failed to fetch profile during init:', profileError)
+          // If token is invalid (401) or user not found (404), logout
+          if (profileError?.response?.status === 401 || profileError?.response?.status === 404) {
+            console.log(`Logging out due to ${profileError.response.status} on profile fetch during init.`)
+            get().logout()
+            // After logout, reset necessary state again for clarity
+            set({ token: null, isAuthenticated: false, user: null, error: null })
           } else {
             // Keep authenticated but signal profile load failure?
             set({ error: 'Failed to load profile' })
-            // Consider if we should logout even for non-401 errors if profile is essential
+            // Consider if we should logout even for non-401/404 errors if profile is essential
           }
         }
       } else {
@@ -74,12 +76,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const updatedUser = await getUserProfile(token)
       set({ user: updatedUser })
     } catch (error: any) {
-      // Optional: Handle specific errors, e.g., clear auth if token is invalid (401 Unauthorized)
-      if (error?.response?.status === 401) {
-        get().logout() // Call logout if token is invalid
+      // Handle specific errors: logout if token is invalid (401) or user not found (404)
+      if (error?.response?.status === 401 || error?.response?.status === 404) {
+        console.log(`Logging out due to ${error.response.status} on profile update.`)
+        get().logout() // Call logout if token is invalid or user not found
+      } else {
+        // Keep existing error state or set a new one? Depends on desired behavior.
+        console.error('Failed to update user profile:', error)
+        set({ error: 'Failed to update user profile' })
       }
-      // Keep existing error state or set a new one? Depends on desired behavior.
-      // set({ error: 'Failed to update user profile' });
     }
   },
 

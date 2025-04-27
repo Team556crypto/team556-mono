@@ -27,6 +27,9 @@ type AuthHandler struct {
 	EmailClient *email.Client
 }
 
+// Character set for user code generation
+const userCodeChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
 // NewAuthHandler creates a new AuthHandler
 func NewAuthHandler(db *gorm.DB, jwtSecret string, emailClient *email.Client) *AuthHandler {
 	return &AuthHandler{
@@ -41,8 +44,6 @@ func NewAuthHandler(db *gorm.DB, jwtSecret string, emailClient *email.Client) *A
 type RegisterRequest struct {
 	Email     string `json:"email" validate:"required,email"`
 	Password  string `json:"password" validate:"required,min=8"`
-	FirstName string `json:"first_name" validate:"omitempty"`
-	LastName  string `json:"last_name" validate:"omitempty"`
 }
 
 // LoginRequest defines the expected input for login
@@ -64,6 +65,7 @@ type GetMeResponse struct {
 	LastName          string        `json:"last_name"`
 	Email             string         `json:"email"`
 	EmailVerified     bool           `json:"email_verified"` // Changed tag to match User model/frontend expectation
+	PresaleType       *uint8         `json:"presale_type"`           // Add presale type (pointer to allow null). Removed omitempty.
 	HasRedeemedPresale bool           `json:"has_redeemed_presale"`
 	Wallets           []models.Wallet `json:"wallets,omitempty"`
 	// Add other user fields you want to expose as needed
@@ -79,6 +81,20 @@ func generateVerificationCode(length int) (string, error) {
 			return "", err // Return error if random number generation fails
 		}
 		builder.WriteByte('0' + byte(randomIndex.Int64()))
+	}
+	return builder.String(), nil
+}
+
+// generateUserCode creates a random alphanumeric string of the specified length.
+func generateUserCode(length int) (string, error) {
+	var builder strings.Builder
+	charSetLen := big.NewInt(int64(len(userCodeChars)))
+	for i := 0; i < length; i++ {
+		randomIndex, err := rand.Int(rand.Reader, charSetLen)
+		if err != nil {
+			return "", fmt.Errorf("failed to generate random index for user code: %w", err)
+		}
+		builder.WriteByte(userCodeChars[randomIndex.Int64()])
 	}
 	return builder.String(), nil
 }
@@ -129,14 +145,20 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	expiresAtPtr := &expiresAt
 
 	// 6. Prepare user data (new or update)
+	// Generate unique user code *before* creating user object
+	userCode, err := generateUserCode(8) // 8 characters as defined in model
+	if err != nil {
+		log.Printf("Error generating user code: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate user code"})
+	}
+
 	user := models.User{
 		Email:                      strings.ToLower(req.Email),
 		Password:                   string(hashedPassword),
 		EmailVerified:              false, // Always reset to false on registration/re-attempt
 		EmailVerificationCode:      codePtr,
 		EmailVerificationExpiresAt: expiresAtPtr,
-		FirstName:                  req.FirstName,
-		LastName:                   req.LastName,
+		UserCode:                   userCode, // Assign generated code
 	}
 
 	// 7. Save or Update user in database
@@ -144,19 +166,27 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		// Update existing unverified user record with new code/password
 		user.ID = existingUser.ID               // Ensure we update the correct record
 		user.CreatedAt = existingUser.CreatedAt // Keep original creation time
+		log.Printf("Attempting to update existing unverified user: %s (ID: %d)\n", user.Email, user.ID)
 		if err := h.DB.Save(&user).Error; err != nil {
+			log.Printf("Error updating user %s: %v\n", user.Email, err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update user registration", "details": err.Error()})
 		}
 		log.Printf("Updated verification code for existing unverified user: %s\n", user.Email)
 	} else { // User does not exist, create new
+		log.Printf("Attempting to create new user: %s\n", user.Email) // Log before create attempt
 		if err := h.DB.Create(&user).Error; err != nil {
+			// Log the specific database error received
+			log.Printf("Database error during Create for user %s: %v\n", user.Email, err)
 			// Handle potential unique constraint violation again (race condition?)
 			if strings.Contains(err.Error(), "duplicate key value violates unique constraint") || strings.Contains(err.Error(), "UNIQUE constraint failed") {
+				log.Printf("Detected unique constraint violation for %s. Returning 409.\n", user.Email)
 				return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "Email already registered"})
 			}
+			// Log other DB errors before returning 500
+			log.Printf("Unhandled database error during Create for user %s. Returning 500.\n", user.Email)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to register user", "details": err.Error()})
 		}
-		log.Printf("Created new user requires verification: %s\n", user.Email)
+		log.Printf("Created new user requires verification: %s (ID: %d)\n", user.Email, user.ID)
 	}
 
 	// 8. Send verification email (always send on register/re-attempt)
@@ -180,8 +210,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		log.Printf("Error signing JWT token after registration for %s: %v", user.Email, err)
 		// Don't fail the whole request, but maybe log or monitor this
 		// Return the user object without the token in this edge case?
-		// For now, let's return the user but maybe log it significantly.
-		// Decided to return 500 as token generation is critical for login flow
+		// For now, let's return 500 as token generation is critical for login flow
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate authentication token after registration"})
 	}
 
@@ -246,13 +275,29 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	// 7. Preload wallets after successful login before returning user data
 	h.DB.Preload("Wallets").First(&user, user.ID) // Reload user with wallets
 
+	// 7.5 Check redeemed presale code status (similar to GetMe)
+	var redeemedCode models.PresaleCode
+	var presaleType *uint8
+	hasRedeemed := false
+	if err := h.DB.Where("user_id = ? AND redeemed = ?", user.ID, true).First(&redeemedCode).Error; err == nil {
+		hasRedeemed = true
+		tempType := uint8(redeemedCode.Type)
+		presaleType = &tempType
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		log.Printf("Error fetching redeemed presale code during login for user %d: %v\n", user.ID, err)
+		// Decide how to handle this error - log and continue, or return error?
+		// For now, logging and continuing, the fields will be nil/false in response.
+	}
+
 	// 8. Return token and user data
 	return c.JSON(fiber.Map{
 		"token": tokenString,
 		"user": fiber.Map{
 			"id":            user.ID,
 			"email":         user.Email,
-			"emailVerified": user.EmailVerified, // Include verification status
+			"email_verified": user.EmailVerified, // Include verification status
+			"has_redeemed_presale": hasRedeemed,  // Include redeemed status
+			"presale_type":  presaleType,      // Include presale type (can be nil)
 			"wallets":       user.Wallets,       // Include wallets
 			"firstName":     user.FirstName,
 			"lastName":      user.LastName,
@@ -285,13 +330,24 @@ func (h *AuthHandler) GetMe(c *fiber.Ctx) error {
 			// This means the user ID from a valid token doesn't exist in the DB (edge case, maybe user deleted)
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User associated with token not found"})
 		}
-		// Handle other potential database errors
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database error fetching user details", "details": err.Error()})
 	}
 
-	// Check if the user has redeemed a presale code
-	var redeemedCount int64
-	h.DB.Model(&models.PresaleCode{}).Where("user_id = ? AND redeemed = ?", userID, true).Count(&redeemedCount)
+	// Check if the user has redeemed a presale code and get its type
+	var redeemedCode models.PresaleCode
+	var presaleType *uint8 // Use pointer to handle potential null/not found
+	hasRedeemed := false
+	// Fetch the first redeemed code for the user
+	if err := h.DB.Where("user_id = ? AND redeemed = ?", userID, true).First(&redeemedCode).Error; err == nil {
+		// Found a redeemed code
+		hasRedeemed = true
+		tempType := uint8(redeemedCode.Type) // Convert int to uint8
+		presaleType = &tempType           // Assign address to the pointer
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		// Handle potential DB error other than not found
+		log.Printf("Error fetching redeemed presale code for user %d: %v\n", userID, err)
+		// Optionally return an error, or just log and proceed without presale type
+	}
 
 	// Prepare response
 	response := GetMeResponse{
@@ -300,7 +356,8 @@ func (h *AuthHandler) GetMe(c *fiber.Ctx) error {
 		LastName:          user.LastName,
 		Email:             user.Email,
 		EmailVerified:     user.EmailVerified,
-		HasRedeemedPresale: redeemedCount > 0,
+		HasRedeemedPresale: hasRedeemed, // Use the boolean flag from the query
+		PresaleType:       presaleType, // Include presale type from the redeemed code (or nil)
 		Wallets:           user.Wallets, // Include wallets
 	}
 

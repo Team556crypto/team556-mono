@@ -11,7 +11,7 @@ interface AuthState {
   error: string | null
   initializeAuth: () => Promise<void>
   login: (credentials: UserCredentials) => Promise<void>
-  signup: (credentials: UserCredentials) => Promise<void>
+  signup: (credentials: UserCredentials) => Promise<void> // Revert signature
   logout: () => Promise<void>
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
@@ -119,7 +119,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       // Call the signupUser function from the API service
       console.log('Calling signupUser API...');
-      const responseData = await signupUser(credentials); // Get the raw response first
+      // Pass only email/password credentials
+      const responseData = await signupUser(credentials);
       console.log('Signup API response received:', JSON.stringify(responseData, null, 2)); // Log the raw response
 
       // Now destructure
@@ -152,9 +153,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Check if the error was already handled by the token/user check above
       if (!get().error) {
         console.error('Signup failed inside authStore catch block:', error);
-        const errorMessage = error.response?.data?.error || error.message || 'Signup failed';
-        set({ token: null, user: null, isAuthenticated: false, isLoading: false, error: errorMessage });
-        await SecureStoreUtils.deleteToken();
+        // Check for specific 409 Conflict error
+        if (error.response?.status === 409) {
+          set({ error: 'Email already registered. Please sign in.', isLoading: false });
+        } else {
+          // Handle other errors
+          const errorMessage = error.response?.data?.error || error.message || 'Signup failed';
+          set({ token: null, user: null, isAuthenticated: false, isLoading: false, error: errorMessage });
+          await SecureStoreUtils.deleteToken();
+        }
       }
       // Re-throw error to be caught by the component
       throw error;

@@ -17,6 +17,18 @@ interface RedeemPresaleDrawerContentProps {
   onClose: () => void
 }
 
+const ComingSoonDrawerContent: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  return (
+    <View style={{ padding: 20, alignItems: 'center', gap: 15 }}>
+      <Text preset='h4'>Feature Coming Soon!</Text>
+      <Text preset='paragraph' style={{ textAlign: 'center' }}>
+        The ability to change your password directly within the app is under development.
+      </Text>
+      <Button title='Close' onPress={onClose} variant='secondary' />
+    </View>
+  )
+}
+
 const RedeemPresaleDrawerContent: React.FC<RedeemPresaleDrawerContentProps> = ({ onClose }) => {
   const { token, fetchAndUpdateUser } = useAuthStore()
   const [presaleCode, setPresaleCode] = useState('')
@@ -164,16 +176,15 @@ const RedeemPresaleDrawerContent: React.FC<RedeemPresaleDrawerContentProps> = ({
   )
 }
 
-const handleOpenRedeemDashboard = () => {
-  console.log('Navigate to Redeem Dashboard (Not Implemented)')
-  // TODO: Implement navigation or action for Redeem Dashboard
-}
-
 export default function SettingsScreen() {
   const router = useRouter()
   const { copyAddressToClipboard } = useWalletClipboard()
   const { logout: clearAuthStore, token, user, fetchAndUpdateUser } = useAuthStore()
   const { openDrawer, closeDrawer } = useDrawerStore()
+
+  const handleOpenRedeemDashboard = () => {
+    router.push('/redeem_dashboard')
+  }
 
   const handleLogout = async () => {
     try {
@@ -198,6 +209,14 @@ export default function SettingsScreen() {
     if (user?.wallets && user.wallets.length > 0) {
       copyAddressToClipboard(user.wallets[0].address)
     }
+  }
+
+  const handleChangePasswordPress = () => {
+    openDrawer(<ComingSoonDrawerContent onClose={closeDrawer} />)
+  }
+
+  const handleHelpPress = () => {
+    openDrawer(<ComingSoonDrawerContent onClose={closeDrawer} />)
   }
 
   const walletAddress = user?.wallets && user.wallets.length > 0 ? user.wallets[0].address : 'No wallet linked'
@@ -251,7 +270,10 @@ export default function SettingsScreen() {
             </View>
 
             <View style={styles.cardContent}>
-              <TouchableOpacity style={styles.menuItem}>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={handleChangePasswordPress} // <--- ADD THIS onPress PROP
+              >
                 <View style={styles.menuItemIcon}>
                   <Ionicons name='lock-closed-outline' size={22} color={Colors.text} />
                 </View>
@@ -270,7 +292,7 @@ export default function SettingsScreen() {
             </View>
 
             <View style={styles.cardContent}>
-              <TouchableOpacity style={styles.menuItem}>
+              <TouchableOpacity style={styles.menuItem} onPress={handleHelpPress}>
                 <View style={styles.menuItemIcon}>
                   <Ionicons name='help-circle-outline' size={22} color={Colors.text} />
                 </View>
@@ -327,7 +349,7 @@ export default function SettingsScreen() {
                   </View>
                   <View style={styles.menuItemContent}>
                     <Text preset='label'>Redeem Dashboard</Text>
-                    <Text preset='caption'>View your redemption details</Text>
+                    <Text preset='caption'>Your presale redeem dashboard</Text>
                   </View>
                   <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
                 </TouchableOpacity>

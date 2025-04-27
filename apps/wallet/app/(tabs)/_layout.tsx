@@ -29,6 +29,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Ionicons name='settings' size={28} color={color} />
         }}
       />
+      <Tabs.Screen
+        name='redeem_dashboard'
+        options={{
+          title: 'Redeem Dashboard',
+          tabBarIcon: ({ color }) => <Ionicons name='speedometer' size={28} color={color} />
+        }}
+      />
     </Tabs>
   )
 }

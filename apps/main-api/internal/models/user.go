@@ -20,9 +20,9 @@ type User struct {
 	UserCode       string `json:"user_code" gorm:"uniqueIndex;size:8"` // Unique code for the user
 	RedeemWallet   string `json:"redeem_wallet"`
 	RedeemCodeUsed string `json:"redeem_code_used"`
-	PresaleType    *uint8 `json:"presale_type,omitempty" gorm:"index"` // Can be 1, 2, or null
+	PresaleType    *uint8 `json:"presale_type,omitempty" gorm:"index"` // Can be 1, 2, or null. Added omitempty back.
 
-	EmailVerified              bool       `gorm:"default:false" json:"emailVerified"`
+	EmailVerified              bool       `gorm:"default:false" json:"email_verified"` // Changed JSON tag to snake_case
 	EmailVerificationCode      *string    `gorm:"index" json:"-"` // Nullable, index for lookup
 	EmailVerificationExpiresAt *time.Time `json:"-"`
 

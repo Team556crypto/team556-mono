@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { View, StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable } from 'react-native'
+import {
+  View,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView
+} from 'react-native'
 import { Text, StepForm, Input } from '@team556/ui'
 import { createWallet, verifyEmail, resendVerificationEmail } from '@/services/api'
 import { router } from 'expo-router'
@@ -8,8 +17,10 @@ import { Ionicons } from '@expo/vector-icons'
 import { useAuthStore } from '@/store/authStore'
 import { Colors } from '@/constants/Colors'
 import { genericStyles } from '@/constants/GenericStyles'
+import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 export default function OnboardingScreen() {
+  const { isTabletOrLarger } = useBreakpoint()
   const [currentStep, setCurrentStep] = useState(0)
   const [mnemonic, setMnemonic] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -36,7 +47,7 @@ export default function OnboardingScreen() {
     let timer: NodeJS.Timeout | null = null
     if (resendCooldown > 0) {
       timer = setInterval(() => {
-        setResendCooldown((prev) => prev - 1)
+        setResendCooldown(prev => prev - 1)
       }, 1000)
     } else if (timer) {
       clearInterval(timer)
@@ -236,7 +247,10 @@ export default function OnboardingScreen() {
   ]
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
+    >
       <StepForm
         steps={steps}
         currentStep={currentStep}
@@ -263,18 +277,34 @@ export default function OnboardingScreen() {
           (currentStep === 1 && isLoading) ||
           (currentStep === 2 && !confirmedSaved)
         }
+        style={isTabletOrLarger ? styles.stepFormTablet : styles.stepForm}
       />
     </KeyboardAvoidingView>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
+  stepForm: {
     flex: 1
   },
+  stepFormTablet: {
+    flex: 1,
+    maxWidth: 600,
+    maxHeight: 600,
+    alignSelf: 'center',
+    marginHorizontal: 20,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    overflow: 'hidden'
+  },
   stepContentContainer: {
-    // paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 20,
     flex: 1,
     alignItems: 'center'
   },
@@ -286,9 +316,10 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 16,
-    textAlign: 'center',
+    color: '#ccc',
     marginBottom: 20,
-    lineHeight: 22
+    lineHeight: 22,
+    width: '100%'
   },
   warning: {
     fontWeight: 'bold',
@@ -326,12 +357,12 @@ const styles = StyleSheet.create({
   },
   mnemonicContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.background,
-    padding: 15,
+    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 8,
+    marginTop: 10,
     marginBottom: 20,
-    minHeight: 60
+    width: '100%'
   },
   mnemonicText: {
     flex: 1,

@@ -16,19 +16,19 @@ const SIDEBAR_BREAKPOINT = 768
  */
 export function ResponsiveNavigation(props: BottomTabBarProps) {
   const { width } = useWindowDimensions()
-  
+
   // Always use sidebar on web, regardless of window size
   const isWeb = Platform.OS === 'web'
-  
+
   // On native platforms, use sidebar for large screens only
   const isLargeScreen = width >= SIDEBAR_BREAKPOINT
-  
+
   // Use sidebar when on web OR when on a large screen on native
-  const useSidebar = isWeb || isLargeScreen
-  
+  const useSidebar = isLargeScreen
+
   if (useSidebar) {
     return <CustomSideBar {...props} />
   }
-  
+
   return <CustomTabBar {...props} />
 }

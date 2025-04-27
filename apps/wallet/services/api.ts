@@ -18,6 +18,7 @@ export interface User {
   has_redeemed_presale: boolean // Field indicating if user redeemed a presale code
   wallets?: Wallet[] // Add wallets array (optional because preload might fail)
   redeem_wallet?: Wallet
+  presale_type?: number | null // Added optional presale_type
   // Add other fields as needed
 }
 

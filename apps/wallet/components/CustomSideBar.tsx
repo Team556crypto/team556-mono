@@ -3,7 +3,7 @@ import { View, TouchableOpacity, Text, StyleSheet, Dimensions, Platform } from '
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import LogoWideSvg from '@/assets/images/logo-wide.svg'
-
+import { excludedRoutes } from '@/constants/Global'
 import { Colors } from '@/constants/Colors'
 
 export function CustomSideBar({ state, descriptors, navigation }: BottomTabBarProps) {
@@ -31,6 +31,10 @@ export function CustomSideBar({ state, descriptors, navigation }: BottomTabBarPr
           const { options } = descriptors[route.key]
           const label = options.title ?? route.name
           const isFocused = state.index === index
+
+          if (excludedRoutes.includes(route.name)) {
+            return null
+          }
 
           const onPress = () => {
             const event = navigation.emit({

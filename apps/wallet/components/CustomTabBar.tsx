@@ -2,6 +2,7 @@ import React from 'react'
 import { View, TouchableOpacity, Text, StyleSheet, Dimensions, Platform } from 'react-native'
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { excludedRoutes } from '@/constants/Global'
 
 import { Colors } from '@/constants/Colors'
 const { width } = Dimensions.get('window')
@@ -28,6 +29,10 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
           const { options } = descriptors[route.key]
           const label = options.title ?? route.name
           const isFocused = state.index === index
+
+          if (excludedRoutes.includes(route.name)) {
+            return null
+          }
 
           const onPress = () => {
             const event = navigation.emit({

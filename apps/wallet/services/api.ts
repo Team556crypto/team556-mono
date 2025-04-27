@@ -96,6 +96,47 @@ interface SignTransactionResponse {
   signedTransaction: string // base64 encoded signed transaction
 }
 
+// --- SWAP TYPES ---
+
+// Copied basic type from SwapDrawerContent - consider a shared location
+interface QuoteResponseV6 {
+  inputMint: string
+  inAmount: string
+  outputMint: string
+  outAmount: string
+  otherAmountThreshold: string
+  swapMode: string
+  slippageBps: number
+  platformFee: any // Adjust type as needed
+  priceImpactPct: string
+  routePlan: any[] // Adjust type as needed
+  contextSlot: number
+  timeTaken: number
+}
+
+interface GetQuoteRequest {
+  inputMint: string
+  outputMint: string
+  amount: number // Change type to number
+  slippageBps: number
+}
+
+interface GetQuoteResponse {
+  quoteResponse: QuoteResponseV6
+}
+
+interface ExecuteSwapRequest {
+  password: string
+  quoteResponse: QuoteResponseV6
+}
+
+interface ExecuteSwapResponse {
+  signature: string // base64 encoded signed transaction
+  message?: string // Optional success message
+}
+
+// --- END SWAP TYPES ---
+
 /**
  * Makes a POST request to the login endpoint.
  * @param credentials - The user's email and password.
@@ -565,3 +606,76 @@ export async function signTransaction(
 
   return data as SignTransactionResponse
 }
+
+// --- SWAP FUNCTIONS ---
+
+/**
+ * Fetches a swap quote from the backend.
+ * @param payload - The quote request details.
+ * @param token - The user's auth token.
+ * @returns A promise resolving to the quote response.
+ */
+export async function getSwapQuote(payload: GetQuoteRequest, token: string): Promise<GetQuoteResponse> {
+  if (!process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL) {
+    throw new Error('API URL is not configured.')
+  }
+
+  // Ensure amount is a number before stringifying
+  const numericPayload = { ...payload, amount: Number(payload.amount) };
+
+  const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/swap/quote`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(numericPayload) // Send payload with amount as number
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    const errorData = data as ApiErrorResponse
+    const errorMessage = errorData?.error || `Quote request failed: ${response.status}`
+    const error = new Error(errorMessage) as any
+    error.response = { data: errorData, status: response.status }
+    throw error
+  }
+
+  return data as GetQuoteResponse
+}
+
+/**
+ * Executes a swap transaction via the backend.
+ * @param payload - The swap execution details (password and quote).
+ * @param token - The user's auth token.
+ * @returns A promise resolving to the swap execution response (tx signature).
+ */
+export async function executeSwap(payload: ExecuteSwapRequest, token: string): Promise<ExecuteSwapResponse> {
+  if (!process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL) {
+    throw new Error('API URL is not configured.')
+  }
+
+  const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/swap/execute`, { // Corrected endpoint
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    const errorData = data as ApiErrorResponse
+    const errorMessage = errorData?.error || `Swap execution failed: ${response.status}`
+    const error = new Error(errorMessage) as any
+    error.response = { data: errorData, status: response.status }
+    throw error
+  }
+
+  return data as ExecuteSwapResponse
+}
+
+// --- END SWAP FUNCTIONS ---

@@ -26,10 +26,12 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(db, cfg.JWTSecret, emailClient) // Pass emailClient
+	swapHandler := handlers.NewSwapHandler(db, cfg) // Instantiate Swap Handler
 
 	// Groups Routes
 	auth := api.Group("/auth")
 	wallet := api.Group("/wallet")
+	swap := api.Group("/swap") // Create Swap Group
 
 	// Auth Routes
 	auth.Post("/register", authHandler.Register)
@@ -47,4 +49,9 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	wallet.Post("/check-presale-code", handlers.CheckPresaleCode(db))
 	wallet.Post("/redeem-presale-code", handlers.RedeemPresaleCode(db))
 	wallet.Post("/sign", handlers.SignTransactionHandler(db, cfg)) // Route for transaction signing
+
+	// Swap Routes
+	swap.Use(middleware.AuthMiddleware(cfg.JWTSecret)) // Protect swap routes
+	swap.Post("/quote", swapHandler.HandleGetSwapQuote) // Route for getting quote
+	swap.Post("/execute", swapHandler.HandleExecuteSwap) // Route for executing swap
 }

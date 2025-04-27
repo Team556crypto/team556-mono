@@ -9,6 +9,25 @@ import { Ionicons } from '@expo/vector-icons'
 import { genericStyles } from '@/constants/GenericStyles'
 import { TEAM_MINT_ADDRESS, teamDecimals } from '@/constants/Tokens'
 import { LAMPORTS_PER_SOL } from '@solana/web3.js'
+import { debounce } from 'lodash'
+import { getSwapQuote, executeSwap } from '@/services/api'
+
+// Basic type for Jupiter V6 Quote Response (expand as needed)
+// Consider moving to a shared types package
+interface QuoteResponseV6 {
+  inputMint: string
+  inAmount: string
+  outputMint: string
+  outAmount: string
+  otherAmountThreshold: string
+  swapMode: string
+  slippageBps: number
+  platformFee: any // Adjust type as needed
+  priceImpactPct: string
+  routePlan: any[] // Adjust type as needed
+  contextSlot: number
+  timeTaken: number
+}
 
 // Type definitions
 type SwapDrawerProps = {
@@ -22,12 +41,6 @@ type SwapDrawerProps = {
 
 type TokenOption = 'SOL' | 'TEAM'
 type SwapStatus = 'idle' | 'swapping' | 'success' | 'error'
-
-// Mock swap rate - would come from API in production
-const MOCK_SWAP_RATE = {
-  SOL_TO_TEAM: 120, // 1 SOL = 120 TEAM
-  TEAM_TO_SOL: 0.008 // 1 TEAM = 0.008 SOL
-}
 
 export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
   onClose,
@@ -46,9 +59,12 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
   const [swapStatus, setSwapStatus] = useState<SwapStatus>('idle')
   const [password, setPassword] = useState('')
   const [step, setStep] = useState<'form' | 'confirm'>('form')
+  const [quoteResponse, setQuoteResponse] = useState<QuoteResponseV6 | null>(null)
+  const [isQuoteLoading, setIsQuoteLoading] = useState(false)
 
-  const { user } = useAuthStore()
+  const { user, token } = useAuthStore()
   const { showToast } = useToastStore()
+  const { isAuthenticated } = useAuthStore()
 
   // Get the available balance based on the selected token
   const availableBalance = fromToken === 'SOL' ? solBalance : teamBalance
@@ -56,8 +72,151 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
   // Helper function to calculate button variant
   const calculateButtonVariant = (percentage: number): 'primary' | 'outline' => {
     if (!amount || availableBalance === null) return 'outline'
-    const targetAmount = (availableBalance * percentage).toFixed(fromToken === 'SOL' ? 9 : teamDecimals)
-    return amount === targetAmount ? 'primary' : 'outline'
+    const numericAvailable = availableBalance ?? 0
+    // Use a small tolerance for floating point comparisons
+    const targetAmount = numericAvailable * percentage
+    const currentAmount = parseFloat(amount)
+    const tolerance = 1e-9 // Adjust tolerance based on expected precision
+
+    // Check if the current amount is very close to the target percentage amount
+    return Math.abs(currentAmount - targetAmount) < tolerance ? 'primary' : 'outline'
+  }
+
+  // --- Debounced Quote Fetching ---
+  const fetchQuoteDebounced = React.useCallback(
+    debounce(async (fetchAmount: string, from: TokenOption, to: TokenOption) => {
+      if (!fetchAmount || isNaN(parseFloat(fetchAmount)) || parseFloat(fetchAmount) <= 0) {
+        setEstimatedReceiveAmount('')
+        setQuoteResponse(null)
+        setIsQuoteLoading(false)
+        setError(null) // Clear previous errors if amount is invalid
+        return
+      }
+
+      setIsQuoteLoading(true)
+      setError(null)
+      setQuoteResponse(null) // Clear previous quote
+      setEstimatedReceiveAmount('') // Clear previous estimate
+
+      try {
+        if (!token) { // Check if token exists
+          throw new Error('Authentication token not found.');
+        }
+
+        const inputMint = from === 'SOL' ? 'So11111111111111111111111111111111111111112' : TEAM_MINT_ADDRESS
+        const outputMint = to === 'SOL' ? 'So11111111111111111111111111111111111111112' : TEAM_MINT_ADDRESS
+        const amountInSmallestUnit = Math.floor(parseFloat(fetchAmount) * (from === 'SOL' ? LAMPORTS_PER_SOL : 10 ** teamDecimals))
+
+        console.log('Fetching quote with:', {
+          inputMint,
+          outputMint,
+          amount: amountInSmallestUnit.toString(),
+          slippageBps: 50 // Example slippage (0.5%)
+        })
+
+        const quotePayload = {
+          inputMint,
+          outputMint,
+          amount: Number(amountInSmallestUnit), // Convert amount to number here
+          slippageBps: 50 // TODO: Allow user to configure slippage
+        }
+        const response = await getSwapQuote(quotePayload, token)
+
+        if (response && response.quoteResponse) {
+          const quote: QuoteResponseV6 = response.quoteResponse
+          setQuoteResponse(quote)
+          const outputAmountInDecimal = parseInt(quote.outAmount) / (to === 'SOL' ? LAMPORTS_PER_SOL : 10 ** teamDecimals)
+          setEstimatedReceiveAmount(outputAmountInDecimal.toFixed(to === 'SOL' ? 9 : teamDecimals))
+          setError(null) // Clear error on success
+        } else {
+          throw new Error('Invalid quote response from server')
+        }
+      } catch (err: any) {
+        console.error('Error fetching quote:', err)
+        const message = err.response?.data?.error || err.message || 'Failed to fetch swap quote.'
+        setError(message)
+        setQuoteResponse(null)
+        setEstimatedReceiveAmount('')
+      } finally {
+        setIsQuoteLoading(false)
+      }
+    }, 500), // 500ms debounce
+    [fromToken, toToken, token] // Recreate debounce if tokens or token change
+  )
+
+  // Trigger debounced quote fetch when amount changes
+  useEffect(() => {
+    fetchQuoteDebounced(amount, fromToken, toToken)
+    // Cleanup function to cancel pending debounced calls if component unmounts or dependencies change
+    return () => {
+      fetchQuoteDebounced.cancel()
+    }
+  }, [amount, fromToken, toToken, fetchQuoteDebounced])
+
+  // --- Swap Execution ---
+
+  // Handle the swap confirmation
+  const handleConfirmSwap = async () => {
+    if (!password) {
+      setError('Password is required.')
+      return
+    }
+    if (!quoteResponse) {
+      setError('Swap quote is not available. Please try again.')
+      return
+    }
+    if (!isAuthenticated) {
+      setError('User authentication not found. Please log in again.')
+      return
+    }
+
+    setError(null)
+    setSwapStatus('swapping')
+
+    try {
+      if (!token) { // Check for token before executing swap
+        throw new Error('Authentication token not found.');
+      }
+
+      console.log('Attempting swap with quote:', quoteResponse)
+      // Call the backend API to execute the swap
+      const swapPayload = {
+        password: password, // Send plain password for backend decryption
+        quoteResponse: quoteResponse // Send the fetched quote response
+      }
+      const response = await executeSwap(swapPayload, token)
+
+      console.log('Swap API Response:', response)
+
+      if (response && response.signature) { // Use 'signature' instead of 'txSignature'
+        setSwapStatus('success')
+        showToast(
+          `Swap submitted! Tx: ${response.signature.substring(0, 10)}...`, // Use 'signature'
+          'success'
+        )
+
+        // Optionally wait a bit for balances to update on-chain before refetching
+        await new Promise(resolve => setTimeout(resolve, 5000))
+
+        // Refresh balances
+        await fetchSolBalance()
+        await fetchTeamBalance()
+
+        // Close the drawer on success
+        onClose()
+      } else {
+        throw new Error(response?.message || 'Swap execution failed. No signature returned.')
+      }
+    } catch (error: any) {
+      console.error('Swap execution error:', error)
+      const message = error.response?.data?.error || error.message || 'An error occurred during the swap execution.'
+      setError(message)
+      setSwapStatus('error')
+    } finally {
+      setPassword('') // Clear password field regardless of outcome
+      // Keep swapStatus as 'error' or 'success' unless we want to reset it?
+      // Maybe reset status if user goes back from confirm step?
+    }
   }
 
   // Swap the tokens when the user clicks the swap icon
@@ -67,33 +226,6 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
     setAmount('')
     setEstimatedReceiveAmount('')
   }
-
-  // Calculate the estimated receive amount when the input amount changes
-  useEffect(() => {
-    if (!amount) {
-      setEstimatedReceiveAmount('')
-      return
-    }
-
-    const numericAmount = parseFloat(amount)
-    if (isNaN(numericAmount) || numericAmount <= 0) {
-      setEstimatedReceiveAmount('')
-      return
-    }
-
-    let swapRate = 0
-    if (fromToken === 'SOL' && toToken === 'TEAM') {
-      swapRate = MOCK_SWAP_RATE.SOL_TO_TEAM
-    } else if (fromToken === 'TEAM' && toToken === 'SOL') {
-      swapRate = MOCK_SWAP_RATE.TEAM_TO_SOL
-    }
-
-    const estimated = numericAmount * swapRate
-
-    // Format based on token decimals
-    const decimals = toToken === 'SOL' ? 4 : 2
-    setEstimatedReceiveAmount(estimated.toFixed(decimals))
-  }, [amount, fromToken, toToken])
 
   // Handle the next button
   const handleNext = async () => {
@@ -115,40 +247,6 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
     // In a real implementation, this would validate the swap can be done
     // For now, just move to the confirm step
     setStep('confirm')
-  }
-
-  // Handle the swap confirmation
-  const handleConfirmSwap = async () => {
-    if (!password) {
-      setError('Password is required.')
-      return
-    }
-
-    setError(null)
-    setSwapStatus('swapping')
-
-    try {
-      // In a real implementation, this would call the API to perform the swap
-      // For now, simulate a delay
-      await new Promise(resolve => setTimeout(resolve, 2000))
-
-      // Simulate success
-      setSwapStatus('success')
-      showToast(`Successfully swapped ${amount} ${fromToken} to ${estimatedReceiveAmount} ${toToken}`, 'success')
-
-      // Refresh balances
-      await fetchSolBalance()
-      await fetchTeamBalance()
-
-      // Close the drawer
-      onClose()
-    } catch (error: any) {
-      console.error('Swap error:', error)
-      setError(error.message || 'An error occurred during the swap.')
-      setSwapStatus('error')
-    } finally {
-      setPassword('')
-    }
   }
 
   // Handle setting amount as a percentage of available balance
@@ -287,7 +385,7 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
             <View style={styles.exchangeRateContainer}>
               <Text preset='caption' style={styles.exchangeRateText}>
                 Exchange Rate: 1 {fromToken} ≈{' '}
-                {String(fromToken === 'SOL' ? MOCK_SWAP_RATE.SOL_TO_TEAM : MOCK_SWAP_RATE.TEAM_TO_SOL)} {toToken}
+                {String(fromToken === 'SOL' ? 120 : 0.008)} {toToken}
               </Text>
             </View>
           </View>
@@ -369,8 +467,8 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    padding: 4,
-    gap: 12
+    padding: 16,
+    gap: 16
   },
   title: {
     textAlign: 'center',
@@ -537,6 +635,20 @@ const styles = StyleSheet.create({
   passwordSection: {
     marginTop: 10,
     marginBottom: 8
+  },
+  estimatedValueContainer: {
+    minHeight: 24,
+    justifyContent: 'center'
+  },
+  estimatedValue: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.text
+  },
+  slippageText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 4
   }
 })
 

@@ -300,11 +300,21 @@ export const signTransaction = async (req: Request, res: Response) => {
     // 2. Derive Keypair from Mnemonic
     const seed = await bip39.mnemonicToSeed(mnemonic, '') // Use empty passphrase
     const keypair = Keypair.fromSeed(seed.slice(0, 32))
+    const derivedPublicKey = keypair.publicKey.toBase58()
+    console.log(`Derived PublicKey from Mnemonic: ${derivedPublicKey}`)
 
     // 3. Deserialize Unsigned Transaction
     // The unsigned transaction is expected to be sent as a base64 encoded buffer
     const transactionBuffer = Buffer.from(unsignedTransaction, 'base64')
     const transaction = Transaction.from(transactionBuffer)
+
+    // Log expected fee payer and compare
+    const expectedFeePayer = transaction.feePayer?.toBase58()
+    console.log(`Transaction Fee Payer (expected signer): ${expectedFeePayer}`)
+    if (derivedPublicKey !== expectedFeePayer) {
+      console.error(`SIGNER MISMATCH: Derived key ${derivedPublicKey} does not match expected fee payer ${expectedFeePayer}`)
+      // This is likely the cause of the 'unknown signer' error
+    }
 
     // 4. Sign the Transaction
     // Note: For partially signed transactions, you might need connection.getLatestBlockhash()

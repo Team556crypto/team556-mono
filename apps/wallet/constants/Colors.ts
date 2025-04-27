@@ -11,6 +11,7 @@ export const Colors = {
   error: '#ff5252',
   success: '#4caf50',
   text: '#ECEDEE',
+  textSecondary: '#9BA1A6', // Added secondary text color
   background: '#23242A',
   backgroundDark: '#1C1D21',
   backgroundDarker: '#191A1D',

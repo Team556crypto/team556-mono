@@ -156,7 +156,7 @@ export default function HomeScreen() {
           error={solError}
           iconComponent={<SolanaIcon width={26} height={26} />}
         />
-        {/* <BalanceCard
+        <BalanceCard
           symbol='TEAM'
           name='Team Token'
           balance={teamBalance}
@@ -164,7 +164,7 @@ export default function HomeScreen() {
           value={teamValue}
           error={teamError}
           iconComponent={<TeamIcon width={40} height={40} />}
-        /> */}
+        />
       </View>
 
       {/* Action Buttons Container */}

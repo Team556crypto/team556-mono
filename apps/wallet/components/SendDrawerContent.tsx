@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { View, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from 'react-native'
 import { Text, Button, Input } from '@team556/ui'
 import {
@@ -61,6 +61,9 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
   const { user } = useAuthStore()
   const { showToast } = useToastStore()
 
+  // Memoize sender address to avoid re-computation and simplify checks
+  const senderWalletAddress = useMemo(() => user?.wallets?.[0]?.address, [user])
+
   const availableBalance = selectedToken === 'SOL' ? solBalance : teamBalance
 
   const handleSend = async () => {
@@ -115,10 +118,17 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
 
     try {
       // 2. Construct Transaction (reusing logic from original handleSend)
-      if (!user?.wallets?.[0]?.address) {
-        throw new Error('Sender wallet address not found.')
+      // --- Add Guard Clause --- 
+      if (!senderWalletAddress) {
+        console.error('Send Error: Sender wallet address is missing from user state.')
+        setError('Your wallet information is not available. Please try logging out and back in.')
+        showToast('Wallet info missing. Please re-login.', 'error')
+        setSendStatus('error')
+        return
       }
-      const senderPublicKey = new PublicKey(user.wallets[0].address)
+      // --- End Guard Clause ---
+      // Use the validated sender address
+      const senderPublicKey = new PublicKey(senderWalletAddress)
       const transaction = new Transaction()
       const recipientPublicKey = new PublicKey(recipientAddress)
       const numericAmount = parseFloat(amount) // Already validated in handleSend

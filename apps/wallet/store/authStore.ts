@@ -39,6 +39,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         try {
           // Call getUserProfile immediately using the stored token
           const userProfile = await getUserProfile(storedToken)
+          console.log('[AuthStore Init] Received userProfile from API:', JSON.stringify(userProfile, null, 2))
           set({ user: userProfile }) // Update user state
         } catch (profileError: any) {
           console.error('Failed to fetch profile during init:', profileError)
@@ -74,6 +75,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
     try {
       const updatedUser = await getUserProfile(token)
+      console.log('[AuthStore Update] Received updatedUser from API:', JSON.stringify(updatedUser, null, 2))
       set({ user: updatedUser })
     } catch (error: any) {
       // Handle specific errors: logout if token is invalid (401) or user not found (404)
@@ -92,6 +94,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true, error: null })
     try {
       const { token, user } = await loginUser(credentials) // Call API service
+      console.log('[AuthStore Login] Received user from API:', JSON.stringify(user, null, 2))
       await SecureStoreUtils.saveToken(token)
       set({ token, user, isAuthenticated: true, isLoading: false, error: null })
 
@@ -132,6 +135,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Automatically log in the user after successful signup
       await SecureStoreUtils.saveToken(token)
+
+      console.log('[AuthStore Signup] Received user from API:', JSON.stringify(user, null, 2))
 
       set({ token, user, isAuthenticated: true, isLoading: false, error: null })
 

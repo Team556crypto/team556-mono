@@ -14,8 +14,8 @@ import { formatWalletAddress } from '@/utils/formatters'
 import { useWalletClipboard } from '@/hooks/useWalletClipboard'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useDrawerStore } from '@/store/drawerStore'
-import { SendDrawerContent } from '@/components/SendDrawerContent';
-import QRCode from 'react-native-qrcode-svg'
+import SendDrawerContent from '@/components/SendDrawerContent'
+import ReceiveDrawerContent from '@/components/ReceiveDrawerContent'
 
 const ComingSoonDrawerContent: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   return (
@@ -25,36 +25,6 @@ const ComingSoonDrawerContent: React.FC<{ onClose: () => void }> = ({ onClose })
         The ability to change your password directly within the app is under development.
       </Text>
       <Button title='Close' onPress={onClose} variant='secondary' />
-    </View>
-  )
-}
-
-const ReceiveDrawerContent: React.FC<{ address: string; onClose: () => void }> = ({ address, onClose }) => {
-  const { copyAddressToClipboard } = useWalletClipboard()
-  const handleCopy = () => {
-    copyAddressToClipboard(address)
-  }
-
-  return (
-    <View style={{ padding: 20, alignItems: 'center', gap: 20 }}>
-      <Text preset='h4'>Receive Funds</Text>
-      <Text preset='paragraph' style={{ textAlign: 'center' }}>
-        Share this address or scan the QR code to receive SOL or TEAM tokens.
-      </Text>
-      {/* QR Code */}
-      <View style={{ backgroundColor: 'white', padding: 10, borderRadius: 5 }}>
-        <QRCode value={address} size={150} color='black' backgroundColor='white' />
-      </View>
-      {/* Address Display and Copy Button */}
-      <View style={styles.receiveAddressContainer}>
-        <Text style={styles.receiveAddressText} numberOfLines={1} ellipsizeMode='middle'>
-          {address}
-        </Text>
-        <TouchableOpacity onPress={handleCopy} style={styles.receiveCopyButton}>
-          <Ionicons name='copy-outline' size={20} color={Colors.tint} />
-        </TouchableOpacity>
-      </View>
-      <Button title='Close' onPress={onClose} variant='secondary' style={{ width: '100%' }} />
     </View>
   )
 }
@@ -126,7 +96,7 @@ export default function HomeScreen() {
 
   const handleReceivePress = () => {
     if (walletAddress) {
-      openDrawer(<ReceiveDrawerContent address={walletAddress} onClose={closeDrawer} />)
+      openDrawer(<ReceiveDrawerContent address={walletAddress} onClose={closeDrawer} onDismiss={closeDrawer} />)
     } else {
       // Handle case where address is not available (shouldn't happen if user is logged in)
       showToast('Wallet address not found.', 'error')
@@ -177,7 +147,7 @@ export default function HomeScreen() {
           error={solError}
           iconComponent={<SolanaIcon width={26} height={26} />}
         />
-        <BalanceCard
+        {/* <BalanceCard
           symbol='TEAM'
           name='Team Token'
           balance={teamBalance}
@@ -185,7 +155,7 @@ export default function HomeScreen() {
           value={teamValue}
           error={teamError}
           iconComponent={<TeamIcon width={40} height={40} />}
-        />
+        /> */}
       </View>
 
       {/* Action Buttons Container */}
@@ -207,12 +177,12 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         {/* Swap Button */}
-        <TouchableOpacity style={styles.actionButton} onPress={handleSwapPress}>
+        {/* <TouchableOpacity style={styles.actionButton} onPress={handleSwapPress}>
           <View style={[styles.buttonContent, isTabletOrLarger && styles.buttonContentLarge]}>
             <Ionicons name='swap-horizontal-outline' size={24} color={Colors.tint} />
             <Text style={styles.buttonLabel}>Swap</Text>
           </View>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
     </ScreenLayout>
   )
@@ -244,7 +214,7 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     alignItems: 'center',
-    backgroundColor: Colors.backgroundCard,
+    backgroundColor: Colors.backgroundDark,
     flexGrow: 1,
     padding: 14,
     borderRadius: 10

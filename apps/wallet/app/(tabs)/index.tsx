@@ -176,12 +176,12 @@ export default function HomeScreen() {
               <Text style={styles.actionText}>Send</Text>
             </TouchableOpacity>
 
-            {/* <TouchableOpacity style={styles.actionButton} onPress={handleSwapPress}>
+            <TouchableOpacity style={styles.actionButton} onPress={handleSwapPress}>
               <View style={styles.actionIconContainer}>
                 <Ionicons name='swap-horizontal-outline' size={20} color={Colors.text} />
               </View>
               <Text style={styles.actionText}>Swap</Text>
-            </TouchableOpacity> */}
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -209,7 +209,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         {/* TEAM Token */}
-        {/* <TouchableOpacity style={styles.assetItem}>
+        <TouchableOpacity style={styles.assetItem}>
           <View style={styles.assetLeft}>
             <View style={[styles.assetIconContainer, { backgroundColor: Colors.secondarySubtle }]}>
               <TeamIcon width={24} height={24} />
@@ -224,10 +224,10 @@ export default function HomeScreen() {
             <Text style={styles.assetAmount}>{teamBalance ? formatBalance(teamBalance) : '--'} TEAM</Text>
             <Text style={styles.assetValue}>${teamValue ? formatPrice(teamValue) : '--'}</Text>
           </View>
-        </TouchableOpacity> */}
+        </TouchableOpacity>
 
         {/* Recent Activity Section */}
-        {/* <View style={[styles.sectionHeader, { marginTop: 12 }]}>
+        <View style={[styles.sectionHeader, { marginTop: 12 }]}>
           <Text style={styles.sectionTitle}>Recent Activity</Text>
           <TouchableOpacity>
             <Text style={styles.seeAllText}>See all</Text>
@@ -237,7 +237,7 @@ export default function HomeScreen() {
         <View style={styles.emptyActivity}>
           <Ionicons name='time-outline' size={24} color={Colors.textTertiary} />
           <Text style={styles.emptyActivityText}>No recent transactions</Text>
-        </View> */}
+        </View>
       </ScrollView>
     </ScreenLayout>
   )

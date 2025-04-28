@@ -19,7 +19,7 @@ export function CustomSideBar({ state, descriptors, navigation }: BottomTabBarPr
           paddingLeft: Platform.OS === 'web' ? 0 : insets.left,
           backgroundColor: Colors.backgroundDarkest,
           borderRightWidth: 1,
-          borderRightColor: Colors.backgroundDarker
+          borderRightColor: Colors.background
           // borderWidth: 1,
           // borderColor: Colors.backgroundDarker
         }
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     bottom: 0,
-    width: 220,
+    width: 220
     // borderRadius: 10
   },
   header: {

@@ -24,7 +24,7 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
           paddingBottom: bottomInset,
           backgroundColor: Colors.backgroundDarkest,
           borderTopWidth: 1,
-          borderTopColor: Colors.backgroundDarker
+          borderTopColor: Colors.background
         }
       ]}
     >

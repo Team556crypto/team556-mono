@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { View, StyleSheet, Alert, SafeAreaView } from 'react-native'
+import { View, StyleSheet, Alert, SafeAreaView, Platform, TouchableOpacity } from 'react-native'
 import { Button, Input, Text } from '@repo/ui'
 import { useRouter } from 'expo-router'
 import { genericStyles } from '@/constants/GenericStyles'
@@ -29,6 +29,10 @@ const SignInScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      {/* Back Button */}
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <Ionicons name="arrow-back" size={24} color={Colors.text} />
+      </TouchableOpacity>
       <View style={styles.outerContainer}>
         {/* Form Content Centered */}
         <View style={[styles.contentContainer, isTabletOrLarger && styles.contentContainerDesktop]}>
@@ -129,7 +133,14 @@ const styles = StyleSheet.create({
   errorText: {
     color: Colors.errorText,
     textAlign: 'center'
-  }
+  },
+  backButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 20, // Adjust based on OS status bar
+    left: 20,
+    zIndex: 1, // Ensure it's above other content
+    padding: 10 // Make tap area larger
+  },
 })
 
 export default SignInScreen

@@ -134,9 +134,12 @@ export default function StepForm({
   const currentStepTitle = steps[currentStep]?.title
 
   // Progress bar animation - calibrated to match step positions
+  // We need to carefully control the width to ensure it only goes between circles
   const progressBarWidth = progressAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0%', '100%']
+    // Slightly adjust to ensure it doesn't go past the last circle
+    outputRange: ['0%', '100%'],
+    extrapolate: 'clamp' // Prevent the bar from exceeding the limits
   })
 
   return (
@@ -256,47 +259,46 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1
   },
   progressContainer: {
-    height: 36,
-    marginBottom: 20,
     position: 'relative',
-    justifyContent: 'center'
+    width: '100%',
+    height: 40,
+    marginBottom: 15,
+    alignSelf: 'center',
+    paddingHorizontal: 20 // Add horizontal padding to contain circles
   },
   progressTrack: {
     position: 'absolute',
-    height: 2,
-    backgroundColor: 'rgba(200, 200, 200, 0.5)',
-    left: 24,
-    right: 24,
-    top: '50%',
-    marginTop: -1,
+    left: 12, // Start from first circle
+    right: 12, // End at last circle
+    height: 3,
+    backgroundColor: 'rgba(200, 200, 200, 0.3)',
+    top: 20, // Align with circles
     zIndex: 1
   },
   progressFill: {
     position: 'absolute',
-    height: 2,
-    left: 24,
-    top: '50%',
-    marginTop: -1,
-    zIndex: 5
+    height: 3,
+    left: 12, // Match track's left position
+    top: 20, // Match track's top position
+    zIndex: 2
   },
   stepsContainer: {
+    position: 'absolute',
+    top: 0, // Align with the top
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    position: 'relative',
-    zIndex: 2,
-    paddingHorizontal: 0,
-    width: '100%'
+    paddingVertical: 10,
+    zIndex: 3
   },
   stepCircle: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    borderWidth: 0,
-    backgroundColor: 'rgba(200, 200, 200, 0.5)',
-    justifyContent: 'center',
     alignItems: 'center',
-    overflow: 'hidden',
-    zIndex: 10
+    justifyContent: 'center',
+    backgroundColor: '#fff'
   },
   activeStepCircle: {
     transform: [{ scale: 1.1 }]

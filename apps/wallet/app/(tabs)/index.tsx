@@ -218,7 +218,7 @@ export default function HomeScreen() {
               {/* <TeamIcon width={24} height={24} /> */}
             </View>
             <View>
-              <Text style={styles.assetName}>TEST TOKEN (TEST)</Text>
+              <Text style={styles.assetName}>TEST TOKEN</Text>
               <Text style={styles.assetTicker}>TEST</Text>
             </View>
           </View>

@@ -54,4 +54,5 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	swap.Use(middleware.AuthMiddleware(cfg.JWTSecret)) // Protect swap routes
 	swap.Post("/quote", swapHandler.HandleGetSwapQuote) // Route for getting quote
 	swap.Post("/execute", swapHandler.HandleExecuteSwap) // Route for executing swap
+	swap.Post("/create-token-accounts", swapHandler.HandleCreateTokenAccounts) // Route for submitting signed token account tx
 }

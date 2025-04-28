@@ -18,6 +18,11 @@ import (
 	"github.com/team556-mono/server/internal/crypto"
 	"github.com/team556-mono/server/internal/models"
 	bip39 "github.com/tyler-smith/go-bip39"
+
+	// Imports for lyonnee/key25519 based derivation
+	"github.com/lyonnee/key25519/bip32"
+	"github.com/lyonnee/key25519/bip44"
+
 	"gorm.io/gorm"
 )
 
@@ -61,13 +66,20 @@ type ExecuteSwapRequest struct {
 
 // SolanaAPISwapRequest defines the body sent to the solana-api /swap endpoint
 type SolanaAPISwapRequest struct {
-	QuoteResponse   json.RawMessage `json:"quoteResponse"`
-	UserPrivateKey  string          `json:"userPrivateKey"` // Base64 encoded private key bytes
+	QuoteResponse       json.RawMessage `json:"quoteResponse"`
+	UserPublicKeyString   string          `json:"userPublicKeyString"` // Renamed field and tag
+	UserPrivateKeyBase64 string          `json:"userPrivateKeyBase64,omitempty"` // Add back as optional
 }
 
 // SolanaAPISwapResponse from solana-api should contain the signature
 type SolanaAPISwapResponse struct {
 	Signature string `json:"signature"`
+}
+
+// CreateTokenAccountsRequest defines the body for /create-token-accounts requests from the frontend
+type CreateTokenAccountsRequest struct {
+	SignedTransaction string `json:"signedTransaction"` // Base64 encoded signed transaction
+	Password          string `json:"password"`          // User's password for decryption
 }
 
 // HandleGetSwapQuote fetches a swap quote by proxying the request to the solana-api
@@ -173,8 +185,8 @@ func (h *SwapHandler) HandleExecuteSwap(c *fiber.Ctx) error {
 	}
 
 	// 3. Fetch user's wallet
-	var wallet models.Wallet
-	if err := h.DB.WithContext(ctx).Where("user_id = ?", userID).First(&wallet).Error; err != nil {
+	var userWallet models.Wallet
+	if err := h.DB.WithContext(ctx).Where("user_id = ?", userID).First(&userWallet).Error; err != nil {
 		// Securely clear potentially sensitive password before returning
 		reqBody.Password = ""
 		if err == gorm.ErrRecordNotFound {
@@ -185,7 +197,7 @@ func (h *SwapHandler) HandleExecuteSwap(c *fiber.Ctx) error {
 	}
 
 	// 4. Decrypt mnemonic
-	mnemonic, err := crypto.DecryptMnemonic(wallet.EncryptedMnemonic, wallet.EncryptionMetadata, reqBody.Password)
+	mnemonic, err := crypto.DecryptMnemonic(userWallet.EncryptedMnemonic, userWallet.EncryptionMetadata, reqBody.Password)
 	// Clear password from memory ASAP regardless of decryption success/failure
 	reqBody.Password = ""
 	if err != nil {
@@ -197,32 +209,49 @@ func (h *SwapHandler) HandleExecuteSwap(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to decrypt wallet key"})
 	}
 
-	// 5. Derive private key from mnemonic
+	// --- Derive User Keypair from Mnemonic using Standard Path (lyonnee/key25519) ---
 	seed := bip39.NewSeed(mnemonic, "")
-	mnemonic = "" // Zero out mnemonic
+	mnemonic = "" // zero out mnemonic asap
 
-	// Use standard crypto/ed25519 function with the first 32 bytes of the BIP39 seed.
-	ed25519PrivKey := ed25519.NewKeyFromSeed(seed[:32])
-	derivedKey := solana.PrivateKey(ed25519PrivKey) // Convert ed25519.PrivateKey to solana.PrivateKey
+	// Create master key from seed
+	masterKey := bip32.GenerateMasterKey(seed)
 
-	for i := range seed { seed[i] = 0 } // Zero out seed buffer
-
-	// Optional: Check key validity (though NewKeyFromSeed should always produce a valid key)
-	if !derivedKey.IsValid() {
-		fmt.Printf("Error: derived private key is invalid for user %d\n", userID)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to derive valid wallet key"})
+	// Define the standard Solana derivation path
+	path := "m/44'/501'/0'/0'"
+	indices, err := bip44.ParsePath(path)
+	if err != nil {
+		for i := range seed { seed[i] = 0 } // Clear seed
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to parse derivation path", "details": err.Error()})
 	}
 
-	// --- Architecture Change: Pass Key to Solana API ---
+	// Derive the key by iterating through path indices
+	derivedKey := masterKey
+	for _, index := range indices {
+		derivedKey = bip32.CKDPriv(derivedKey, index)
+	}
 
-	// 6. Prepare request for solana-api
-	solanaAPIURL := fmt.Sprintf("%s/api/swap/swap", h.Cfg.SolanaAPIURL) // Reverted back to correct path /api/swap/swap
+	// Convert the derived private key bytes to an ed25519.PrivateKey
+	finalEd25519PrivKey := ed25519.NewKeyFromSeed(derivedKey.PrivKey)
+
+	// Get the public key string (using gagliardetto/solana-go type for consistency)
+	userPublicKey := solana.PublicKey(finalEd25519PrivKey.Public().(ed25519.PublicKey))
+	userPublicKeyString := userPublicKey.String()
+
+	// Convert the 32-byte private seed to base64 for sending
+	secretKeyBase64 := base64.StdEncoding.EncodeToString(derivedKey.PrivKey) // Send the 32-byte seed
+
+	// Clear sensitive data
+	for i := range seed { seed[i] = 0 }
+	for i := range derivedKey.PrivKey { derivedKey.PrivKey[i] = 0 }
+
+	// --- Call Solana API Swap Endpoint ---
+	// The solana-api /swap endpoint now expects userPublicKeyString
+	solanaAPIURL := fmt.Sprintf("%s/api/swap/swap", h.Cfg.SolanaAPIURL)
 	solanaReqBody := SolanaAPISwapRequest{
-		QuoteResponse:  reqBody.QuoteResponse,                     // Forward raw JSON quote
-		UserPrivateKey: base64.StdEncoding.EncodeToString(derivedKey), // Send raw private key bytes encoded
+		QuoteResponse:       reqBody.QuoteResponse,
+		UserPublicKeyString: userPublicKeyString,
+		UserPrivateKeyBase64: secretKeyBase64, // Send the 32-byte seed (base64 encoded)
 	}
-	// Clear derived key from memory ASAP
-	derivedKey = solana.PrivateKey{}
 
 	payloadBytes, err := json.Marshal(solanaReqBody)
 	if err != nil {
@@ -261,4 +290,84 @@ func (h *SwapHandler) HandleExecuteSwap(c *fiber.Ctx) error {
 	// Forward the successful response (should contain signature) from solana-api
 	c.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 	return c.Status(http.StatusOK).Send(responseBodyBytes)
+}
+
+// HandleCreateTokenAccounts handles submission of signed token account creation tx
+func (h *SwapHandler) HandleCreateTokenAccounts(c *fiber.Ctx) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// --- Authentication ---
+	userIDLocals := c.Locals("userID")
+	userID, ok := userIDLocals.(uint)
+	if !ok || userID == 0 {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "User ID not found or invalid in context"})
+	}
+
+	// --- Parse Request Body ---
+	var reqBody CreateTokenAccountsRequest
+	if err := c.BodyParser(&reqBody); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse request body", "details": err.Error()})
+	}
+	if reqBody.SignedTransaction == "" || reqBody.Password == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Missing required fields: signedTransaction, password"})
+	}
+
+	// --- Fetch Wallet ---
+	var wallet models.Wallet
+	if err := h.DB.WithContext(ctx).Where("user_id = ?", userID).First(&wallet).Error; err != nil {
+		reqBody.Password = "" // clear sensitive data
+		if err == gorm.ErrRecordNotFound {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Wallet not found for user"})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database error fetching wallet"})
+	}
+
+	// --- Decrypt Mnemonic ---
+	// Decrypt just to verify password, mnemonic is not needed further in this func
+	_, err := crypto.DecryptMnemonic(wallet.EncryptedMnemonic, wallet.EncryptionMetadata, reqBody.Password)
+	reqBody.Password = "" // zero out password asap
+	if err != nil {
+		if strings.Contains(err.Error(), "cipher: message authentication failed") {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid password"})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to decrypt wallet key"})
+	}
+
+	// --- Proxy Request to solana-api --- 
+	// We only need the signedTransaction from the client now
+	solanaAPIURL := fmt.Sprintf("%s/api/swap/create-token-accounts", h.Cfg.SolanaAPIURL)
+
+	proxyBody := map[string]interface{}{
+		"signedTransaction": reqBody.SignedTransaction, 
+		// "userPrivateKey": base64.StdEncoding.EncodeToString(derivedKey), // Removed - Private key no longer sent here
+	}
+
+	payloadBytes, err := json.Marshal(proxyBody)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Internal server error creating request"})
+	}
+
+	httpClient := &http.Client{Timeout: 90 * time.Second}
+	resp, err := httpClient.Post(solanaAPIURL, "application/json", bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "Failed to connect to token account creation service"})
+	}
+	defer resp.Body.Close()
+
+	respBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "Failed to read response from token account creation service"})
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		var forwarded map[string]interface{}
+		if json.Unmarshal(respBytes, &forwarded) == nil {
+			return c.Status(resp.StatusCode).JSON(forwarded)
+		}
+		return c.Status(resp.StatusCode).JSON(fiber.Map{"error": "Received error from token account creation service", "details": string(respBytes)})
+	}
+
+	c.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+	return c.Status(http.StatusOK).Send(respBytes)
 }

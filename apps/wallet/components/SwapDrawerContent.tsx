@@ -83,7 +83,6 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
   const [tokenAccountSetup, setTokenAccountSetup] = useState<TokenAccountSetupData | null>(null)
   // Store our wallet address
   const [userWalletAddress, setUserWalletAddress] = useState<string | undefined>(walletAddress)
-  const passwordRef = useRef<string>('')
 
   const { user, token } = useAuthStore()
   const { showToast } = useToastStore()
@@ -238,14 +237,17 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
           'success'
         )
 
-        // Wait for accounts to be created on-chain
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        // Wait a bit longer for accounts to potentially become visible onchain before retrying swap
+        // Consider using a more robust check if possible (e.g., polling getAccountInfo)
+        await new Promise(resolve => setTimeout(resolve, 5000))
 
         // Now proceed to the swap
-        setStep('confirm')
         setTokenAccountSetup(null)
-        setPassword('')
-        setSwapStatus('idle')
+        // Directly call handleConfirmSwap to retry the swap automatically
+        console.log('Token accounts created, automatically retrying swap...')
+        await handleConfirmSwap(password); // Pass the current password state
+
+        // Note: handleConfirmSwap will handle setting the final status (success/error) and clearing the password
       } else {
         throw new Error(response?.message || 'Token account creation failed.')
       }
@@ -272,8 +274,10 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
   // --- Swap Execution ---
 
   // Handle the swap confirmation
-  const handleConfirmSwap = async () => {
-    if (!password) {
+  const handleConfirmSwap = async (swapPassword?: string) => { // Accept optional password
+    const effectivePassword = swapPassword || password; // Use passed password or state
+
+    if (!effectivePassword) {
       setError('Password is required.')
       return
     }
@@ -297,7 +301,7 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
       console.log('Attempting swap with quote:', quoteResponse)
       // Call the backend API to execute the swap
       const swapPayload = {
-        password: password, // Send plain password for backend decryption
+        password: effectivePassword, // Send plain password for backend decryption
         quoteResponse: quoteResponse, // Send the fetched quote response
         publicKey: userWalletAddress // Send the wallet's public key
       }
@@ -324,6 +328,7 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
         )
 
         // Optionally wait a bit for balances to update on-chain before refetching
+        // Consider using a more robust check if possible (e.g., polling getAccountInfo)
         await new Promise(resolve => setTimeout(resolve, 5000))
 
         // Refresh balances
@@ -341,7 +346,7 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
       setError(message)
       setSwapStatus('error')
     } finally {
-      setPassword('') // Clear password field regardless of outcome
+      setPassword('') // Clear password input state
       // Keep swapStatus as 'error' or 'success' unless we want to reset it?
       // Maybe reset status if user goes back from confirm step?
     }
@@ -434,12 +439,12 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
         password,
         token
       );
-      
+
       console.log('Token account created:', result);
-      
+
       // Wait for confirmation
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       // Move to swap confirmation
       setStep('confirm');
       setTokenAccountSetup(null);
@@ -550,7 +555,7 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
     
     try {
       // Get user's password
-      if (!passwordRef.current) {
+      if (!password) {
         showToast('Password is required for this transaction', 'error');
         setSwapStatus('error');
         return false;
@@ -565,17 +570,17 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
       // Sign the transaction with the user's password
       const signResponse = await signTransaction(
         token,
-        passwordRef.current,
+        password,
         createAccountTransaction
       );
       
       // Submit the signed transaction to create token accounts
       const result = await submitTokenAccountTransaction(
         signResponse.signedTransaction,
-        passwordRef.current,
+        password,
         token
       );
-      
+
       console.log('Token accounts created:', result);
       return true;
     } catch (error) {
@@ -858,7 +863,7 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
             />
             <Button
               title={swapStatus === 'swapping' ? 'Processing...' : 'Confirm Swap'}
-              onPress={handleExecuteSwap}
+              onPress={() => handleConfirmSwap()} // Call without args for manual confirmation
               style={{ flex: 1, marginLeft: 5 }}
               disabled={swapStatus === 'swapping' || !password}
               leftIcon={

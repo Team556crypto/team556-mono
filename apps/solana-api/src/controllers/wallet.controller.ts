@@ -362,83 +362,40 @@ export const signTransaction = async (req: Request, res: Response) => {
     const expectedFeePayer = oldTransaction.feePayer?.toBase58()
     console.log(`Transaction Fee Payer (expected signer): ${expectedFeePayer}`)
     
-    // 4. Check if we need to modify the transaction
+    // 4. Check if the transaction's feePayer needs to be updated
     if (expectedFeePayer && expectedFeePayer !== derivedPublicKey) {
-      console.log(`Fee payer mismatch detected. Original: ${expectedFeePayer}, New: ${derivedPublicKey}`)
-      
-      // 5. Create a new transaction
-      const newTransaction = new Transaction()
-      
-      // 6. Set blockhash
-      newTransaction.recentBlockhash = oldTransaction.recentBlockhash || (await getLatestBlockhash())
-      
-      // 7. Set fee payer explicitly to our keypair
-      newTransaction.feePayer = keypair.publicKey
-      
-      // 8. Process each instruction - important!
-      if (oldTransaction.instructions && oldTransaction.instructions.length > 0) {
-        console.log(`Examining ${oldTransaction.instructions.length} instructions...`)
-        
-        for (const oldInstruction of oldTransaction.instructions) {
-          // Create a new instruction with modified account metas
-          const newKeys = oldInstruction.keys.map(accountMeta => {
-            // If this account meta references the old signer, update it to our signer
-            if (accountMeta.pubkey.toBase58() === expectedFeePayer && accountMeta.isSigner) {
-              console.log(`Replacing signer ${accountMeta.pubkey.toBase58()} with ${keypair.publicKey.toBase58()} in instruction`)
-              return {
-                pubkey: keypair.publicKey,
-                isSigner: true,
-                isWritable: accountMeta.isWritable
-              }
-            }
-            // Otherwise keep it as is
-            return accountMeta
-          })
-          
-          // Create new instruction with updated account metas
-          const newInstruction = new TransactionInstruction({
-            keys: newKeys,
-            programId: oldInstruction.programId,
-            data: oldInstruction.data
-          })
-          
-          // Add to our new transaction
-          newTransaction.add(newInstruction)
-        }
-        console.log(`Modified and added ${oldTransaction.instructions.length} instructions to new transaction`)
-      } else {
-        console.warn('No instructions found in the original transaction')
-        return res.status(400).json({ error: 'Invalid transaction: No instructions found' })
-      }
-      
-      // 9. Sign the transaction with our keypair
-      newTransaction.sign(keypair)
-      console.log(`Transaction signed with keypair ${keypair.publicKey.toBase58()}`)
-      
-      // 10. Serialize and return
-      try {
-        const signedTxBuffer = newTransaction.serialize()
-        const signedTxBase64 = signedTxBuffer.toString('base64')
-        console.log(`Transaction successfully serialized`)
-        return res.status(200).json({ signedTransaction: signedTxBase64 })
-      } catch (serializeError) {
-        console.error('Error serializing modified transaction:', serializeError)
-        throw serializeError
-      }
+      console.log(`Fee payer mismatch detected. Updating fee payer from ${expectedFeePayer} to ${derivedPublicKey}`)
+      // Set the fee payer explicitly to our keypair's public key
+      oldTransaction.feePayer = keypair.publicKey
+      // NOTE: We DO NOT modify the instructions themselves, only the transaction's feePayer field.
     } else {
-      // No mismatch, we can just sign the original transaction
-      console.log(`No fee payer mismatch detected, signing original transaction`)
-      oldTransaction.sign(keypair)
-      
-      try {
-        const signedTxBuffer = oldTransaction.serialize()
-        const signedTxBase64 = signedTxBuffer.toString('base64')
-        console.log(`Transaction successfully serialized`)
-        return res.status(200).json({ signedTransaction: signedTxBase64 })
-      } catch (serializeError) {
-        console.error('Error serializing transaction:', serializeError)
-        throw serializeError
+      console.log(`Fee payer is correct or not set, using derived keypair: ${derivedPublicKey}`)
+      // Ensure fee payer is set if it was null
+      if (!oldTransaction.feePayer) {
+        oldTransaction.feePayer = keypair.publicKey
       }
+    }
+    
+    // 5. Ensure the transaction has a recent blockhash
+    if (!oldTransaction.recentBlockhash) {
+      console.log('Transaction missing recent blockhash, fetching latest...')
+      oldTransaction.recentBlockhash = await getLatestBlockhash()
+      console.log(`Using blockhash: ${oldTransaction.recentBlockhash}`)
+    }
+
+    // 6. Sign the transaction (original object, potentially with updated feePayer)
+    oldTransaction.sign(keypair)
+    console.log(`Transaction signed with keypair ${keypair.publicKey.toBase58()}`)
+    
+    // 7. Serialize and return
+    try {
+      const signedTxBuffer = oldTransaction.serialize()
+      const signedTxBase64 = signedTxBuffer.toString('base64')
+      console.log(`Transaction successfully serialized`)
+      return res.status(200).json({ signedTransaction: signedTxBase64 })
+    } catch (serializeError) {
+      console.error('Error serializing transaction:', serializeError)
+      throw serializeError
     }
   } catch (error: unknown) {
     console.error('Error signing transaction:', error)

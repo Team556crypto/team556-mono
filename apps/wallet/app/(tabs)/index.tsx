@@ -215,11 +215,11 @@ export default function HomeScreen() {
         <TouchableOpacity style={styles.assetItem}>
           <View style={styles.assetLeft}>
             <View style={[styles.assetIconContainer, { backgroundColor: Colors.secondarySubtle }]}>
-              <TeamIcon width={24} height={24} />
+              {/* <TeamIcon width={24} height={24} /> */}
             </View>
             <View>
-              <Text style={styles.assetName}>Team Token</Text>
-              <Text style={styles.assetTicker}>TEAM</Text>
+              <Text style={styles.assetName}>TEST TOKEN (TEST)</Text>
+              <Text style={styles.assetTicker}>TEST</Text>
             </View>
           </View>
 

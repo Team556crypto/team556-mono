@@ -249,12 +249,18 @@ export default function OnboardingScreen() {
             <View style={styles.mnemonicCard}>
               <Text style={styles.mnemonicLabel}>Your Recovery Phrase:</Text>
               <View style={styles.mnemonicContainer}>
-                <Text style={styles.mnemonicText}>{showMnemonic ? mnemonic : '•••••••••••••••••••••••••••••••••'}</Text>
-                <Pressable onPress={() => setShowMnemonic(!showMnemonic)} style={styles.iconButton}>
-                  <Ionicons name={showMnemonic ? 'eye-off-outline' : 'eye-outline'} size={24} color={'#888'} />
+                <Text style={styles.mnemonicText}>
+                  {showMnemonic ? mnemonic : '•••••••••••••••••••••••••••••••••'}
+                </Text>
+              </View>
+              <View style={styles.mnemonicActions}>
+                <Pressable onPress={() => setShowMnemonic(!showMnemonic)} style={styles.actionButton}>
+                  <Ionicons name={showMnemonic ? 'eye-off-outline' : 'eye-outline'} size={20} color={'#fff'} />
+                  <Text style={styles.actionButtonText}>{showMnemonic ? 'Hide' : 'Reveal'}</Text>
                 </Pressable>
-                <Pressable onPress={handleCopyToClipboard} style={styles.iconButton}>
-                  <Ionicons name='copy-outline' size={24} color={'#888'} />
+                <Pressable onPress={handleCopyToClipboard} style={styles.actionButton}>
+                  <Ionicons name='copy-outline' size={20} color={'#fff'} />
+                  <Text style={styles.actionButtonText}>Copy</Text>
                 </Pressable>
               </View>
 
@@ -383,25 +389,40 @@ const styles = StyleSheet.create({
     marginBottom: 10
   },
   mnemonicContainer: {
-    flexDirection: 'row',
     padding: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 8,
     marginTop: 10,
-    marginBottom: 20,
+    marginBottom: 10,
     width: '100%'
   },
   mnemonicText: {
-    flex: 1,
     fontSize: 16,
-    fontFamily: 'monospace',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     lineHeight: 24,
-    marginRight: 10,
-    color: Colors.text
+    color: Colors.text,
+    flexWrap: 'wrap'
   },
-  iconButton: {
-    padding: 5,
-    marginLeft: 5
+  mnemonicActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    marginBottom: 10,
+    width: '100%'
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.tint,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    marginHorizontal: 4
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 6
   },
   confirmationContainer: {
     flexDirection: 'row',

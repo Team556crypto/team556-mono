@@ -625,7 +625,7 @@ export async function signTransaction(
     unsignedTransaction
   }
 
-  const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/wallet/sign`, {
+  const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/wallet/sign-transaction`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

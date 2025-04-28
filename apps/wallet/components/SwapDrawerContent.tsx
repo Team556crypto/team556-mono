@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { View, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native'
 import { Text, Button, Input } from '@team556/ui'
 import { Colors } from '@/constants/Colors'
@@ -33,7 +33,7 @@ interface QuoteResponseV6 {
 // Type for token account setup response
 interface TokenAccountSetupData {
   createAccountTransaction: string
-  missingAccounts: { mint: string, address: string }[]
+  missingAccounts: { mint: string; address: string }[]
 }
 
 // Type definitions
@@ -48,7 +48,7 @@ type SwapDrawerProps = {
 }
 
 type TokenOption = 'SOL' | 'TEAM'
-type SwapStatus = 
+type SwapStatus =
   | 'idle'
   | 'loading'
   | 'ready'
@@ -79,6 +79,7 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
   const [step, setStep] = useState<StepType>('form')
   const [quoteResponse, setQuoteResponse] = useState<QuoteResponseV6 | null>(null)
   const [isQuoteLoading, setIsQuoteLoading] = useState(false)
+  const [exchangeRate, setExchangeRate] = useState<string | null>(null) // Add state for exchange rate
   // Add state for token account setup
   const [tokenAccountSetup, setTokenAccountSetup] = useState<TokenAccountSetupData | null>(null)
   // Store our wallet address
@@ -93,7 +94,7 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
     // First priority: Use address from props
     if (walletAddress) {
       setUserWalletAddress(walletAddress)
-    } 
+    }
     // Second priority: Get from user object in auth store
     else if (user?.wallets && user.wallets.length > 0) {
       setUserWalletAddress(user.wallets[0].address)
@@ -133,13 +134,16 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
       setEstimatedReceiveAmount('') // Clear previous estimate
 
       try {
-        if (!token) { // Check if token exists
-          throw new Error('Authentication token not found.');
+        if (!token) {
+          // Check if token exists
+          throw new Error('Authentication token not found.')
         }
 
         const inputMint = from === 'SOL' ? 'So11111111111111111111111111111111111111112' : TEAM_MINT_ADDRESS
         const outputMint = to === 'SOL' ? 'So11111111111111111111111111111111111111112' : TEAM_MINT_ADDRESS
-        const amountInSmallestUnit = Math.floor(parseFloat(fetchAmount) * (from === 'SOL' ? LAMPORTS_PER_SOL : 10 ** teamDecimals))
+        const amountInSmallestUnit = Math.floor(
+          parseFloat(fetchAmount) * (from === 'SOL' ? LAMPORTS_PER_SOL : 10 ** teamDecimals)
+        )
 
         console.log('Fetching quote with:', {
           inputMint,
@@ -159,11 +163,32 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
         if (response && response.quoteResponse) {
           const quote: QuoteResponseV6 = response.quoteResponse
           setQuoteResponse(quote)
-          const outputAmountInDecimal = parseInt(quote.outAmount) / (to === 'SOL' ? LAMPORTS_PER_SOL : 10 ** teamDecimals)
+
+          // Calculate and set exchange rate
+          try {
+            const inDecimals = from === 'SOL' ? 9 : teamDecimals
+            const outDecimals = to === 'SOL' ? 9 : teamDecimals
+            const inAmountNum = Number(quote.inAmount) / 10 ** inDecimals
+            const outAmountNum = Number(quote.outAmount) / 10 ** outDecimals
+
+            if (inAmountNum > 0 && outAmountNum > 0) {
+              const rate = outAmountNum / inAmountNum
+              setExchangeRate(rate.toFixed(6)) // Format to 6 decimals
+            } else {
+              setExchangeRate(null) // Avoid division by zero or invalid amounts
+            }
+          } catch (rateCalcError) {
+            console.error('Error calculating exchange rate:', rateCalcError)
+            setExchangeRate(null)
+          }
+
+          const outputAmountInDecimal =
+            parseInt(quote.outAmount) / (to === 'SOL' ? LAMPORTS_PER_SOL : 10 ** teamDecimals)
           setEstimatedReceiveAmount(outputAmountInDecimal.toFixed(to === 'SOL' ? 9 : teamDecimals))
           setError(null) // Clear error on success
         } else {
-          throw new Error('Invalid quote response from server')
+          setError('Could not fetch swap quote.')
+          setExchangeRate(null) // Clear rate on error
         }
       } catch (err: any) {
         console.error('Error fetching quote:', err)
@@ -171,6 +196,7 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
         setError(message)
         setQuoteResponse(null)
         setEstimatedReceiveAmount('')
+        setExchangeRate(null) // Clear rate on error
       } finally {
         setIsQuoteLoading(false)
       }
@@ -209,33 +235,22 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
 
     try {
       console.log('Creating token accounts with transaction:', tokenAccountSetup.createAccountTransaction)
-      
+
       // IMPORTANT: First sign the transaction using the wallet service
       // This is the critical step we were missing
-      const signResponse = await signTransaction(
-        token,
-        password,
-        tokenAccountSetup.createAccountTransaction
-      )
-      
+      const signResponse = await signTransaction(token, password, tokenAccountSetup.createAccountTransaction)
+
       if (!signResponse || !signResponse.signedTransaction) {
         throw new Error('Failed to sign the token account transaction')
       }
-      
+
       // Now submit the SIGNED transaction
-      const response = await submitTokenAccountTransaction(
-        signResponse.signedTransaction,
-        password,
-        token
-      )
+      const response = await submitTokenAccountTransaction(signResponse.signedTransaction, password, token)
 
       console.log('Token account creation response:', response)
 
       if (response && response.status === 'success') {
-        showToast(
-          `Token account(s) created! Tx: ${response.signature.substring(0, 10)}...`,
-          'success'
-        )
+        showToast(`Token account(s) created! Tx: ${response.signature.substring(0, 10)}...`, 'success')
 
         // Wait a bit longer for accounts to potentially become visible onchain before retrying swap
         // Consider using a more robust check if possible (e.g., polling getAccountInfo)
@@ -245,7 +260,7 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
         setTokenAccountSetup(null)
         // Directly call handleConfirmSwap to retry the swap automatically
         console.log('Token accounts created, automatically retrying swap...')
-        await handleConfirmSwap(password); // Pass the current password state
+        await handleConfirmSwap(password) // Pass the current password state
 
         // Note: handleConfirmSwap will handle setting the final status (success/error) and clearing the password
       } else {
@@ -253,10 +268,10 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
       }
     } catch (error: any) {
       console.error('Token account creation error:', error)
-      
+
       // Enhanced error handling - specific handling for JSON parse errors
       let errorMessage = 'An error occurred during token account creation.'
-      
+
       if (error instanceof SyntaxError && error.message.includes('JSON')) {
         errorMessage = 'Invalid response from server. Please try again.'
         console.error('JSON parsing error:', error.message)
@@ -265,7 +280,7 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
       } else if (error.message) {
         errorMessage = error.message
       }
-      
+
       setError(errorMessage)
       setSwapStatus('error')
     }
@@ -274,8 +289,9 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
   // --- Swap Execution ---
 
   // Handle the swap confirmation
-  const handleConfirmSwap = async (swapPassword?: string) => { // Accept optional password
-    const effectivePassword = swapPassword || password; // Use passed password or state
+  const handleConfirmSwap = async (swapPassword?: string) => {
+    // Accept optional password
+    const effectivePassword = swapPassword || password // Use passed password or state
 
     if (!effectivePassword) {
       setError('Password is required.')
@@ -291,7 +307,7 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
     }
     if (!userWalletAddress) {
       setError('Wallet address not found. Please refresh the app.')
-      return;
+      return
     }
 
     setError(null)
@@ -322,10 +338,7 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
 
       if (response && response.status === 'success' && response.signature) {
         setSwapStatus('success')
-        showToast(
-          `Swap submitted! Tx: ${response.signature.substring(0, 10)}...`,
-          'success'
-        )
+        showToast(`Swap submitted! Tx: ${response.signature.substring(0, 10)}...`, 'success')
 
         // Optionally wait a bit for balances to update on-chain before refetching
         // Consider using a more robust check if possible (e.g., polling getAccountInfo)
@@ -409,206 +422,192 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
   // Setup a token account if needed
   const handleSetupTokenAccount = async () => {
     if (!password) {
-      setError('Password is required');
-      return;
+      setError('Password is required')
+      return
     }
 
     if (!tokenAccountSetup) {
-      setError('Token account setup data is missing');
-      return;
+      setError('Token account setup data is missing')
+      return
     }
 
     if (!isAuthenticated || !token) {
-      setError('User authentication required');
-      return;
+      setError('User authentication required')
+      return
     }
 
     try {
-      setSwapStatus('swapping');
-      
-      // Step 1: Sign the transaction
-      const signedData = await signTransaction(
-        token,
-        password,
-        tokenAccountSetup.createAccountTransaction
-      );
-      
-      // Step 2: Submit the signed transaction
-      const result = await submitTokenAccountTransaction(
-        signedData.signedTransaction,
-        password,
-        token
-      );
+      setSwapStatus('swapping')
 
-      console.log('Token account created:', result);
+      // Step 1: Sign the transaction
+      const signedData = await signTransaction(token, password, tokenAccountSetup.createAccountTransaction)
+
+      // Step 2: Submit the signed transaction
+      const result = await submitTokenAccountTransaction(signedData.signedTransaction, password, token)
+
+      console.log('Token account created:', result)
 
       // Wait for confirmation
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 2000))
 
       // Move to swap confirmation
-      setStep('confirm');
-      setTokenAccountSetup(null);
-      setSwapStatus('idle');
-      setPassword('');
+      setStep('confirm')
+      setTokenAccountSetup(null)
+      setSwapStatus('idle')
+      setPassword('')
     } catch (error: any) {
-      console.error('Error creating token account:', error);
-      
-      let errorMessage = 'Failed to create token account';
+      console.error('Error creating token account:', error)
+
+      let errorMessage = 'Failed to create token account'
       if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
+        errorMessage = error.response.data.error
       } else if (error.message) {
-        errorMessage = error.message;
+        errorMessage = error.message
       }
-      
-      setError(errorMessage);
-      setSwapStatus('error');
+
+      setError(errorMessage)
+      setSwapStatus('error')
     }
-  };
+  }
 
   // Execute the swap
   const handleExecuteSwap = async () => {
     if (!password) {
-      setError('Password is required');
-      return;
+      setError('Password is required')
+      return
     }
 
     if (!quoteResponse) {
-      setError('Swap quote not available');
-      return;
+      setError('Swap quote not available')
+      return
     }
 
     if (!isAuthenticated || !token) {
-      setError('User authentication required');
-      return;
+      setError('User authentication required')
+      return
     }
 
     if (!userWalletAddress) {
-      setError('Wallet address not available');
-      return;
+      setError('Wallet address not available')
+      return
     }
 
     try {
-      setSwapStatus('swapping');
-      
+      setSwapStatus('swapping')
+
       // Create the payload for the swap execution
       const swapPayload = {
         password,
         quoteResponse,
         publicKey: userWalletAddress
-      };
-      
+      }
+
       // Execute the swap using the imported function
-      const result = await executeSwap(
-        swapPayload,
-        token,
-        userWalletAddress
-      );
-      
+      const result = await executeSwap(swapPayload, token, userWalletAddress)
+
       // Check if we need to create token accounts
       if (result.status === 'needs_token_accounts' && result.createAccountTransaction) {
         setTokenAccountSetup({
           createAccountTransaction: result.createAccountTransaction,
           missingAccounts: result.missingAccounts || []
-        });
-        setStep('confirmTokenAccounts');
-        setSwapStatus('idle');
-        return;
+        })
+        setStep('confirmTokenAccounts')
+        setSwapStatus('idle')
+        return
       }
-      
+
       if (result.status === 'success' && result.signature) {
-        setSwapStatus('success');
-        showToast(
-          `Swap submitted! Tx: ${result.signature.substring(0, 10)}...`,
-          'success'
-        );
-        
+        setSwapStatus('success')
+        showToast(`Swap submitted! Tx: ${result.signature.substring(0, 10)}...`, 'success')
+
         // Wait for confirmation and refresh balances
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        await fetchSolBalance();
-        await fetchTeamBalance();
-        
+        await new Promise(resolve => setTimeout(resolve, 5000))
+        await fetchSolBalance()
+        await fetchTeamBalance()
+
         // Close drawer
-        onClose();
+        onClose()
       } else {
-        throw new Error(result?.message || 'Swap execution failed');
+        throw new Error(result?.message || 'Swap execution failed')
       }
     } catch (error: any) {
-      console.error('Error executing swap:', error);
-      
-      let errorMessage = 'Failed to execute swap';
-      if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      setError(errorMessage);
-      setSwapStatus('error');
-    } finally {
-      setPassword('');
-    }
-  };
+      console.error('Error executing swap:', error)
 
-  const setupTokenAccount = async (createAccountTransaction: string, missingAccounts: { mint: string, address: string }[]) => {
-    console.log('Setting up token accounts before swap', { missingAccounts });
-    setSwapStatus('setting_up_token_accounts');
-    
+      let errorMessage = 'Failed to execute swap'
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+
+      setError(errorMessage)
+      setSwapStatus('error')
+    } finally {
+      setPassword('')
+    }
+  }
+
+  const setupTokenAccount = async (
+    createAccountTransaction: string,
+    missingAccounts: { mint: string; address: string }[]
+  ) => {
+    console.log('Setting up token accounts before swap', { missingAccounts })
+    setSwapStatus('setting_up_token_accounts')
+
     try {
       // Get user's password
       if (!password) {
-        showToast('Password is required for this transaction', 'error');
-        setSwapStatus('error');
-        return false;
+        showToast('Password is required for this transaction', 'error')
+        setSwapStatus('error')
+        return false
       }
-      
+
       if (!token) {
-        showToast('Authentication token not found', 'error');
-        setSwapStatus('error');
-        return false;
+        showToast('Authentication token not found', 'error')
+        setSwapStatus('error')
+        return false
       }
-      
+
       // Sign the transaction with the user's password
-      const signResponse = await signTransaction(
-        token,
-        password,
-        createAccountTransaction
-      );
-      
+      const signResponse = await signTransaction(token, password, createAccountTransaction)
+
       // Submit the signed transaction to create token accounts
-      const result = await submitTokenAccountTransaction(
-        signResponse.signedTransaction,
-        password,
-        token
-      );
+      const result = await submitTokenAccountTransaction(signResponse.signedTransaction, password, token)
 
-      console.log('Token accounts created:', result);
-      return true;
+      console.log('Token accounts created:', result)
+      return true
     } catch (error) {
-      console.error('Error setting up token accounts:', error);
-      showToast('Failed to set up token accounts', 'error');
-      setSwapStatus('error');
-      return false;
+      console.error('Error setting up token accounts:', error)
+      showToast('Failed to set up token accounts', 'error')
+      setSwapStatus('error')
+      return false
     }
-  };
+  }
 
-  const mySignTransaction = async ({ password, unsignedTransaction }: { password: string, unsignedTransaction: string }) => {
+  const mySignTransaction = async ({
+    password,
+    unsignedTransaction
+  }: {
+    password: string
+    unsignedTransaction: string
+  }) => {
     try {
       // Sign the transaction using the user's password
       if (!token) {
-        throw new Error('Authentication token not found');
+        throw new Error('Authentication token not found')
       }
-      
-      const response = await signTransaction(token, password, unsignedTransaction);
-      return response;
+
+      const response = await signTransaction(token, password, unsignedTransaction)
+      return response
     } catch (error: any) {
-      console.error('Error signing transaction:', error);
+      console.error('Error signing transaction:', error)
       // Provide more user-friendly error messages
       if (error.response?.status === 401 || error.response?.status === 403) {
-        throw new Error('Incorrect password or authentication failed');
+        throw new Error('Incorrect password or authentication failed')
       }
-      throw new Error(error.response?.data?.error || 'Failed to sign transaction');
+      throw new Error(error.response?.data?.error || 'Failed to sign transaction')
     }
-  };
+  }
 
   return (
     <View style={styles.container}>
@@ -731,8 +730,7 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
 
             <View style={styles.exchangeRateContainer}>
               <Text preset='caption' style={styles.exchangeRateText}>
-                Exchange Rate: 1 {fromToken} ≈{' '}
-                {String(fromToken === 'SOL' ? 120 : 0.008)} {toToken}
+                Exchange Rate: 1 {fromToken} ≈ {exchangeRate ? exchangeRate : '-'} {toToken}
               </Text>
             </View>
           </View>
@@ -755,7 +753,7 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
       {step === 'confirmTokenAccounts' && tokenAccountSetup && (
         <>
           <View style={styles.tokenAccountsSection}>
-            <Ionicons name="alert-circle-outline" size={32} color={Colors.tint} style={styles.alertIcon} />
+            <Ionicons name='alert-circle-outline' size={32} color={Colors.tint} style={styles.alertIcon} />
             <Text preset='h4' style={styles.tokenAccountsTitle}>
               Create Token Accounts
             </Text>

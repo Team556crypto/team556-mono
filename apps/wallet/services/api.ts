@@ -96,6 +96,16 @@ interface SignTransactionResponse {
   signedTransaction: string // base64 encoded signed transaction
 }
 
+// --- Get Recovery Phrase ---
+export interface GetRecoveryPhraseRequest {
+  password: string
+}
+
+export interface GetRecoveryPhraseResponse {
+  recoveryPhrase?: string
+  error?: string // Include error field for potential API errors
+}
+
 // --- SWAP TYPES ---
 
 // Copied basic type from SwapDrawerContent - consider a shared location
@@ -128,14 +138,14 @@ interface GetQuoteResponse {
 interface ExecuteSwapRequest {
   password: string
   quoteResponse: QuoteResponseV6
-  publicKey?: string  // Add optional public key for token account creation
+  publicKey?: string // Add optional public key for token account creation
 }
 
 // Type for create token account transaction response
 interface CreateTokenAccountsResponse {
   status: 'needs_token_accounts'
   createAccountTransaction: string // Base64 encoded unsigned transaction
-  missingAccounts: { mint: string, address: string }[]
+  missingAccounts: { mint: string; address: string }[]
   message: string
 }
 
@@ -157,7 +167,7 @@ interface ExecuteSwapResponseWithStatus {
   status: 'success' | 'needs_token_accounts'
   signature?: string
   createAccountTransaction?: string
-  missingAccounts?: { mint: string, address: string }[]
+  missingAccounts?: { mint: string; address: string }[]
   message?: string
 }
 
@@ -305,10 +315,7 @@ export async function logoutUser(token: string | null): Promise<void> {
  * @returns A promise that resolves with the create wallet response (message and mnemonic).
  * @throws An error if the request fails.
  */
-export async function createWallet(
-  token: string | null,
-  password: string
-): Promise<CreateWalletResponse> {
+export async function createWallet(token: string | null, password: string): Promise<CreateWalletResponse> {
   if (!process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL) {
     throw new Error('API URL is not configured.')
   }
@@ -369,9 +376,7 @@ export async function getUserProfile(token: string | null): Promise<User> {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({})) // Catch potential JSON parse errors
     // Create a structured error object including the status code
-    const error = new Error(
-      errorData?.error || `Failed to fetch user profile: ${response.statusText}`
-    ) as any // Use 'any' to add custom properties
+    const error = new Error(errorData?.error || `Failed to fetch user profile: ${response.statusText}`) as any // Use 'any' to add custom properties
     error.response = {
       data: errorData,
       status: response.status // Include status code
@@ -539,8 +544,8 @@ export const redeemPresaleCode = async (
 
   try {
     // Ensure the MAIN_API_URL does not end with a slash, and the path does not start with one for clean joining.
-    const baseUrl = (process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL || '').replace(/\/$/, ''); // Remove trailing slash if present
-    const endpointPath = '/wallet/redeem-presale-code'; // Path without leading /api
+    const baseUrl = (process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL || '').replace(/\/$/, '') // Remove trailing slash if present
+    const endpointPath = '/wallet/redeem-presale-code' // Path without leading /api
 
     const response = await fetch(`${baseUrl}${endpointPath}`, {
       method: 'POST',
@@ -561,11 +566,11 @@ export const redeemPresaleCode = async (
         errorMessage = errorText || errorMessage // Use the server's message if available
         // Optionally, try to parse as JSON if text gives clues it might be JSON
         try {
-            errorData = JSON.parse(errorText)
-            errorMessage = errorData?.error || errorData?.message || errorMessage
+          errorData = JSON.parse(errorText)
+          errorMessage = errorData?.error || errorData?.message || errorMessage
         } catch (jsonError) {
-            // If parsing text as JSON fails, stick with the text message
-            console.warn('Could not parse error response as JSON, using text content.')
+          // If parsing text as JSON fails, stick with the text message
+          console.warn('Could not parse error response as JSON, using text content.')
         }
       } catch (textError) {
         // If reading as text fails, use the status text
@@ -582,11 +587,11 @@ export const redeemPresaleCode = async (
     // If response.ok is true, *then* parse the JSON body
     const responseData = await response.json()
     return responseData as RedeemPresaleCodeResponse
-
   } catch (error: any) {
     // Catch errors from fetch itself or the error thrown above
     console.error('Error redeeming presale code:', error.response?.data || error.message)
-    const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to redeem code'
+    const errorMessage =
+      error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to redeem code'
     return { success: false, message: errorMessage }
   }
 }
@@ -651,6 +656,59 @@ export async function signTransaction(
   return data as SignTransactionResponse
 }
 
+// --- Get Recovery Phrase ---
+/**
+ * Fetches the user's decrypted recovery phrase from the backend.
+ * Requires the user's password for decryption.
+ */
+export const getRecoveryPhrase = async (
+  data: GetRecoveryPhraseRequest,
+  token: string | null
+): Promise<GetRecoveryPhraseResponse> => {
+  const apiUrl = process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL
+  if (!apiUrl) {
+    console.error('API URL is not configured.')
+    return { error: 'API URL is not configured.' }
+  }
+  if (!token) {
+    console.error('Authentication token is missing.')
+    return { error: 'Authentication token is missing.' }
+  }
+
+  try {
+    const response = await fetch(`${apiUrl}/wallet/recovery-phrase`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(data)
+    })
+
+    const responseData = await response.json()
+
+    if (!response.ok) {
+      const errorData = responseData as ApiErrorResponse
+      const errorMessage = errorData?.error || `Failed to fetch recovery phrase: ${response.status}`
+      console.error('Get Recovery Phrase API Error:', errorMessage, 'Status:', response.status)
+      return { error: errorMessage } // Return error message in the response object
+    }
+
+    // Ensure recoveryPhrase field exists in successful response
+    if (typeof responseData.recoveryPhrase !== 'string') {
+      console.error('Get Recovery Phrase API Error: Invalid response format, missing recoveryPhrase.')
+      return { error: 'Invalid response format from server.' }
+    }
+
+    return responseData as GetRecoveryPhraseResponse
+  } catch (error: any) {
+    console.error('Error fetching recovery phrase:', error.message)
+    // Check for specific network error messages if needed
+    const errorMessage = error.message || 'An unexpected error occurred while fetching the recovery phrase.'
+    return { error: errorMessage }
+  }
+}
+
 // --- SWAP FUNCTIONS ---
 
 /**
@@ -665,7 +723,7 @@ export async function getSwapQuote(payload: GetQuoteRequest, token: string): Pro
   }
 
   // Ensure amount is a number before stringifying
-  const numericPayload = { ...payload, amount: Number(payload.amount) };
+  const numericPayload = { ...payload, amount: Number(payload.amount) }
 
   const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/swap/quote`, {
     method: 'POST',
@@ -697,7 +755,7 @@ export async function getSwapQuote(payload: GetQuoteRequest, token: string): Pro
  * @returns A promise resolving to the swap execution response (tx signature).
  */
 export async function executeSwap(
-  payload: ExecuteSwapRequest, 
+  payload: ExecuteSwapRequest,
   token: string,
   publicKey?: string
 ): Promise<ExecuteSwapResponseWithStatus> {
@@ -709,7 +767,7 @@ export async function executeSwap(
   const requestPayload = {
     ...payload,
     publicKey: publicKey || payload.publicKey
-  };
+  }
 
   const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/swap/execute`, {
     method: 'POST',

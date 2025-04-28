@@ -77,7 +77,7 @@ export default function HomeScreen() {
   // Calculate SOL value
   const solValue = typeof solBalance === 'number' && typeof solPrice === 'number' ? solBalance * solPrice : null
   const teamValue = typeof teamBalance === 'number' && typeof teamPrice === 'number' ? teamBalance * teamPrice : null
-  
+
   // Calculate total portfolio value
   const totalValue = (solValue || 0) + (teamValue || 0)
 
@@ -138,13 +138,13 @@ export default function HomeScreen() {
     return (
       <TouchableOpacity style={styles.addressContainer} onPress={handleCopyAddress}>
         <Text style={styles.addressText}>{formatWalletAddress(walletAddress)}</Text>
-        <Ionicons name="copy-outline" size={16} color={Colors.primary} />
+        <Ionicons name='copy-outline' size={16} color={Colors.primary} />
       </TouchableOpacity>
     )
   }
 
   return (
-    <ScreenLayout title="Wallet" headerRightElement={renderHeaderRight()}>
+    <ScreenLayout title='Wallet' headerRightElement={renderHeaderRight()}>
       <ScrollView
         contentContainerStyle={[
           styles.scrollContentContainer,
@@ -156,36 +156,36 @@ export default function HomeScreen() {
         <View style={styles.mainBalanceCard}>
           <Text style={styles.balanceLabel}>Total Balance</Text>
           <Text style={styles.balanceAmount}>{totalValue ? formatPrice(totalValue) : '--'}</Text>
-          
+
           <View style={styles.actionsRow}>
             <TouchableOpacity style={styles.actionButton} onPress={handleReceivePress}>
               <View style={styles.actionIconContainer}>
-                <Ionicons name="arrow-down-outline" size={20} color={Colors.text} />
+                <Ionicons name='arrow-down-outline' size={20} color={Colors.text} />
               </View>
               <Text style={styles.actionText}>Receive</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={styles.actionButton} onPress={handleSendPress}>
               <View style={styles.actionIconContainer}>
-                <Ionicons name="arrow-up-outline" size={20} color={Colors.text} />
+                <Ionicons name='arrow-up-outline' size={20} color={Colors.text} />
               </View>
               <Text style={styles.actionText}>Send</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={styles.actionButton} onPress={handleSwapPress}>
               <View style={styles.actionIconContainer}>
-                <Ionicons name="swap-horizontal-outline" size={20} color={Colors.text} />
+                <Ionicons name='swap-horizontal-outline' size={20} color={Colors.text} />
               </View>
               <Text style={styles.actionText}>Swap</Text>
             </TouchableOpacity>
           </View>
         </View>
-        
+
         {/* Assets Section */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Assets</Text>
         </View>
-        
+
         {/* SOL Token */}
         <TouchableOpacity style={styles.assetItem}>
           <View style={styles.assetLeft}>
@@ -197,17 +197,17 @@ export default function HomeScreen() {
               <Text style={styles.assetTicker}>SOL</Text>
             </View>
           </View>
-          
+
           <View style={styles.assetRight}>
             <Text style={styles.assetAmount}>{solBalance ? formatBalance(solBalance) : '--'} SOL</Text>
             <Text style={styles.assetValue}>${solValue ? formatPrice(solValue) : '--'}</Text>
           </View>
         </TouchableOpacity>
-        
+
         {/* TEAM Token */}
         <TouchableOpacity style={styles.assetItem}>
           <View style={styles.assetLeft}>
-            <View style={[styles.assetIconContainer, {backgroundColor: Colors.secondarySubtle}]}>
+            <View style={[styles.assetIconContainer, { backgroundColor: Colors.secondarySubtle }]}>
               <TeamIcon width={24} height={24} />
             </View>
             <View>
@@ -215,13 +215,13 @@ export default function HomeScreen() {
               <Text style={styles.assetTicker}>TEAM</Text>
             </View>
           </View>
-          
+
           <View style={styles.assetRight}>
             <Text style={styles.assetAmount}>{teamBalance ? formatBalance(teamBalance) : '--'} TEAM</Text>
             <Text style={styles.assetValue}>${teamValue ? formatPrice(teamValue) : '--'}</Text>
           </View>
         </TouchableOpacity>
-        
+
         {/* Recent Activity Section */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Recent Activity</Text>
@@ -229,9 +229,9 @@ export default function HomeScreen() {
             <Text style={styles.seeAllText}>See all</Text>
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.emptyActivity}>
-          <Ionicons name="time-outline" size={24} color={Colors.textTertiary} />
+          <Ionicons name='time-outline' size={24} color={Colors.textTertiary} />
           <Text style={styles.emptyActivityText}>No recent transactions</Text>
         </View>
       </ScrollView>
@@ -241,7 +241,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   scrollContentContainer: {
-    paddingTop: 8, // Keep top padding within scroll content if needed
+    paddingTop: 8 // Keep top padding within scroll content if needed
   },
   addressContainer: {
     flexDirection: 'row',
@@ -250,24 +250,24 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 12,
-    gap: 8,
+    gap: 8
   },
   addressText: {
     color: Colors.textSecondary,
     fontSize: 14,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace'
   },
   mainBalanceCard: {
     padding: 24,
     borderRadius: 16,
     backgroundColor: Colors.cardBackground, // Use defined card background
-    marginBottom: 24,
+    marginBottom: 24
   },
   balanceLabel: {
     fontSize: 14,
     color: Colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 8
   },
   balanceAmount: {
     fontSize: 36,
@@ -275,19 +275,19 @@ const styles = StyleSheet.create({
     color: Colors.text,
     textAlign: 'center',
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    marginBottom: 20,
+    marginBottom: 20
   },
   actionsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 12
   },
   actionButton: {
     flex: 1,
     alignItems: 'center',
     backgroundColor: Colors.backgroundSubtle,
     padding: 14,
-    borderRadius: 12,
+    borderRadius: 12
   },
   actionIconContainer: {
     width: 36,
@@ -296,27 +296,27 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primarySubtleDark, // Use darker subtle primary for icon bg
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 8
   },
   actionText: {
     color: Colors.text,
-    fontSize: 14,
+    fontSize: 14
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
-    marginTop: 8,
+    marginTop: 8
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.text,
+    color: Colors.text
   },
   seeAllText: {
     fontSize: 14,
-    color: Colors.primary, // Use primary color for links
+    color: Colors.primary // Use primary color for links
   },
   assetItem: {
     flexDirection: 'row',
@@ -325,11 +325,11 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: Colors.cardBackgroundSubtle, // Use defined subtle card background
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 12
   },
   assetLeft: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   assetIconContainer: {
     width: 40,
@@ -338,39 +338,39 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primarySubtle, // Use subtle primary for icon bg
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 12
   },
   assetName: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.text,
+    color: Colors.text
   },
   assetTicker: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: Colors.textSecondary
   },
   assetRight: {
-    alignItems: 'flex-end',
+    alignItems: 'flex-end'
   },
   assetAmount: {
     fontSize: 16,
     fontWeight: '500',
     color: Colors.text,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace'
   },
   assetValue: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: Colors.textSecondary
   },
   emptyActivity: {
     height: 120,
     backgroundColor: Colors.cardBackgroundSubtle, // Use defined subtle card background
     borderRadius: 12,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   emptyActivityText: {
     color: Colors.textTertiary, // Use tertiary text color
-    marginTop: 8,
-  },
+    marginTop: 8
+  }
 })

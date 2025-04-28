@@ -94,6 +94,16 @@ type SolanaSignResponse struct {
 	SignedTransaction string `json:"signedTransaction"` // Base64 encoded
 }
 
+// GetRecoveryPhraseRequest defines the expected request body for fetching the recovery phrase.
+type GetRecoveryPhraseRequest struct {
+	Password string `json:"password" validate:"required"`
+}
+
+// GetRecoveryPhraseResponse defines the response body when successfully fetching the recovery phrase.
+type GetRecoveryPhraseResponse struct {
+	RecoveryPhrase string `json:"recoveryPhrase"`
+}
+
 // CreateWalletHandler handles the creation of a new Solana wallet for the authenticated user.
 func CreateWalletHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 	return func(c *fiber.Ctx) error { // TODO: Add input validation
@@ -579,6 +589,78 @@ func RedeemPresaleCode(db *gorm.DB) fiber.Handler {
 	}
 }
 
+// GetRecoveryPhraseHandler handles the request to view the user's recovery phrase.
+// It requires the user's password to decrypt the stored mnemonic.
+func GetRecoveryPhraseHandler(db *gorm.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		userIDInterface := c.Locals("userID")
+		if userIDInterface == nil {
+			log.Println("Error: userID not found in context")
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "User not authenticated"})
+		}
+
+		userID, ok := userIDInterface.(uint)
+		if !ok {
+			log.Printf("Error: userID has unexpected type: %T\n", userIDInterface)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Internal server error processing user identity"})
+		}
+
+		// Parse request body
+		req := new(GetRecoveryPhraseRequest)
+		if err := c.BodyParser(req); err != nil {
+			log.Printf("Error parsing GetRecoveryPhrase request body: %v", err)
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body", "details": err.Error()})
+		}
+
+		// Validate request body (password presence)
+		// Note: Add more sophisticated validation if needed (e.g., length)
+		if req.Password == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Password is required"})
+		}
+
+		// Fetch the user's wallet
+		var wallet models.Wallet
+		if err := db.Where("user_id = ?", userID).First(&wallet).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				log.Printf("Wallet not found for user %d", userID)
+				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Wallet not found for this user"})
+			}
+			log.Printf("Database error fetching wallet for user %d: %v", userID, err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database error fetching wallet"})
+		}
+
+		// Check if mnemonic is actually encrypted
+		if wallet.EncryptedMnemonic == "" || wallet.EncryptionMetadata == nil || len(wallet.EncryptionMetadata) == 0 {
+			log.Printf("Error: Wallet %d for user %d does not have encrypted mnemonic data", wallet.ID, userID)
+			// Potentially return a different error if this state shouldn't happen
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Wallet data is incomplete or corrupted"})
+		}
+
+		// --- Decrypt Mnemonic ---
+		// IMPORTANT: Clear password from memory after use
+		decryptedMnemonic, err := crypto.DecryptMnemonic(wallet.EncryptedMnemonic, wallet.EncryptionMetadata, req.Password)
+		// Clear password immediately after use
+		req.Password = "" // Overwrite in struct
+
+		if err != nil {
+			// Log the actual error internally, but return a generic message to the user
+			log.Printf("Failed to decrypt mnemonic for wallet %d (user %d): %v", wallet.ID, userID, err)
+			// Return 401 Unauthorized as decryption failure likely means wrong password
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Decryption failed. Please check your password."}) 
+		}
+
+		// --- Return Decrypted Phrase ---
+		response := GetRecoveryPhraseResponse{
+			RecoveryPhrase: decryptedMnemonic,
+		}
+
+		// Clear decrypted mnemonic from memory after creating response
+		decryptedMnemonic = ""
+
+		return c.Status(fiber.StatusOK).JSON(response)
+	}
+}
+
 // SignTransactionHandler handles decrypting the user's mnemonic and requesting the solana-api to sign a transaction.
 func SignTransactionHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -690,3 +772,5 @@ func SignTransactionHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 		})
 	}
 }
+
+// CreateWalletHandler handles the creation of a new wallet entry in the database.

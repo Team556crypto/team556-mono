@@ -96,6 +96,16 @@ interface SignTransactionResponse {
   signedTransaction: string // base64 encoded signed transaction
 }
 
+// --- Get Recovery Phrase ---
+export interface GetRecoveryPhraseRequest {
+  password: string
+}
+
+export interface GetRecoveryPhraseResponse {
+  recoveryPhrase?: string
+  error?: string // Include error field for potential API errors
+}
+
 // --- SWAP TYPES ---
 
 // Copied basic type from SwapDrawerContent - consider a shared location
@@ -515,7 +525,7 @@ export const redeemPresaleCode = async (
   }
 
   try {
-    const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/api/wallet/redeem-presale-code`, {
+    const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/wallet/redeem-presale-code`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -605,6 +615,59 @@ export async function signTransaction(
   }
 
   return data as SignTransactionResponse
+}
+
+// --- Get Recovery Phrase ---
+/**
+ * Fetches the user's decrypted recovery phrase from the backend.
+ * Requires the user's password for decryption.
+ */
+export const getRecoveryPhrase = async (
+  data: GetRecoveryPhraseRequest,
+  token: string | null
+): Promise<GetRecoveryPhraseResponse> => {
+  const apiUrl = process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL
+  if (!apiUrl) {
+    console.error('API URL is not configured.')
+    return { error: 'API URL is not configured.' }
+  }
+  if (!token) {
+    console.error('Authentication token is missing.')
+    return { error: 'Authentication token is missing.' }
+  }
+
+  try {
+    const response = await fetch(`${apiUrl}/wallet/recovery-phrase`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(data)
+    })
+
+    const responseData = await response.json()
+
+    if (!response.ok) {
+      const errorData = responseData as ApiErrorResponse
+      const errorMessage = errorData?.error || `Failed to fetch recovery phrase: ${response.status}`
+      console.error('Get Recovery Phrase API Error:', errorMessage, 'Status:', response.status)
+      return { error: errorMessage } // Return error message in the response object
+    }
+
+    // Ensure recoveryPhrase field exists in successful response
+    if (typeof responseData.recoveryPhrase !== 'string') {
+      console.error('Get Recovery Phrase API Error: Invalid response format, missing recoveryPhrase.')
+      return { error: 'Invalid response format from server.' } 
+    }
+
+    return responseData as GetRecoveryPhraseResponse
+  } catch (error: any) {
+    console.error('Error fetching recovery phrase:', error.message)
+    // Check for specific network error messages if needed
+    const errorMessage = error.message || 'An unexpected error occurred while fetching the recovery phrase.'
+    return { error: errorMessage }
+  }
 }
 
 // --- SWAP FUNCTIONS ---

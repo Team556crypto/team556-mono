@@ -1,16 +1,15 @@
 import { createJupiterApiClient, QuoteGetRequest, QuoteResponse, SwapInstructionsPostRequest, SwapInstructionsResponse, SwapResponse } from '@jup-ag/api';
 import {
-    Connection,
-    PublicKey,
-    Keypair,
-    VersionedTransaction,
-    TransactionMessage,
-    ComputeBudgetProgram,
-    AddressLookupTableAccount,
-    TransactionInstruction,
-    SystemProgram,
-    Transaction,
-    sendAndConfirmRawTransaction,
+  Connection,
+  PublicKey,
+  Keypair,
+  VersionedTransaction,
+  TransactionMessage,
+  ComputeBudgetProgram, // Import ComputeBudgetProgram
+  AddressLookupTableAccount,
+  TransactionInstruction,
+  SystemProgram,
+  Transaction,
 } from '@solana/web3.js';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -22,7 +21,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
 
 const SOLANA_RPC_ENDPOINT = process.env.GLOBAL__MAINNET_RPC_URL;
 if (!SOLANA_RPC_ENDPOINT) {
-    throw new Error("Missing GLOBAL__MAINNET_RPC_URL environment variable");
+  throw new Error("Missing GLOBAL__MAINNET_RPC_URL environment variable");
 }
 
 const connection = new Connection(SOLANA_RPC_ENDPOINT);
@@ -38,21 +37,21 @@ const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xW
  * @returns {Promise<QuoteResponse>} The quote response from Jupiter API.
  */
 export const getQuote = async (quoteRequest: QuoteGetRequest): Promise<QuoteResponse> => {
-    try {
-        console.log('Fetching quote with params:', quoteRequest);
-        const quote = await jupiterApi.quoteGet(quoteRequest);
-        console.log('Received quote:', quote);
-        if (!quote) {
-            throw new Error("Unable to get quote");
-        }
-        return quote;
-    } catch (error) {
-        console.error("Error getting quote:", error);
-        if (error instanceof Error) {
-             throw new Error(`Failed to get quote: ${error.message}`);
-        }
-        throw new Error("Failed to get quote due to an unknown error.");
+  try {
+    console.log('Fetching quote with params:', quoteRequest);
+    const quote = await jupiterApi.quoteGet(quoteRequest);
+    console.log('Received quote:', quote);
+    if (!quote) {
+      throw new Error("Unable to get quote");
     }
+    return quote;
+  } catch (error) {
+    console.error("Error getting quote:", error);
+    if (error instanceof Error) {
+      throw new Error(`Failed to get quote: ${error.message}`);
+    }
+    throw new Error("Failed to get quote due to an unknown error.");
+  }
 };
 
 /**
@@ -64,33 +63,34 @@ export const getQuote = async (quoteRequest: QuoteGetRequest): Promise<QuoteResp
  * @returns {Promise<SwapInstructionsResponse>} The instructions response from Jupiter API.
  */
 export const getSwapInstructionsFromJupiter = async (userPublicKey: PublicKey, quoteResponse: QuoteResponse): Promise<SwapInstructionsResponse> => {
-    try {
-        console.log('Getting swap instructions for user:', userPublicKey.toBase58());
+  try {
+    console.log('Getting swap instructions for user:', userPublicKey.toBase58());
 
-        // Construct the payload conforming to SwapInstructionsPostRequest (based on example)
-        const instructionsPayload: SwapInstructionsPostRequest = { 
-          swapRequest: { // Fix: Use nested 'swapRequest' object
-            quoteResponse: quoteResponse,
-            userPublicKey: userPublicKey.toBase58(),
-            // Optional: Add other parameters like prioritizationFeeLamports: 'auto' if needed
-          }
-        };
+    // Construct the payload conforming to SwapInstructionsPostRequest (based on example)
+    const instructionsPayload: SwapInstructionsPostRequest = { 
+      swapRequest: { 
+        quoteResponse: quoteResponse,
+        userPublicKey: userPublicKey.toBase58(),
+        dynamicComputeUnitLimit: true, // Add dynamic CU limit estimation
+        // Optional: Add other parameters like prioritizationFeeLamports: 'auto' if needed
+      }
+    };
 
-        console.log('Instructions request payload:', instructionsPayload);
-        // Call swapInstructionsPost instead of instructionsPost
-        const instructionsResult = await jupiterApi.swapInstructionsPost(instructionsPayload);
-        console.log('Received swap instructions data:', instructionsResult);
+    console.log('Instructions request payload:', instructionsPayload);
+    // Call swapInstructionsPost instead of instructionsPost
+    const instructionsResult = await jupiterApi.swapInstructionsPost(instructionsPayload);
+    console.log('Received swap instructions data:', instructionsResult);
 
-        // Return the full instructions result object
-        return instructionsResult;
+    // Return the full instructions result object
+    return instructionsResult;
 
-    } catch (error) {
-        console.error("Error getting swap instructions:", error);
-         if (error instanceof Error) {
-             throw new Error(`Failed to get swap instructions: ${error.message}`);
-        }
-        throw new Error("Failed to get swap instructions due to an unknown error.");
+  } catch (error) {
+    console.error("Error getting swap instructions:", error);
+    if (error instanceof Error) {
+      throw new Error(`Failed to get swap instructions: ${error.message}`);
     }
+    throw new Error("Failed to get swap instructions due to an unknown error.");
+  }
 };
 
 /**
@@ -220,24 +220,53 @@ export const createTokenAccountTransaction = async (
 /**
  * Executes the swap transaction.
  * @param {QuoteResponse} quoteResponse - The quote details.
- * @param {string} userPrivateKeyBase64 - The base64 encoded private key of the user.
+ * @param {string} userPublicKeyString - The public key of the user performing the swap.
+ * @param {string} [userPrivateKeyBase64] - The base64 encoded private key of the user.
  * @returns {Promise<string | { requiresTokenAccounts: true; createAccountTransaction: string; missingAccounts: { mint: string; address: string }[] }>} Either the transaction signature or a token account setup request.
  */
 export const executeSwapTransaction = async (
   quoteResponse: QuoteResponse,
-  userPrivateKeyBase64: string
-): Promise<string | { requiresTokenAccounts: true; createAccountTransaction: string; missingAccounts: { mint: string; address: string }[] }> => { 
+  userPublicKeyString: string,
+  userPrivateKeyBase64?: string
+): Promise<string | { requiresTokenAccounts: true; createAccountTransaction: string; missingAccounts: { mint: string; address: string }[] }> => {
   // Use confirmed commitment for better reliability
   const connection = new Connection(process.env.GLOBAL__MAINNET_RPC_URL || '', 'confirmed');
-  let privateKeyBytes: Uint8Array;
-  let userKeypair: Keypair;
+  let userKeypair: Keypair | null = null;
+  let userPublicKey: PublicKey;
 
   try {
-    console.log("Executing swap transaction using instructions...");
-    privateKeyBytes = base64.toByteArray(userPrivateKeyBase64);
-    userKeypair = Keypair.fromSecretKey(privateKeyBytes);
-    const userPublicKey = userKeypair.publicKey;
-    privateKeyBytes.fill(0); // Clear sensitive data after use
+    // Always derive PublicKey from the provided string
+    try {
+      userPublicKey = new PublicKey(userPublicKeyString);
+      console.log(`Processing request for public key: ${userPublicKey.toBase58()}`);
+    } catch (e) {
+      throw new Error(`Invalid userPublicKey provided: ${userPublicKeyString}`);
+    }
+
+    // Derive keypair only if private key is provided
+    if (userPrivateKeyBase64) {
+      console.log("Private key provided, deriving keypair...");
+      let privateKeyBytes: Uint8Array | null = null;
+      try {
+        privateKeyBytes = Buffer.from(userPrivateKeyBase64, 'base64');
+        // Derive the keypair from the 32-byte seed
+        userKeypair = Keypair.fromSeed(privateKeyBytes);
+        privateKeyBytes.fill(0); // Clear sensitive data immediately
+        privateKeyBytes = null; // Dereference
+
+        // Verify derived public key matches the provided one
+        if (userKeypair.publicKey.toBase58() !== userPublicKey.toBase58()) {
+          throw new Error("Provided userPublicKey does not match the derived public key from the private key.");
+        }
+        console.log(`Keypair derived successfully. Public key verified: ${userKeypair.publicKey.toBase58()}`);
+      } catch (error) {
+         if (privateKeyBytes) privateKeyBytes.fill(0); // Ensure cleanup on error
+         console.error("Error deriving or verifying keypair:", error);
+         throw new Error(`Failed to derive or verify keypair: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    } else {
+      console.log("No private key provided. Proceeding with public key only for token account checks.");
+    }
 
     // Log the tokens being swapped to help diagnose issues
     if (!quoteResponse.inputMint || !quoteResponse.outputMint) {
@@ -251,7 +280,7 @@ export const executeSwapTransaction = async (
     const outputMint = new PublicKey(quoteResponse.outputMint);
     
     const tokenAccountCheck = await checkRequiredTokenAccounts(
-      userPublicKey,
+      userPublicKey, // Use the derived PublicKey object
       inputMint,
       outputMint,
       connection
@@ -264,7 +293,7 @@ export const executeSwapTransaction = async (
       // Create a transaction to create the missing token accounts
       const { transaction } = await createTokenAccountTransaction(
         tokenAccountCheck.createAccountInstructions,
-        userPublicKey,
+        userPublicKey, // Use the derived PublicKey object
         connection
       );
       
@@ -282,6 +311,18 @@ export const executeSwapTransaction = async (
         }))
       };
     }
+
+    // --- Full Swap Execution Logic --- 
+    // This part should ONLY run if the private key was provided
+    if (!userKeypair) {
+      // If accounts exist BUT no private key was provided, we cannot proceed with the swap.
+      // This scenario might happen if the client calls again after creating accounts but still without the private key.
+      console.error("Token accounts exist, but userPrivateKey is required to execute the swap.");
+      throw new Error("Token accounts are ready, but userPrivateKey is required to sign the swap transaction.");
+    }
+    
+    // If we reach here, token accounts exist AND we have the keypair
+    console.log("Token accounts exist and keypair is available. Proceeding with swap instruction fetch and execution...");
 
     // 2. Get swap instructions from Jupiter
     const instructionsResponse = await getSwapInstructionsFromJupiter(userKeypair.publicKey, quoteResponse);
@@ -310,145 +351,175 @@ export const executeSwapTransaction = async (
     console.log(`Fetched ${addressLookupTableAccounts.length} ALTs.`);
 
     // 4. Create Transaction Instructions Array
-    // Add additional compute budget instruction for higher priority
-    const priorityFeeInstruction = ComputeBudgetProgram.setComputeUnitPrice({
-        microLamports: 50_000_000 // 50 lamports per CU - high priority
-    });
-    
-    const computeUnitInstruction = ComputeBudgetProgram.setComputeUnitLimit({
-        units: 1_400_000 // Maximum compute units
-    });
-    
-    // Let Jupiter handle other compute budget instructions
+    // Combine all instructions from Jupiter response
+    // Order matters: Compute Budget -> Setup -> Swap -> Cleanup -> Other
+    const instructionDataToTransactionInstruction = (instruction: any): TransactionInstruction | null => {
+      if (instruction === null || instruction === undefined) return null;
+      return new TransactionInstruction({
+        programId: new PublicKey(instruction.programId),
+        keys: instruction.accounts.map((key: any) => ({
+          pubkey: new PublicKey(key.pubkey),
+          isSigner: key.isSigner,
+          isWritable: key.isWritable,
+        })),
+        data: Buffer.from(instruction.data, 'base64'),
+      });
+    };
+
     const instructions: TransactionInstruction[] = [
-      // Add our high priority compute budget instructions first
-      priorityFeeInstruction,
-      computeUnitInstruction,
       ...computeBudgetInstructions.map(instructionDataToTransactionInstruction),
       ...setupInstructions.map(instructionDataToTransactionInstruction),
       instructionDataToTransactionInstruction(swapInstruction),
       instructionDataToTransactionInstruction(cleanupInstruction),
     ].filter((ix): ix is TransactionInstruction => ix !== null);
 
-    if (instructions.length === 0) {
-        throw new Error("No instructions found for swap.");
-    }
-    
-    console.log(`Built transaction with ${instructions.length} instructions`);
+    console.log(`Collected and converted ${instructions.length} instructions from Jupiter`);
 
-    // 5. Get Latest Blockhash
-    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized');
-    console.log(`Using blockhash: ${blockhash}`);
+    // 8. Fetch latest blockhash immediately before sending
+    // Re-fetch latest blockhash *just* before sending for maximum validity
+    const latestBlockHash = await connection.getLatestBlockhash('confirmed');
 
-    // 6. Compile Transaction Message
+    // 9. Compile message and create transaction
     const messageV0 = new TransactionMessage({
-      payerKey: userPublicKey,
-      recentBlockhash: blockhash,
-      instructions,
+      payerKey: userPublicKey, // Ensure this is the PublicKey object
+      recentBlockhash: latestBlockHash.blockhash,
+      instructions, // The collected instructions including priority fee
     }).compileToV0Message(addressLookupTableAccounts);
 
-    // 7. Create and Sign Versioned Transaction
     const transaction = new VersionedTransaction(messageV0);
-    console.log("Signing transaction...");
+
+    // 11. Send the transaction (Removed skipPreflight to see simulation errors)
+    console.log('Signing transaction...');
     transaction.sign([userKeypair]);
-
-    // 8. Send Transaction with high priority
-    console.log("Sending transaction...");
-    const rawTransaction = transaction.serialize();
     
-    // Add higher priority with explicit compute budget configuration
-    const highPriorityOptions = {
-      skipPreflight: true,
-      maxRetries: 30,
-      preflightCommitment: 'processed' as 'processed',
-      minContextSlot: quoteResponse.contextSlot || undefined
-    };
+    console.log('Sending transaction...');
+    const txid = await connection.sendTransaction(transaction, {
+      maxRetries: 2, // Retry sending a couple of times if needed
+    });
+    console.log(`Transaction sent. Signature: ${txid}`);
 
-    // Try sending the transaction
-    let txid = '';
+    // 12. Confirm the transaction using the blockhash used for sending
+    console.log('Attempting to confirm transaction...');
+    console.time(`confirm-${txid}`);
+    let confirmationStatus: { value: { err: any | null } } | null = null;
     try {
-      txid = await connection.sendRawTransaction(rawTransaction, highPriorityOptions);
-      console.log(`Transaction sent. Signature: ${txid}`);
-    } catch (sendError: any) {
-      console.error('Error sending transaction:', sendError);
-      
-      // If primary RPC fails, try backup RPCs if available
-      if (process.env.GLOBAL__BACKUP_RPC_URL) {
-        console.log('Trying backup RPC endpoint...');
-        try {
-          const backupConnection = new Connection(process.env.GLOBAL__BACKUP_RPC_URL, 'confirmed');
-          txid = await backupConnection.sendRawTransaction(rawTransaction, highPriorityOptions);
-          console.log(`Transaction sent via backup RPC. Signature: ${txid}`);
-        } catch (backupError) {
-          console.error('Backup RPC send failed:', backupError);
-          throw new Error(`Failed to send transaction: ${sendError.message}`);
-        }
+      const confirmationPromise = connection.confirmTransaction(
+        {
+          signature: txid,
+          blockhash: latestBlockHash.blockhash, // Use the same blockhash used to send
+          lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+        },
+        'confirmed'
+      );
+
+      // Add timeout logic
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Transaction confirmation timed out after 30 seconds.')), 30000)
+      );
+
+      confirmationStatus = await Promise.race([confirmationPromise, timeoutPromise]);
+
+    } catch (error) {
+      console.timeEnd(`confirm-${txid}`);
+      if (error instanceof Error && error.message.includes('timed out')) {
+        console.error('Confirmation timed out:', error.message);
+        // Try to get status one last time if timed out
+        const lastStatus = await connection.getSignatureStatus(txid, { searchTransactionHistory: false });
+        throw new Error(`Transaction confirmation timed out. Signature: ${txid}. Last known status: ${lastStatus?.value?.confirmationStatus || 'unknown'}`);
       } else {
-        throw sendError;
+        console.error('Error during confirmation polling:', error);
+        throw error;
       }
+    } finally {
+      console.timeEnd(`confirm-${txid}`);
     }
 
-    // 9. Poll for transaction status with timeout and increased frequency
-    console.log(`Confirming transaction: ${txid}`);
-    let status = null;
-    const startTime = Date.now();
-    const maxRetries = 10;
-    const interval = 1000; // Check every 1 second
-    const timeout = 10000; // 10 seconds total timeout
-    
-    while (Date.now() - startTime < timeout) {
-      try {
-        status = await connection.getSignatureStatus(txid, { searchTransactionHistory: true });
-        console.log(`Status check: ${JSON.stringify(status?.value?.confirmationStatus || 'pending')}`);
-        
-        if (status?.value) {
-          if (status.value.err) {
-            console.error('Transaction error:', status.value.err);
-            throw new Error(`Transaction failed: ${JSON.stringify(status.value.err)}`);
-          }
-          
-          if (status.value.confirmationStatus === 'confirmed' || status.value.confirmationStatus === 'finalized') {
-            console.log(`Transaction confirmed with status: ${status.value.confirmationStatus}`);
-            return txid;
-          }
+    // Check transaction status from confirmTransaction result
+    if (confirmationStatus?.value?.err) {
+      console.error('Transaction failed confirmation:', confirmationStatus.value.err);
+      // Try to get more details if possible
+      if (txid) {
+        try {
+          const failedTx = await connection.getTransaction(txid, { commitment: 'confirmed', maxSupportedTransactionVersion: 0 });
+          console.error("Failed transaction details:", JSON.stringify(failedTx?.meta?.err));
+        } catch (txError) {
+          console.error("Could not fetch failed transaction details:", txError);
         }
-        
-        // Wait before next check
-        await new Promise(resolve => setTimeout(resolve, interval));
-      } catch (error) {
-        console.warn('Error checking transaction status:', error);
-        // Continue polling despite errors
-        await new Promise(resolve => setTimeout(resolve, interval));
+        throw new Error(`Transaction failed confirmation: ${JSON.stringify(confirmationStatus.value.err)}. Signature: ${txid}`);
+      } else {
+        throw new Error(`Transaction failed confirmation: ${JSON.stringify(confirmationStatus.value.err)}`);
       }
+    } else if (confirmationStatus) {
+      // If err is null, the transaction reached 'confirmed' commitment.
+      console.log(`Transaction successfully confirmed. Signature: ${txid}`);
+    } else {
+      // Should not happen if timeout error is caught correctly, but as a safeguard
+      throw new Error('Transaction confirmation status unclear after process completed.');
     }
-    
-    // Final check after timeout
-    status = await connection.getSignatureStatus(txid, { searchTransactionHistory: true });
-    if (status?.value && !status.value.err && 
-       (status.value.confirmationStatus === 'confirmed' || status.value.confirmationStatus === 'finalized')) {
-      console.log(`Transaction confirmed on final check with status: ${status.value.confirmationStatus}`);
-      return txid;
-    }
-    
-    throw new Error(`Transaction confirmation timed out after ${timeout/1000} seconds. Final status: ${JSON.stringify(status?.value?.confirmationStatus || 'unknown')}`);
+    return txid; // Return the transaction signature upon successful confirmation
 
   } catch (error: any) {
-    console.error('Error executing swap transaction:', error);
+    console.error('Error in executeSwapTransaction:', error);
+    // Clear keypair if it exists in case of error
+    // Note: privateKeyBytes should already be cleared
+    userKeypair = null; 
     if (error instanceof Error) {
-      // Log specific Jupiter API errors if available
-      if ('response' in error && typeof error.response === 'object' && error.response !== null && 'json' in error.response && typeof error.response.json === 'function') {
-        try {
-          const errDetails = await (error as any).response.json();
-          console.error('Jupiter API Error Details:', errDetails);
-        } catch (jsonError) {
-          console.error('Failed to parse error response JSON');
-        }
-      }
-      throw new Error(`Failed to execute swap transaction: ${error.message}`);
+        // Re-throw the original error message for clarity
+        throw new Error(`Swap execution failed: ${error.message}`);
+    } else {
+        // Throw a generic message for non-Error types
+        throw new Error(`Swap execution failed due to an unknown error.`);
     }
-    throw new Error('Failed to execute swap transaction due to an unknown error.');
   }
-};
+}; // End of executeSwapTransaction
+
+/**
+ * Get the associated token address for a given mint and owner.
+ */
+async function getAssociatedTokenAddress(
+  mint: PublicKey,
+  owner: PublicKey
+): Promise<PublicKey> {
+  const [address] = await PublicKey.findProgramAddress(
+    [
+      owner.toBuffer(),
+      TOKEN_PROGRAM_ID.toBuffer(),
+      mint.toBuffer(),
+    ],
+    ASSOCIATED_TOKEN_PROGRAM_ID
+  );
+  return address;
+}
+
+/**
+ * Create an instruction to create an associated token account if one doesn't exist.
+ */
+function createAssociatedTokenAccountInstruction(
+  payer: PublicKey,
+  associatedTokenAddress: PublicKey, // Renamed for clarity
+  owner: PublicKey,
+  mint: PublicKey
+): TransactionInstruction {
+  const keys = [
+    { pubkey: payer, isSigner: true, isWritable: true },
+    { pubkey: associatedTokenAddress, isSigner: false, isWritable: true },
+    { pubkey: owner, isSigner: false, isWritable: false },
+    { pubkey: mint, isSigner: false, isWritable: false },
+    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    // Rent sysvar is implicitly passed via Solana runtime V1.10+
+    // { pubkey: new PublicKey('SysvarRent111111111111111111111111111111111'), isSigner: false, isWritable: false },
+  ];
+
+  // The Associated Token Account Program does not require data for the create instruction
+  const data = Buffer.alloc(0); 
+
+  return new TransactionInstruction({
+    keys,
+    programId: ASSOCIATED_TOKEN_PROGRAM_ID,
+    data,
+  });
+}
 
 /**
  * Helper function to get or create an associated token account
@@ -578,68 +649,8 @@ async function getOrCreateAssociatedTokenAccount(
 }
 
 /**
- * Create an instruction to create an associated token account
+ * Helper function to fetch Address Lookup Table Accounts (ALTs)
  */
-function createAssociatedTokenAccountInstruction(
-  payer: PublicKey,
-  associatedToken: PublicKey,
-  owner: PublicKey,
-  mint: PublicKey
-): TransactionInstruction {
-  const data = Buffer.alloc(0);
-  
-  // Layout for the keys in the Associated Token Account instruction
-  const keys = [
-    { pubkey: payer, isSigner: true, isWritable: true },
-    { pubkey: associatedToken, isSigner: false, isWritable: true },
-    { pubkey: owner, isSigner: false, isWritable: false },
-    { pubkey: mint, isSigner: false, isWritable: false },
-    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-    { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-    // Rent sysvar can be skipped in newer Solana versions since its accessed via the SysvarRent address
-    { pubkey: new PublicKey('SysvarRent111111111111111111111111111111111'), isSigner: false, isWritable: false },
-  ];
-
-  return new TransactionInstruction({
-    keys,
-    programId: ASSOCIATED_TOKEN_PROGRAM_ID,
-    data,
-  });
-}
-
-/**
- * Get the associated token address
- */
-async function getAssociatedTokenAddress(
-  mint: PublicKey,
-  owner: PublicKey
-): Promise<PublicKey> {
-  const [address] = PublicKey.findProgramAddressSync(
-    [
-      owner.toBuffer(),
-      TOKEN_PROGRAM_ID.toBuffer(),
-      mint.toBuffer(),
-    ],
-    ASSOCIATED_TOKEN_PROGRAM_ID
-  );
-  return address;
-}
-
-// Helper function to convert InstructionData received from Jupiter API to TransactionInstruction
-function instructionDataToTransactionInstruction(instruction: any | undefined | null): TransactionInstruction | null {
-  if (instruction === null || instruction === undefined) return null;
-  return new TransactionInstruction({
-    programId: new PublicKey(instruction.programId),
-    keys: instruction.accounts.map((key: any) => ({
-      pubkey: new PublicKey(key.pubkey),
-      isSigner: key.isSigner,
-      isWritable: key.isWritable,
-    })),
-    data: Buffer.from(instruction.data, 'base64'),
-  });
-}
-
-// Helper function to fetch Address Lookup Table Accounts (ALTs)
 async function getAdressLookupTableAccounts(
     connection: Connection,
     addresses: string[]
@@ -683,7 +694,25 @@ export const submitTokenAccountTransaction = async (
   try {
     // Deserialize the transaction from base64
     const transactionBuffer = Buffer.from(serializedTransaction, 'base64');
-    
+
+    // --- Development-only: simulate transaction to catch obvious issues before submit ---
+    if (process.env.NODE_ENV !== 'production') {
+      try {
+        const legacyTx = Transaction.from(transactionBuffer);
+        const simResult = await connection.simulateTransaction(legacyTx, undefined, true);
+        if (simResult.value.err) {
+          console.error('Preflight simulation failed:', JSON.stringify(simResult.value.err));
+          if (simResult.value.logs) {
+            simResult.value.logs.forEach((log) => console.error('sim log:', log));
+          }
+        } else {
+          console.log('Preflight simulation succeeded');
+        }
+      } catch (simErr) {
+        console.warn('Simulation attempt threw error:', simErr instanceof Error ? simErr.message : String(simErr));
+      }
+    }
+
     // Send and confirm transaction
     console.log('Sending token account transaction...');
     const signature = await connection.sendRawTransaction(transactionBuffer, {

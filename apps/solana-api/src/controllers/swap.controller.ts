@@ -12,9 +12,10 @@ interface GetQuoteRequestBody {
     // Add other relevant QuoteGetRequest fields if needed by frontend
 }
 
-interface PostSwapRequestBody {
-    quoteResponse: QuoteResponse; 
-    userPrivateKey: string; // Expect base64 encoded private key string
+interface PostSwapRequestBody { 
+    quoteResponse: QuoteResponse;
+    userPublicKeyString: string; // User's public key as a base58 string (REQUIRED)
+    userPrivateKeyBase64?: string; // Optional: base64 encoded private key string
 }
 
 interface CreateTokenAccountsRequestBody {
@@ -62,19 +63,19 @@ export const handleGetQuote = async (req: Request, res: Response) => {
 
 /**
  * Handles requests to generate a swap transaction.
- * Expects quoteResponse and userPrivateKey in request body.
+ * Expects quoteResponse and userPublicKeyString in request body.
  */
 export const handlePostSwap = async (req: Request<{}, {}, PostSwapRequestBody>, res: Response) => {
     console.log("Received /swap request:", req.body);
-    const { quoteResponse, userPrivateKey } = req.body;
+    const { quoteResponse, userPublicKeyString, userPrivateKeyBase64 } = req.body;
 
-    if (!quoteResponse || !userPrivateKey) {
-        return res.status(400).json({ error: 'Missing required fields: quoteResponse, userPrivateKey' });
+    if (!quoteResponse || !userPublicKeyString) {
+        return res.status(400).json({ error: 'Missing required fields: quoteResponse, userPublicKeyString' });
     }
 
     try {
         // Execute swap transaction - will now check for required token accounts
-        const result = await swapService.executeSwapTransaction(quoteResponse, userPrivateKey);
+        const result = await swapService.executeSwapTransaction(quoteResponse, userPublicKeyString, userPrivateKeyBase64);
         
         // Check if token accounts need to be created
         if (typeof result === 'object' && 'requiresTokenAccounts' in result) {

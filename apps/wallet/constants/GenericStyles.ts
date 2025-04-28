@@ -4,10 +4,13 @@ import { StyleSheet } from 'react-native'
 export const genericStyles = StyleSheet.create({
   input: {
     height: 50,
-    backgroundColor: Colors.backgroundDark,
+    backgroundColor: Colors.background,
     color: Colors.text,
     paddingHorizontal: 16,
-    borderRadius: 8
+    borderRadius: 8,
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   button: {
     width: '100%',

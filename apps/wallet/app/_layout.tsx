@@ -40,7 +40,7 @@ function InitialLayout() {
     const inAuthGroup = currentSegment === '(tabs)'
     const inOnboarding = currentSegment === 'onboarding'
     const inLogin = currentSegment === 'login'
-    const allowedStandaloneRoutes = ['privacy', 'terms'] // Explicitly allow these
+    const allowedStandaloneRoutes = ['privacy', 'terms', 'signin', 'signup'] // Explicitly allow these
     const inAllowedStandalone = allowedStandaloneRoutes.includes(currentSegment)
 
     if (isAuthenticated) {
@@ -80,8 +80,8 @@ function InitialLayout() {
       }
     } else {
       // Not authenticated
-      // Redirect to login if not already there
-      if (!inLogin) {
+      // Redirect to login if not already there or on another allowed standalone route
+      if (!inLogin && !inAllowedStandalone) {
         router.replace('/login')
       } else {
         console.log('[Layout] Unauthenticated user in login route.')
@@ -109,6 +109,8 @@ function InitialLayout() {
       <Stack.Screen name='privacy' options={{ headerShown: false }} />
       <Stack.Screen name='terms' options={{ headerShown: false }} />
       <Stack.Screen name='+not-found' />
+      <Stack.Screen name='signin' options={{ headerShown: false }} />
+      <Stack.Screen name='signup' options={{ headerShown: false }} />
     </Stack>
   )
 }

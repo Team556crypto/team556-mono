@@ -144,7 +144,7 @@ export default function StepForm({
 
   return (
     // Use SafeAreaView as the root, styled to fill the screen
-    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }, style]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.backgroundDarker }, style]}>
       <StatusBar barStyle='light-content' />
 
       {/* Header with progress bar and title */}

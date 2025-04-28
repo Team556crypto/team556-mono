@@ -176,12 +176,12 @@ export default function HomeScreen() {
               <Text style={styles.actionText}>Send</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionButton} onPress={handleSwapPress}>
+            {/* <TouchableOpacity style={styles.actionButton} onPress={handleSwapPress}>
               <View style={styles.actionIconContainer}>
                 <Ionicons name='swap-horizontal-outline' size={20} color={Colors.text} />
               </View>
               <Text style={styles.actionText}>Swap</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
         </View>
 

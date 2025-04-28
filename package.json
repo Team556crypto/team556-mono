@@ -33,13 +33,26 @@
     "deploy:main-api": "flyctl deploy -a team556-main-api -c apps/main-api/fly.toml",
     "build:wallet-web": "cd apps/wallet && npx expo export --platform web --clear && cd ../..",
     "deploy:wallet-web": "cd apps/wallet && flyctl deploy && cd ../..",
-    "deploy:wallet-web:full": "yarn build:wallet-web && yarn deploy:wallet-web"
+    "deploy:wallet-web:full": "yarn build:wallet-web && yarn deploy:wallet-web",
+    "generate-presale-csv": "dotenv -e .env -- ts-node scripts/generate-presale-codes-csv.ts",
+    "send-presale-emails": "dotenv -e .env -- ts-node scripts/send-presale-codes.ts"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
-    "prettier": "^3.5.3",
-    "turbo": "^2.5.0",
-    "typescript": "5.8.2"
+    "prettier": "^3.2.5",
+    "dotenv-cli": "^7.4.2",
+    "pg": "^8.11.5",
+    "dotenv": "^16.4.5",
+    "csv-writer": "^1.6.0",
+    "csv-parser": "^3.0.0",
+    "resend": "^3.2.0",
+    "validator": "^13.12.0",
+    "@types/pg": "^8.11.6",
+    "@types/node": "^20.12.12",
+    "@types/validator": "^13.11.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5",
+    "turbo": "^2.5.0"
   },
   "engines": {
     "node": ">=18"

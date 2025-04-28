@@ -387,7 +387,7 @@ export default function SettingsScreen() {
   const walletAddress = user?.wallets && user.wallets.length > 0 ? user.wallets[0].address : 'No wallet linked'
 
   return (
-    <ScreenLayout title='Settings' headerIcon={<Ionicons name='settings' size={24} color={Colors.tint} />}>
+    <ScreenLayout title='Settings' headerIcon={<Ionicons name='settings' size={24} color={Colors.primary} />}>
       {user ? (
         <View style={styles.container}>
           <View style={styles.card}>
@@ -576,7 +576,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.cardBackgroundSubtle, // Match HomeScreen card style
     borderRadius: 12, // Match HomeScreen card radius
     marginBottom: 16,
-    overflow: 'hidden',
+    overflow: 'hidden'
     // Remove shadow to match HomeScreen style
     // shadowColor: '#000',
     // shadowOffset: { width: 0, height: 2 },

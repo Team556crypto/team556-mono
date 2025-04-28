@@ -495,7 +495,7 @@ export const checkPresaleCode = async (code: string, token: string | null): Prom
   }
 
   try {
-    const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/wallet/check-presale-code`, {
+    const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/wallet/presale/check`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -545,7 +545,7 @@ export const redeemPresaleCode = async (
   try {
     // Ensure the MAIN_API_URL does not end with a slash, and the path does not start with one for clean joining.
     const baseUrl = (process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL || '').replace(/\/$/, '') // Remove trailing slash if present
-    const endpointPath = '/wallet/redeem-presale-code' // Path without leading /api
+    const endpointPath = '/wallet/presale/redeem' // Path without leading /api
 
     const response = await fetch(`${baseUrl}${endpointPath}`, {
       method: 'POST',

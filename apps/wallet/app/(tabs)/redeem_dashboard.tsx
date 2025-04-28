@@ -111,7 +111,6 @@ export default function RedeemDashboard() {
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
         {/* Header section explaining vesting */}
         <View style={styles.headerSection}>
-          <Text style={styles.headerTitle}>Your TEAM Token Vesting</Text>
           <Text style={styles.headerDescription}>
             Your tokens will be available according to the vesting schedule below. Tokens become available on the
             vesting date.
@@ -167,11 +166,11 @@ const styles = StyleSheet.create({
     flex: 1
   },
   contentContainer: {
-    paddingHorizontal: 16,
     paddingBottom: 32
   },
   headerSection: {
-    marginBottom: 24
+    marginBottom: 18,
+    marginTop: 12
   },
   headerTitle: {
     fontSize: 28,

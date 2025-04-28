@@ -1,22 +1,21 @@
 import React, { useEffect, useCallback, useState, useMemo } from 'react'
-import { StyleSheet, View, TouchableOpacity, Platform } from 'react-native'
+import { StyleSheet, View, TouchableOpacity, Platform, ImageBackground, ScrollView, StatusBar } from 'react-native'
 import { Text, Button } from '@team556/ui'
 import { Colors } from '@/constants/Colors'
 import { useAuthStore } from '@/store/authStore'
 import { useToastStore } from '@/store/toastStore'
 import { useWalletStore } from '@/store/walletStore'
 import { Ionicons } from '@expo/vector-icons'
-import { BalanceCard } from '@/components/BalanceCard'
-import { ScreenLayout } from '@/components/ScreenLayout'
-import SolanaIcon from '@/assets/images/solana.svg'
-import TeamIcon from '@/assets/images/team.svg'
-import { formatWalletAddress } from '@/utils/formatters'
 import { useWalletClipboard } from '@/hooks/useWalletClipboard'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useDrawerStore } from '@/store/drawerStore'
 import SendDrawerContent from '@/components/SendDrawerContent'
 import ReceiveDrawerContent from '@/components/ReceiveDrawerContent'
 import SwapDrawerContent from '@/components/SwapDrawerContent'
+import { LinearGradient } from 'expo-linear-gradient'
+import SolanaIcon from '@/assets/images/solana.svg'
+import TeamIcon from '@/assets/images/team.svg'
+import { formatWalletAddress, formatBalance, formatPrice } from '@/utils/formatters'
 
 const ComingSoonDrawerContent: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   return (
@@ -76,6 +75,9 @@ export default function HomeScreen() {
   // Calculate SOL value
   const solValue = typeof solBalance === 'number' && typeof solPrice === 'number' ? solBalance * solPrice : null
   const teamValue = typeof teamBalance === 'number' && typeof teamPrice === 'number' ? teamBalance * teamPrice : null
+  
+  // Calculate total portfolio value
+  const totalValue = (solValue || 0) + (teamValue || 0)
 
   useEffect(() => {
     if (solError) {
@@ -91,6 +93,7 @@ export default function HomeScreen() {
 
   const handleCopyAddress = () => {
     copyAddressToClipboard(walletAddress)
+    showToast('Address copied to clipboard', 'success')
   }
 
   const { isTabletOrLarger } = useBreakpoint()
@@ -128,131 +131,282 @@ export default function HomeScreen() {
     )
   }
 
-  // Prepare the header right element
-  const headerRightElement = walletAddress ? (
-    <View style={styles.addressContainer}>
-      <Text style={styles.addressText}>{formatWalletAddress(walletAddress)}</Text>
-      <TouchableOpacity onPress={handleCopyAddress} style={styles.copyButton}>
-        <Ionicons name='copy-outline' size={16} color={Colors.tint} />
-      </TouchableOpacity>
-    </View>
-  ) : null
-
-  // Otherwise, render the main content
   return (
-    <ScreenLayout
-      title='Wallet'
-      headerIcon={<Ionicons name='wallet' size={24} color={Colors.tint} />}
-      headerRightElement={headerRightElement}
-    >
-      {/* Cards Container */}
-      <View>
-        <BalanceCard
-          symbol='SOL'
-          name='Solana'
-          balance={solBalance}
-          price={solPrice}
-          value={solValue}
-          error={solError}
-          iconComponent={<SolanaIcon width={26} height={26} />}
-        />
-        <BalanceCard
-          symbol='TEAM'
-          name='Team Token'
-          balance={teamBalance}
-          price={teamPrice}
-          value={teamValue}
-          error={teamError}
-          iconComponent={<TeamIcon width={40} height={40} />}
-        />
-      </View>
-
-      {/* Action Buttons Container */}
-      <View style={styles.buttonContainer}>
-        {/* Receive Button */}
-        <TouchableOpacity style={styles.actionButton} onPress={handleReceivePress}>
-          <View style={[styles.buttonContent, isTabletOrLarger && styles.buttonContentLarge]}>
-            <Ionicons name='arrow-down-circle-outline' size={24} color={Colors.tint} />
-            <Text style={styles.buttonLabel}>Receive</Text>
+    <View style={styles.container}>
+      {/* Status Bar with gradient */}
+      <StatusBar barStyle="light-content" />
+      
+      {/* Top Gradient Header */}
+      <LinearGradient
+        colors={['#9945FF', '#14F195']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.headerGradient}
+      />
+      
+      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        {/* Header with Wallet Address */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Ionicons name="wallet-outline" size={26} color="#9945FF" />
+            <Text preset="h3" style={styles.headerTitle}>Wallet</Text>
+          </View>
+          
+          {walletAddress && (
+            <TouchableOpacity style={styles.addressContainer} onPress={handleCopyAddress}>
+              <Text style={styles.addressText}>{formatWalletAddress(walletAddress)}</Text>
+              <Ionicons name="copy-outline" size={16} color="#9945FF" />
+            </TouchableOpacity>
+          )}
+        </View>
+        
+        {/* Main Balance Card */}
+        <LinearGradient
+          colors={['rgba(153, 69, 255, 0.1)', 'rgba(20, 241, 149, 0.05)']}
+          style={styles.mainBalanceCard}
+        >
+          <Text style={styles.balanceLabel}>Total Balance</Text>
+          <Text style={styles.balanceAmount}>${totalValue ? formatPrice(totalValue) : '--'}</Text>
+          
+          <View style={styles.actionsRow}>
+            <TouchableOpacity style={styles.actionButton} onPress={handleReceivePress}>
+              <View style={styles.actionIconContainer}>
+                <Ionicons name="arrow-down-outline" size={20} color="#fff" />
+              </View>
+              <Text style={styles.actionText}>Receive</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.actionButton} onPress={handleSendPress}>
+              <View style={styles.actionIconContainer}>
+                <Ionicons name="arrow-up-outline" size={20} color="#fff" />
+              </View>
+              <Text style={styles.actionText}>Send</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.actionButton} onPress={handleSwapPress}>
+              <View style={styles.actionIconContainer}>
+                <Ionicons name="swap-horizontal-outline" size={20} color="#fff" />
+              </View>
+              <Text style={styles.actionText}>Swap</Text>
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+        
+        {/* Assets Section */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Assets</Text>
+        </View>
+        
+        {/* SOL Token */}
+        <TouchableOpacity style={styles.assetItem}>
+          <View style={styles.assetLeft}>
+            <View style={styles.assetIconContainer}>
+              <SolanaIcon width={24} height={24} />
+            </View>
+            <View>
+              <Text style={styles.assetName}>Solana</Text>
+              <Text style={styles.assetTicker}>SOL</Text>
+            </View>
+          </View>
+          
+          <View style={styles.assetRight}>
+            <Text style={styles.assetAmount}>{solBalance ? formatBalance(solBalance) : '--'} SOL</Text>
+            <Text style={styles.assetValue}>${solValue ? formatPrice(solValue) : '--'}</Text>
           </View>
         </TouchableOpacity>
-
-        {/* Send Button */}
-        <TouchableOpacity style={styles.actionButton} onPress={handleSendPress}>
-          <View style={[styles.buttonContent, isTabletOrLarger && styles.buttonContentLarge]}>
-            <Ionicons name='arrow-up-circle-outline' size={24} color={Colors.tint} />
-            <Text style={styles.buttonLabel}>Send</Text>
+        
+        {/* TEAM Token */}
+        <TouchableOpacity style={styles.assetItem}>
+          <View style={styles.assetLeft}>
+            <View style={[styles.assetIconContainer, {backgroundColor: 'rgba(20, 241, 149, 0.1)'}]}>
+              <TeamIcon width={24} height={24} />
+            </View>
+            <View>
+              <Text style={styles.assetName}>Team Token</Text>
+              <Text style={styles.assetTicker}>TEAM</Text>
+            </View>
+          </View>
+          
+          <View style={styles.assetRight}>
+            <Text style={styles.assetAmount}>{teamBalance ? formatBalance(teamBalance) : '--'} TEAM</Text>
+            <Text style={styles.assetValue}>${teamValue ? formatPrice(teamValue) : '--'}</Text>
           </View>
         </TouchableOpacity>
-
-        {/* Swap Button */}
-        <TouchableOpacity style={styles.actionButton} onPress={handleSwapPress}>
-          <View style={[styles.buttonContent, isTabletOrLarger && styles.buttonContentLarge]}>
-            <Ionicons name='swap-horizontal-outline' size={24} color={Colors.tint} />
-            <Text style={styles.buttonLabel}>Swap</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
-    </ScreenLayout>
+        
+        {/* Recent Activity Section */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <TouchableOpacity>
+            <Text style={styles.seeAllText}>See all</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <View style={styles.emptyActivity}>
+          <Ionicons name="time-outline" size={24} color="#657786" />
+          <Text style={styles.emptyActivityText}>No recent transactions</Text>
+        </View>
+      </ScrollView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0C0F12',
+  },
+  headerGradient: {
+    height: 3,
+    width: '100%',
+  },
+  scrollContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
   addressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.backgroundDark,
-    paddingVertical: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingVertical: 6,
     paddingHorizontal: 12,
-    borderRadius: 10,
-    gap: 10
+    borderRadius: 12,
+    gap: 8,
   },
   addressText: {
-    color: Colors.icon,
-    fontSize: 14
+    color: '#A5ADBA',
+    fontSize: 14,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
-  copyButton: {
-    // Add padding if needed, but icon size might be enough
+  mainBalanceCard: {
+    padding: 24,
+    borderRadius: 16,
+    backgroundColor: 'rgba(22, 25, 30, 0.8)',
+    marginBottom: 24,
   },
-  buttonContainer: {
-    flex: 1,
-    flexGrow: 1,
+  balanceLabel: {
+    fontSize: 14,
+    color: '#A5ADBA',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  balanceAmount: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    marginBottom: 20,
+  },
+  actionsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 10
+    gap: 12,
   },
   actionButton: {
+    flex: 1,
     alignItems: 'center',
-    backgroundColor: Colors.backgroundDark,
-    flexGrow: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     padding: 14,
-    borderRadius: 10
-    // Add more styling if needed, e.g., padding
+    borderRadius: 12,
   },
-  buttonContent: {
-    flexDirection: 'column', // Default: Icon above text
+  actionIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(153, 69, 255, 0.2)',
     alignItems: 'center',
-    gap: 4
+    justifyContent: 'center',
+    marginBottom: 8,
   },
-  buttonContentLarge: {
-    flexDirection: 'row', // Large screen: Icon beside text
-    gap: 8
-  },
-  buttonLabel: {
-    color: Colors.text,
+  actionText: {
+    color: '#FFFFFF',
     fontSize: 14,
-    fontFamily: 'System' // Use your app's font
   },
-  receiveAddressContainer: {
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  seeAllText: {
+    fontSize: 14,
+    color: '#9945FF',
+  },
+  assetItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: 'rgba(22, 25, 30, 0.5)',
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  assetLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10
   },
-  receiveAddressText: {
-    color: Colors.text,
-    fontSize: 16
+  assetIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(153, 69, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
-  receiveCopyButton: {
-    // Add padding if needed, but icon size might be enough
-  }
+  assetName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  assetTicker: {
+    fontSize: 12,
+    color: '#A5ADBA',
+  },
+  assetRight: {
+    alignItems: 'flex-end',
+  },
+  assetAmount: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  assetValue: {
+    fontSize: 12,
+    color: '#A5ADBA',
+  },
+  emptyActivity: {
+    height: 120,
+    backgroundColor: 'rgba(22, 25, 30, 0.5)',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyActivityText: {
+    color: '#657786',
+    marginTop: 8,
+  },
 })

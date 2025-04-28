@@ -204,7 +204,7 @@ export default function HomeScreen() {
 
           <View style={styles.assetRight}>
             <Text style={styles.assetAmount}>{solBalance ? formatBalance(solBalance) : '--'} SOL</Text>
-            <Text style={styles.assetValue}>${solValue ? formatPrice(solValue) : '--'}</Text>
+            <Text style={styles.assetValue}>{solValue ? formatPrice(solValue) : '--'}</Text>
           </View>
         </TouchableOpacity>
 
@@ -222,12 +222,12 @@ export default function HomeScreen() {
 
           <View style={styles.assetRight}>
             <Text style={styles.assetAmount}>{teamBalance ? formatBalance(teamBalance) : '--'} TEAM</Text>
-            <Text style={styles.assetValue}>${teamValue ? formatPrice(teamValue) : '--'}</Text>
+            <Text style={styles.assetValue}>{teamValue ? formatPrice(teamValue) : '--'}</Text>
           </View>
         </TouchableOpacity>
 
         {/* Recent Activity Section */}
-        <View style={[styles.sectionHeader, { marginTop: 12 }]}>
+        {/* <View style={[styles.sectionHeader, { marginTop: 12 }]}>
           <Text style={styles.sectionTitle}>Recent Activity</Text>
           <TouchableOpacity>
             <Text style={styles.seeAllText}>See all</Text>
@@ -237,7 +237,7 @@ export default function HomeScreen() {
         <View style={styles.emptyActivity}>
           <Ionicons name='time-outline' size={24} color={Colors.textTertiary} />
           <Text style={styles.emptyActivityText}>No recent transactions</Text>
-        </View>
+        </View> */}
       </ScrollView>
     </ScreenLayout>
   )
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
   mainBalanceCard: {
     padding: 24,
     borderRadius: 16,
-    backgroundColor: Colors.cardBackground, // Use defined card background
+    backgroundColor: Colors.backgroundDark, // Use defined card background
     marginBottom: 24
   },
   balanceLabel: {
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: Colors.cardBackgroundSubtle, // Use defined subtle card background
+    backgroundColor: Colors.backgroundDark, // Use defined subtle card background
     borderRadius: 12,
     marginBottom: 12
   },

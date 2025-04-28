@@ -49,5 +49,8 @@
     "apps/*",
     "packages/*",
     "scripts/*"
-  ]
+  ],
+  "dependencies": {
+    "@solana/spl-token": "^0.3.8"
+  }
 }

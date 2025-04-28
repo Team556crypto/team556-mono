@@ -128,14 +128,38 @@ interface GetQuoteResponse {
 interface ExecuteSwapRequest {
   password: string
   quoteResponse: QuoteResponseV6
+  publicKey?: string  // Add optional public key for token account creation
 }
 
-interface ExecuteSwapResponse {
-  signature: string // base64 encoded signed transaction
-  message?: string // Optional success message
+// Type for create token account transaction response
+interface CreateTokenAccountsResponse {
+  status: 'needs_token_accounts'
+  createAccountTransaction: string // Base64 encoded unsigned transaction
+  missingAccounts: { mint: string, address: string }[]
+  message: string
 }
 
-// --- END SWAP TYPES ---
+// Type for submit token account transaction request
+interface SubmitTokenAccountsRequest {
+  signedTransaction: string // Base64 encoded signed transaction
+  password: string
+}
+
+// Type for submit token account transaction response
+interface SubmitTokenAccountsResponse {
+  status: 'success'
+  signature: string
+  message: string
+}
+
+// Type for execute swap response with status field
+interface ExecuteSwapResponseWithStatus {
+  status: 'success' | 'needs_token_accounts'
+  signature?: string
+  createAccountTransaction?: string
+  missingAccounts?: { mint: string, address: string }[]
+  message?: string
+}
 
 /**
  * Makes a POST request to the login endpoint.
@@ -649,14 +673,74 @@ export async function getSwapQuote(payload: GetQuoteRequest, token: string): Pro
  * Executes a swap transaction via the backend.
  * @param payload - The swap execution details (password and quote).
  * @param token - The user's auth token.
+ * @param publicKey - The user's wallet public key.
  * @returns A promise resolving to the swap execution response (tx signature).
  */
-export async function executeSwap(payload: ExecuteSwapRequest, token: string): Promise<ExecuteSwapResponse> {
+export async function executeSwap(
+  payload: ExecuteSwapRequest, 
+  token: string,
+  publicKey?: string
+): Promise<ExecuteSwapResponseWithStatus> {
   if (!process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL) {
     throw new Error('API URL is not configured.')
   }
 
-  const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/swap/execute`, { // Corrected endpoint
+  // Include the user's public key if provided
+  const requestPayload = {
+    ...payload,
+    publicKey: publicKey || payload.publicKey
+  };
+
+  const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/swap/execute`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(requestPayload)
+  })
+
+  const data = await response.json()
+
+  // Check if the response is 202 (needs token accounts)
+  if (response.status === 202 && data.status === 'needs_token_accounts') {
+    console.log('Token accounts need to be created:', data)
+    return data as CreateTokenAccountsResponse
+  }
+
+  if (!response.ok) {
+    const errorData = data as ApiErrorResponse
+    const errorMessage = errorData?.error || `Swap execution failed: ${response.status}`
+    const error = new Error(errorMessage) as any
+    error.response = { data: errorData, status: response.status }
+    throw error
+  }
+
+  return data as ExecuteSwapResponseWithStatus
+}
+
+/**
+ * Submits a signed token account creation transaction to the backend.
+ * @param signedTransaction - The base64 encoded signed transaction.
+ * @param password - The user's password.
+ * @param token - The user's auth token.
+ * @returns A promise resolving to the transaction submission response.
+ */
+export async function submitTokenAccountTransaction(
+  signedTransaction: string,
+  password: string,
+  token: string
+): Promise<SubmitTokenAccountsResponse> {
+  if (!process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL) {
+    throw new Error('API URL is not configured.')
+  }
+
+  const payload: SubmitTokenAccountsRequest = {
+    signedTransaction,
+    password
+  }
+
+  const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/swap/create-token-accounts`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -669,13 +753,13 @@ export async function executeSwap(payload: ExecuteSwapRequest, token: string): P
 
   if (!response.ok) {
     const errorData = data as ApiErrorResponse
-    const errorMessage = errorData?.error || `Swap execution failed: ${response.status}`
+    const errorMessage = errorData?.error || `Token account creation failed: ${response.status}`
     const error = new Error(errorMessage) as any
     error.response = { data: errorData, status: response.status }
     throw error
   }
 
-  return data as ExecuteSwapResponse
+  return data as SubmitTokenAccountsResponse
 }
 
 // --- END SWAP FUNCTIONS ---

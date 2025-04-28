@@ -216,7 +216,7 @@ func (h *SwapHandler) HandleExecuteSwap(c *fiber.Ctx) error {
 	// --- Architecture Change: Pass Key to Solana API ---
 
 	// 6. Prepare request for solana-api
-	solanaAPIURL := fmt.Sprintf("%s/api/swap/swap", h.Cfg.SolanaAPIURL) // Reverted endpoint back to /api/swap/swap
+	solanaAPIURL := fmt.Sprintf("%s/api/swap/swap", h.Cfg.SolanaAPIURL) // Reverted back to correct path /api/swap/swap
 	solanaReqBody := SolanaAPISwapRequest{
 		QuoteResponse:  reqBody.QuoteResponse,                     // Forward raw JSON quote
 		UserPrivateKey: base64.StdEncoding.EncodeToString(derivedKey), // Send raw private key bytes encoded

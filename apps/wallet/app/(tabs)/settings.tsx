@@ -398,29 +398,32 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   card: {
-    backgroundColor: Colors.backgroundDark,
-    borderRadius: 16,
+    backgroundColor: Colors.cardBackgroundSubtle, // Match HomeScreen card style
+    borderRadius: 12, // Match HomeScreen card radius
     marginBottom: 16,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3
+    // Remove shadow to match HomeScreen style
+    // shadowColor: '#000',
+    // shadowOffset: { width: 0, height: 2 },
+    // shadowOpacity: 0.1,
+    // shadowRadius: 4,
+    // elevation: 3
   },
   cardHeader: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(155, 161, 166, 0.1)'
+    borderBottomColor: Colors.backgroundSubtle // Use a more subtle border
   },
   cardContent: {
-    padding: 8
+    paddingVertical: 8, // Adjusted padding
+    paddingHorizontal: 0 // Let menuItem handle horizontal padding
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 12
+    paddingHorizontal: 16, // Add horizontal padding back here
+    paddingVertical: 12
   },
   walletContainer: {
     flexDirection: 'row',
@@ -440,13 +443,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
-    paddingHorizontal: 12
+    paddingHorizontal: 16 // Add horizontal padding here
   },
   menuItemIcon: {
     width: 40,
     height: 40,
-    borderRadius: 12,
-    backgroundColor: 'rgba(122, 142, 231, 0.1)',
+    borderRadius: 20, // Match HomeScreen icon container radius
+    backgroundColor: Colors.primarySubtle, // Match HomeScreen icon bg
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16

@@ -6,7 +6,6 @@ import { Ionicons } from '@expo/vector-icons'
 import { ScreenLayout } from '@/components/ScreenLayout'
 import { Colors } from '@/constants/Colors'
 import { useAuthStore } from '@/store/authStore'
-import { genericStyles } from '@/constants/GenericStyles'
 import { format, addWeeks } from 'date-fns'
 
 // Interface for vesting card data
@@ -168,30 +167,29 @@ const styles = StyleSheet.create({
     flex: 1
   },
   contentContainer: {
+    paddingHorizontal: 16,
     paddingBottom: 32
   },
   headerSection: {
     marginBottom: 24
   },
   headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
     color: Colors.text,
     marginBottom: 8
   },
   headerDescription: {
-    color: Colors.text,
-    opacity: 0.8,
-    marginBottom: 16
+    fontSize: 16,
+    color: Colors.textSecondary,
+    marginBottom: 16,
+    lineHeight: 22
   },
   card: {
-    backgroundColor: Colors.backgroundDark,
+    backgroundColor: Colors.backgroundCard,
     borderRadius: 12,
     marginBottom: 16,
-    overflow: 'hidden',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3
+    overflow: 'hidden'
   },
   cardHeader: {
     flexDirection: 'row',
@@ -199,19 +197,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.backgroundDarker
+    borderBottomColor: Colors.backgroundDark
   },
   cardTitle: {
+    fontSize: 18,
+    fontWeight: '600',
     color: Colors.text
   },
   badgeContainer: {
-    backgroundColor: Colors.tint,
+    backgroundColor: Colors.primarySubtleDark,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12
   },
   badgeText: {
-    color: Colors.text,
+    color: Colors.primary,
     fontWeight: 'bold',
     fontSize: 14
   },
@@ -224,14 +224,13 @@ const styles = StyleSheet.create({
     marginBottom: 12
   },
   infoLabel: {
-    color: Colors.text,
-    opacity: 0.7,
-    fontSize: 14
+    fontSize: 14,
+    color: Colors.textSecondary
   },
   infoValue: {
+    fontSize: 14,
     color: Colors.text,
-    fontWeight: '600',
-    fontSize: 14
+    fontWeight: '600'
   },
   statusRow: {
     flexDirection: 'row',
@@ -248,19 +247,19 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.success
   },
   statusPending: {
-    backgroundColor: Colors.icon
+    backgroundColor: Colors.textTertiary
   },
   statusText: {
-    color: Colors.text,
-    fontSize: 14
+    fontSize: 14,
+    color: Colors.text
   },
   cardFooter: {
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: Colors.backgroundDarker
+    borderTopColor: Colors.backgroundDark
   },
   claimButton: {
-    backgroundColor: Colors.tint
+    backgroundColor: Colors.primary
   },
   disabledButton: {
     opacity: 0.6
@@ -269,7 +268,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
-    backgroundColor: Colors.backgroundDark,
+    backgroundColor: Colors.backgroundCard,
     borderRadius: 12,
     marginTop: 24
   },
@@ -277,12 +276,15 @@ const styles = StyleSheet.create({
     marginBottom: 16
   },
   notEligibleTitle: {
+    fontSize: 18,
+    fontWeight: '600',
     color: Colors.error,
     marginBottom: 8,
     textAlign: 'center'
   },
   notEligibleText: {
-    color: Colors.text,
+    fontSize: 14,
+    color: Colors.textSecondary,
     textAlign: 'center',
     opacity: 0.8
   }

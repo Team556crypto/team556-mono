@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback, useState, useMemo } from 'react'
-import { StyleSheet, View, TouchableOpacity, Platform, ImageBackground, ScrollView, StatusBar } from 'react-native'
+import { StyleSheet, View, TouchableOpacity, Platform, ScrollView } from 'react-native'
 import { Text, Button } from '@team556/ui'
 import { Colors } from '@/constants/Colors'
 import { useAuthStore } from '@/store/authStore'
@@ -12,10 +12,11 @@ import { useDrawerStore } from '@/store/drawerStore'
 import SendDrawerContent from '@/components/SendDrawerContent'
 import ReceiveDrawerContent from '@/components/ReceiveDrawerContent'
 import SwapDrawerContent from '@/components/SwapDrawerContent'
-import { LinearGradient } from 'expo-linear-gradient'
 import SolanaIcon from '@/assets/images/solana.svg'
 import TeamIcon from '@/assets/images/team.svg'
 import { formatWalletAddress, formatBalance, formatPrice } from '@/utils/formatters'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { ScreenLayout } from '@/components/ScreenLayout'
 
 const ComingSoonDrawerContent: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   return (
@@ -33,6 +34,7 @@ export default function HomeScreen() {
   const { user, token } = useAuthStore()
   const { showToast } = useToastStore()
   const { openDrawer, closeDrawer } = useDrawerStore()
+  const insets = useSafeAreaInsets()
 
   // Use state and actions from the wallet store
   const {
@@ -131,66 +133,53 @@ export default function HomeScreen() {
     )
   }
 
+  const renderHeaderRight = () => {
+    if (!walletAddress) return null
+    return (
+      <TouchableOpacity style={styles.addressContainer} onPress={handleCopyAddress}>
+        <Text style={styles.addressText}>{formatWalletAddress(walletAddress)}</Text>
+        <Ionicons name="copy-outline" size={16} color={Colors.primary} />
+      </TouchableOpacity>
+    )
+  }
+
   return (
-    <View style={styles.container}>
-      {/* Status Bar with gradient */}
-      <StatusBar barStyle="light-content" />
-      
-      {/* Top Gradient Header */}
-      <LinearGradient
-        colors={['#9945FF', '#14F195']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.headerGradient}
-      />
-      
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* Header with Wallet Address */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Ionicons name="wallet-outline" size={26} color="#9945FF" />
-            <Text preset="h3" style={styles.headerTitle}>Wallet</Text>
-          </View>
-          
-          {walletAddress && (
-            <TouchableOpacity style={styles.addressContainer} onPress={handleCopyAddress}>
-              <Text style={styles.addressText}>{formatWalletAddress(walletAddress)}</Text>
-              <Ionicons name="copy-outline" size={16} color="#9945FF" />
-            </TouchableOpacity>
-          )}
-        </View>
-        
+    <ScreenLayout title="Wallet" headerRightElement={renderHeaderRight()}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContentContainer,
+          { paddingBottom: insets.bottom > 0 ? insets.bottom : 20 }
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Main Balance Card */}
-        <LinearGradient
-          colors={['rgba(153, 69, 255, 0.1)', 'rgba(20, 241, 149, 0.05)']}
-          style={styles.mainBalanceCard}
-        >
+        <View style={styles.mainBalanceCard}>
           <Text style={styles.balanceLabel}>Total Balance</Text>
-          <Text style={styles.balanceAmount}>${totalValue ? formatPrice(totalValue) : '--'}</Text>
+          <Text style={styles.balanceAmount}>{totalValue ? formatPrice(totalValue) : '--'}</Text>
           
           <View style={styles.actionsRow}>
             <TouchableOpacity style={styles.actionButton} onPress={handleReceivePress}>
               <View style={styles.actionIconContainer}>
-                <Ionicons name="arrow-down-outline" size={20} color="#fff" />
+                <Ionicons name="arrow-down-outline" size={20} color={Colors.text} />
               </View>
               <Text style={styles.actionText}>Receive</Text>
             </TouchableOpacity>
             
             <TouchableOpacity style={styles.actionButton} onPress={handleSendPress}>
               <View style={styles.actionIconContainer}>
-                <Ionicons name="arrow-up-outline" size={20} color="#fff" />
+                <Ionicons name="arrow-up-outline" size={20} color={Colors.text} />
               </View>
               <Text style={styles.actionText}>Send</Text>
             </TouchableOpacity>
             
             <TouchableOpacity style={styles.actionButton} onPress={handleSwapPress}>
               <View style={styles.actionIconContainer}>
-                <Ionicons name="swap-horizontal-outline" size={20} color="#fff" />
+                <Ionicons name="swap-horizontal-outline" size={20} color={Colors.text} />
               </View>
               <Text style={styles.actionText}>Swap</Text>
             </TouchableOpacity>
           </View>
-        </LinearGradient>
+        </View>
         
         {/* Assets Section */}
         <View style={styles.sectionHeader}>
@@ -218,7 +207,7 @@ export default function HomeScreen() {
         {/* TEAM Token */}
         <TouchableOpacity style={styles.assetItem}>
           <View style={styles.assetLeft}>
-            <View style={[styles.assetIconContainer, {backgroundColor: 'rgba(20, 241, 149, 0.1)'}]}>
+            <View style={[styles.assetIconContainer, {backgroundColor: Colors.secondarySubtle}]}>
               <TeamIcon width={24} height={24} />
             </View>
             <View>
@@ -242,73 +231,48 @@ export default function HomeScreen() {
         </View>
         
         <View style={styles.emptyActivity}>
-          <Ionicons name="time-outline" size={24} color="#657786" />
+          <Ionicons name="time-outline" size={24} color={Colors.textTertiary} />
           <Text style={styles.emptyActivityText}>No recent transactions</Text>
         </View>
       </ScrollView>
-    </View>
+    </ScreenLayout>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0C0F12',
-  },
-  headerGradient: {
-    height: 3,
-    width: '100%',
-  },
-  scrollContainer: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#FFFFFF',
+  scrollContentContainer: {
+    paddingTop: 8, // Keep top padding within scroll content if needed
   },
   addressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: Colors.backgroundSubtle,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 12,
     gap: 8,
   },
   addressText: {
-    color: '#A5ADBA',
+    color: Colors.textSecondary,
     fontSize: 14,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   mainBalanceCard: {
     padding: 24,
     borderRadius: 16,
-    backgroundColor: 'rgba(22, 25, 30, 0.8)',
+    backgroundColor: Colors.cardBackground, // Use defined card background
     marginBottom: 24,
   },
   balanceLabel: {
     fontSize: 14,
-    color: '#A5ADBA',
+    color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: 8,
   },
   balanceAmount: {
     fontSize: 36,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.text,
     textAlign: 'center',
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     marginBottom: 20,
@@ -321,7 +285,7 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: Colors.backgroundSubtle,
     padding: 14,
     borderRadius: 12,
   },
@@ -329,13 +293,13 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(153, 69, 255, 0.2)',
+    backgroundColor: Colors.primarySubtleDark, // Use darker subtle primary for icon bg
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
   },
   actionText: {
-    color: '#FFFFFF',
+    color: Colors.text,
     fontSize: 14,
   },
   sectionHeader: {
@@ -348,18 +312,18 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: Colors.text,
   },
   seeAllText: {
     fontSize: 14,
-    color: '#9945FF',
+    color: Colors.primary, // Use primary color for links
   },
   assetItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: 'rgba(22, 25, 30, 0.5)',
+    backgroundColor: Colors.cardBackgroundSubtle, // Use defined subtle card background
     borderRadius: 12,
     marginBottom: 12,
   },
@@ -371,7 +335,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(153, 69, 255, 0.1)',
+    backgroundColor: Colors.primarySubtle, // Use subtle primary for icon bg
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -379,11 +343,11 @@ const styles = StyleSheet.create({
   assetName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: Colors.text,
   },
   assetTicker: {
     fontSize: 12,
-    color: '#A5ADBA',
+    color: Colors.textSecondary,
   },
   assetRight: {
     alignItems: 'flex-end',
@@ -391,22 +355,22 @@ const styles = StyleSheet.create({
   assetAmount: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#FFFFFF',
+    color: Colors.text,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   assetValue: {
     fontSize: 12,
-    color: '#A5ADBA',
+    color: Colors.textSecondary,
   },
   emptyActivity: {
     height: 120,
-    backgroundColor: 'rgba(22, 25, 30, 0.5)',
+    backgroundColor: Colors.cardBackgroundSubtle, // Use defined subtle card background
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emptyActivityText: {
-    color: '#657786',
+    color: Colors.textTertiary, // Use tertiary text color
     marginTop: 8,
   },
 })

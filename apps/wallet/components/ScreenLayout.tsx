@@ -59,7 +59,7 @@ export const ScreenLayout: React.FC<ScreenLayoutProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.backgroundDarkest, // Use the darkest background from index.tsx
   },
   container: {
     flex: 1,

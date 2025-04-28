@@ -270,13 +270,12 @@ export async function logoutUser(token: string | null): Promise<void> {
     if (!response.ok) {
       // Try to parse the error, but don't let server errors block client logout
       try {
-        const data = await response.json()
+        const data = await response.json().catch(() => ({})) // Catch potential JSON parse errors
         const errorData = data as ApiErrorResponse
         const errorMessage = errorData?.error || `Logout failed with status: ${response.status}`
         console.error('Logout API Error:', errorMessage, 'Status:', response.status)
-        // Throw an error to indicate the server logout failed,
-        // but the calling function should still proceed with client-side logout.
-        const error = new Error(errorMessage) as any
+        // Create a structured error object
+        const error = new Error(errorMessage) as any // Use 'any' to add custom properties
         error.response = {
           data: errorData,
           status: response.status
@@ -539,7 +538,11 @@ export const redeemPresaleCode = async (
   }
 
   try {
-    const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/api/wallet/redeem-presale-code`, {
+    // Ensure the MAIN_API_URL does not end with a slash, and the path does not start with one for clean joining.
+    const baseUrl = (process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL || '').replace(/\/$/, ''); // Remove trailing slash if present
+    const endpointPath = '/wallet/redeem-presale-code'; // Path without leading /api
+
+    const response = await fetch(`${baseUrl}${endpointPath}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -548,28 +551,45 @@ export const redeemPresaleCode = async (
       body: JSON.stringify(data)
     })
 
-    const responseData = await response.json()
-
+    // Check if the response was successful BEFORE trying to parse JSON
     if (!response.ok) {
-      const errorData = responseData as ApiErrorResponse
-      const errorMessage = errorData?.error || `Redeem presale code failed: ${response.status}`
+      let errorData: any = null
+      let errorMessage = `Redeem presale code failed: ${response.status}`
+      try {
+        // Attempt to read the error response body as text first
+        const errorText = await response.text()
+        errorMessage = errorText || errorMessage // Use the server's message if available
+        // Optionally, try to parse as JSON if text gives clues it might be JSON
+        try {
+            errorData = JSON.parse(errorText)
+            errorMessage = errorData?.error || errorData?.message || errorMessage
+        } catch (jsonError) {
+            // If parsing text as JSON fails, stick with the text message
+            console.warn('Could not parse error response as JSON, using text content.')
+        }
+      } catch (textError) {
+        // If reading as text fails, use the status text
+        errorMessage = response.statusText || errorMessage
+        console.error('Could not read error response body as text.')
+      }
+
       console.error('Redeem Presale Code API Error:', errorMessage, 'Status:', response.status)
       const error = new Error(errorMessage) as any
       error.response = { data: errorData, status: response.status }
-      throw error
+      throw error // Throw the constructed error
     }
 
+    // If response.ok is true, *then* parse the JSON body
+    const responseData = await response.json()
     return responseData as RedeemPresaleCodeResponse
+
   } catch (error: any) {
+    // Catch errors from fetch itself or the error thrown above
     console.error('Error redeeming presale code:', error.response?.data || error.message)
-    const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to redeem code'
+    const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to redeem code'
     return { success: false, message: errorMessage }
   }
 }
-
-// ==========================
-// Transaction Signing
-// ==========================
 
 /**
  * Makes a POST request to the sign transaction endpoint.

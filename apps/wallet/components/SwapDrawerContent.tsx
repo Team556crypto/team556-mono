@@ -619,6 +619,9 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
         <>
           {/* From Token Section */}
           <View style={styles.formSection}>
+            <Text preset='error' style={{ marginBottom: 16 }}>
+              Ensure you have at least 0.01 SOL in your wallet to cover transaction fees.
+            </Text>
             <Text preset='label' style={styles.sectionTitle}>
               From
             </Text>

@@ -177,14 +177,14 @@ export default function HomeScreen() {
             </TouchableOpacity>
 
             {/* Only show Swap if presale_type is 1 */}
-            {user?.presale_type === 1 && (
-              <TouchableOpacity style={styles.actionButton} onPress={handleSwapPress}>
-                <View style={styles.actionIconContainer}>
-                  <Ionicons name='swap-horizontal-outline' size={20} color={Colors.text} />
-                </View>
-                <Text style={styles.actionText}>Swap</Text>
-              </TouchableOpacity>
-            )}
+            {/* {user?.presale_type === 1 && ( */}
+            <TouchableOpacity style={styles.actionButton} onPress={handleSwapPress}>
+              <View style={styles.actionIconContainer}>
+                <Ionicons name='swap-horizontal-outline' size={20} color={Colors.text} />
+              </View>
+              <Text style={styles.actionText}>Swap</Text>
+            </TouchableOpacity>
+            {/* )} */}
           </View>
         </View>
 
@@ -215,11 +215,11 @@ export default function HomeScreen() {
         <TouchableOpacity style={styles.assetItem}>
           <View style={styles.assetLeft}>
             <View style={[styles.assetIconContainer, { backgroundColor: Colors.secondarySubtle }]}>
-              {/* <TeamIcon width={24} height={24} /> */}
+              <TeamIcon width={24} height={24} />
             </View>
             <View>
-              <Text style={styles.assetName}>TEST TOKEN</Text>
-              <Text style={styles.assetTicker}>TEST</Text>
+              <Text style={styles.assetName}>Team556</Text>
+              <Text style={styles.assetTicker}>TEAM</Text>
             </View>
           </View>
 

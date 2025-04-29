@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, StyleSheet, TouchableOpacity } from 'react-native'
+import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native'
 import { Text, Button } from '@team556/ui'
 import { Colors } from '@/constants/Colors'
 import { Ionicons } from '@expo/vector-icons'
@@ -12,49 +12,47 @@ type ReceiveDrawerProps = {
   onDismiss?: () => void
 }
 
-export const ReceiveDrawerContent: React.FC<ReceiveDrawerProps> = ({ 
-  address, 
-  onClose,
-  onDismiss 
-}) => {
+export const ReceiveDrawerContent: React.FC<ReceiveDrawerProps> = ({ address, onClose, onDismiss }) => {
   const { copyAddressToClipboard } = useWalletClipboard()
-  
+
   const handleCopy = () => {
     copyAddressToClipboard(address)
   }
 
   return (
     <View style={styles.container}>
-      <Text preset='h3' style={styles.title}>
-        Receive Tokens
-      </Text>
-      
-      <Text preset='paragraph' style={styles.description}>
-        Share this address or scan the QR code to receive SOL or TEAM tokens.
-      </Text>
-      
-      {/* QR Code */}
-      <View style={styles.qrContainer}>
-        <QRCode value={address} size={130} color='black' backgroundColor='white' />
-      </View>
-      
-      {/* Address Display and Copy Button */}
-      <View style={styles.addressSection}>
-        <Text preset='caption' style={styles.addressLabel}>
-          Your Wallet Address
+      <View style={styles.contentContainer}>
+        <Text preset='h3' style={styles.title}>
+          Receive Tokens
         </Text>
-        <View style={styles.addressContainer}>
-          <Text style={styles.addressText} numberOfLines={1} ellipsizeMode='middle'>
-            {address}
-          </Text>
-          <TouchableOpacity onPress={handleCopy} style={styles.copyButton}>
-            <Ionicons name='copy-outline' size={20} color={Colors.tint} />
-          </TouchableOpacity>
+
+        <Text preset='paragraph' style={styles.description}>
+          Share this address or scan the QR code to receive SOL or TEAM tokens.
+        </Text>
+
+        {/* QR Code */}
+        <View style={styles.qrContainer}>
+          <QRCode value={address} size={130} color='black' backgroundColor='white' />
         </View>
-      </View>
-      
-      <View style={styles.actionButtonsContainer}>
-        <Button title='Close' onPress={onClose} variant='secondary' style={styles.button} />
+
+        {/* Address Display and Copy Button */}
+        <View style={styles.addressSection}>
+          <Text preset='caption' style={styles.addressLabel}>
+            Your Wallet Address
+          </Text>
+          <View style={styles.addressContainer}>
+            <Text style={styles.addressText} numberOfLines={1} ellipsizeMode='middle'>
+              {address}
+            </Text>
+            <TouchableOpacity onPress={handleCopy} style={styles.copyButton}>
+              <Ionicons name='copy-outline' size={20} color={Colors.tint} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.actionButtonsContainer}>
+          <Button title='Close' onPress={onClose} variant='secondary' style={styles.button} />
+        </View>
       </View>
     </View>
   )
@@ -62,8 +60,14 @@ export const ReceiveDrawerContent: React.FC<ReceiveDrawerProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    padding: 4,
-    gap: 12
+    flex: 1
+  },
+  contentContainer: {
+    paddingHorizontal: 24,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    minHeight: 150
   },
   title: {
     textAlign: 'center',

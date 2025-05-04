@@ -7,7 +7,8 @@ import {
   ViewStyle,
   TouchableWithoutFeedback,
   LayoutChangeEvent,
-  Platform
+  Platform,
+  ScrollView
 } from 'react-native'
 import Animated, {
   useSharedValue,
@@ -246,7 +247,7 @@ export default function Drawer({
             <View style={[styles.handleBar, handleBarStyle]} />
           </View>
           <View style={[styles.contentContainer, containerStyle]} onLayout={handleContentLayout}>
-            {drawerContent}
+            <ScrollView>{drawerContent}</ScrollView>
           </View>
         </Animated.View>
       </GestureDetector>

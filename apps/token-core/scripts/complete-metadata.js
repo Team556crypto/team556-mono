@@ -21,7 +21,7 @@ async function setTokenMetadata() {
 
     // Load your keypair
     console.log("Loading wallet keypair...");
-    const keypairFile = fs.readFileSync('mainnet-test-wallets/treasury.json', 'utf8');
+    const keypairFile = fs.readFileSync('deploy-wallets/treasury-mainnet.json', 'utf8');
     const secretKey = new Uint8Array(JSON.parse(keypairFile));
     const keypair = Keypair.fromSecretKey(secretKey);
     console.log("Using keypair with public key:", keypair.publicKey.toString());
@@ -31,12 +31,12 @@ async function setTokenMetadata() {
       .use(keypairIdentity(keypair));
 
     // Load metadata
-    console.log("Loading metadata from twofake-metadata.json...");
-    const metadata = JSON.parse(fs.readFileSync('./twofake-metadata.json', 'utf8'));
+    console.log("Loading metadata from team556-metadata.json...");
+    const metadata = JSON.parse(fs.readFileSync('./team556-metadata.json', 'utf8'));
     console.log("Metadata loaded:", metadata);
 
     // Your token mint address
-    const mintAddress = new PublicKey('BomWBaPd9hm58Qgyb3uBube7uUrXmPs9D9ApkVRw2gyu');
+    const mintAddress = new PublicKey('AMNfeXpjD6kXyyTDB4LMKzNWypqNHwtgJUACHUmuKLD5');
 
     // First, upload the complete metadata JSON to get a metadata URI
     console.log("Uploading complete metadata to Arweave...");

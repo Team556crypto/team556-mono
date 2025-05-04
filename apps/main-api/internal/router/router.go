@@ -26,12 +26,13 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(db, cfg.JWTSecret, emailClient) // Pass emailClient
-	swapHandler := handlers.NewSwapHandler(db, cfg) // Instantiate Swap Handler
+	swapHandler := handlers.NewSwapHandler(db, cfg)                        // Instantiate Swap Handler
 
 	// Groups Routes
 	auth := api.Group("/auth")
 	wallet := api.Group("/wallet")
-	swap := api.Group("/swap") // Create Swap Group
+	swap := api.Group("/swap", middleware.AuthMiddleware(cfg.JWTSecret)) // Create Swap Group
+	firearms := api.Group("/firearms")
 
 	// Auth Routes
 	auth.Post("/register", authHandler.Register)
@@ -46,12 +47,23 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	wallet.Post("/create", handlers.CreateWalletHandler(db, cfg))
 	wallet.Get("/balance", handlers.GetWalletBalanceHandler(db, cfg))
 	wallet.Get("/balance/team", handlers.GetWalletTeamTokenBalanceHandler(db, cfg))
-	wallet.Post("/check-presale-code", handlers.CheckPresaleCode(db))
-	wallet.Post("/redeem-presale-code", handlers.RedeemPresaleCode(db))
-	wallet.Post("/sign", handlers.SignTransactionHandler(db, cfg)) // Route for transaction signing
+	wallet.Post("/presale/check", handlers.CheckPresaleCode(db))               // Correct handler name
+	wallet.Post("/presale/redeem", handlers.RedeemPresaleCode(db))             // Correct handler name
+	wallet.Post("/sign-transaction", handlers.SignTransactionHandler(db, cfg)) // Add back cfg argument
+	wallet.Post("/recovery-phrase", handlers.GetRecoveryPhraseHandler(db))     // View recovery phrase
 
 	// Swap Routes
-	swap.Use(middleware.AuthMiddleware(cfg.JWTSecret)) // Protect swap routes
-	swap.Post("/quote", swapHandler.HandleGetSwapQuote) // Route for getting quote
-	swap.Post("/execute", swapHandler.HandleExecuteSwap) // Route for executing swap
+	swap.Post("/quote", swapHandler.HandleGetSwapQuote)                        // Route for getting quote
+	swap.Post("/execute", swapHandler.HandleExecuteSwap)                       // Route for executing swap
+	swap.Post("/create-token-accounts", swapHandler.HandleCreateTokenAccounts) // Route for submitting signed token account tx
+
+	// --- Firearm Routes ---
+	firearms.Post("/", handlers.CreateFirearmHandler(db))
+	firearms.Get("/", handlers.GetFirearmsHandler(db))
+	firearms.Get("/:id", handlers.GetFirearmByIDHandler(db))
+	firearms.Put("/:id", handlers.UpdateFirearmHandler(db))
+	firearms.Delete("/:id", handlers.DeleteFirearmHandler(db))
+
+	// Swagger UI
+	// (Ensure swagger setup is correct if you have it)
 }

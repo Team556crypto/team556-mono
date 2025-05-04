@@ -22,7 +22,9 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
         {
           height: tabBarHeight + bottomInset,
           paddingBottom: bottomInset,
-          backgroundColor: Colors.backgroundDark
+          backgroundColor: Colors.backgroundDarkest,
+          borderTopWidth: 1,
+          borderTopColor: Colors.background
         }
       ]}
     >
@@ -69,14 +71,14 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
               {options.tabBarIcon &&
                 options.tabBarIcon({
                   focused: isFocused,
-                  color: isFocused ? Colors.tint : Colors.tabIconDefault,
+                  color: isFocused ? Colors.primary : Colors.tabIconDefault,
                   size: 24
                 })}
               <Text
                 style={[
                   styles.tabText,
                   {
-                    color: isFocused ? Colors.tint : Colors.tabIconDefault,
+                    color: isFocused ? Colors.primary : Colors.tabIconDefault,
                     opacity: isFocused ? 1 : 0.8
                   }
                 ]}

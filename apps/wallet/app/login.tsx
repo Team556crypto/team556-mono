@@ -1,171 +1,91 @@
-import React, { useState, useEffect } from 'react'
-import { View, StyleSheet, ActivityIndicator } from 'react-native'
-import MaterialIcons from '@expo/vector-icons/MaterialIcons'
-import { Button, Input, Text } from '@team556/ui'
-import { genericStyles } from '@/constants/GenericStyles'
+import React from 'react'
+import { View, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native'
+import { useRouter } from 'expo-router'
+import { Button, Text } from '@team556/ui'
 import LogoSvg from '@/assets/images/logo.svg'
-import { useAuthStore } from '@/store/authStore'
 import { Colors } from '@/constants/Colors'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-export default function LoginScreen() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const { login, signup, isLoading, error, setError } = useAuthStore()
+export default function LandingScreen() {
+  const router = useRouter()
   const { isTabletOrLarger } = useBreakpoint()
 
-  const validateInput = (isSignUp: boolean = false): boolean => {
-    if (!email) {
-      setError('Email is required.')
-      return false
-    }
-    if (!EMAIL_REGEX.test(email)) {
-      setError('Please enter a valid email address.')
-      return false
-    }
-    if (!password) {
-      setError('Password is required.')
-      return false
-    }
-    if (isSignUp && password.length < 8) {
-      setError('Password must be at least 8 characters long for sign up.')
-      return false
-    }
-    setError(null)
-    return true
+  const handleSignInPress = () => {
+    router.push('/signin' as any) // Navigate to the sign-in screen
   }
 
-  const handleSignIn = async () => {
-    if (!validateInput(false)) return
-    setError(null)
-    try {
-      await login({ email, password })
-    } catch (err: any) {
-      if (!error) setError('Login failed. Please try again.')
-    }
+  const handleSignUpPress = () => {
+    router.push('/signup' as any) // Navigate to the sign-up screen
   }
-
-  const handleSignUp = async () => {
-    if (!validateInput(true)) return
-    setError(null)
-    try {
-      await signup({ email, password })
-    } catch (err: any) {
-      if (!error) setError('Signup failed. Please try again.')
-    }
-  }
-
-  useEffect(() => {
-    return () => {
-      setError(null)
-    }
-  }, [setError])
 
   return (
-    <View style={[styles.container, isTabletOrLarger && styles.containerTablet]}>
-      <View style={[styles.content, isTabletOrLarger && styles.contentTablet]}>
-        <LogoSvg width={170} height={170} style={styles.logo} />
-        <Input
-          placeholder='Email'
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize='none'
-          keyboardType='email-address'
-          style={[genericStyles.input]}
-          editable={!isLoading}
-          leftIcon={<MaterialIcons name='mail-outline' size={22} color={Colors.text} />}
-        />
-        <Input
-          placeholder='Password'
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          style={[genericStyles.input]}
-          editable={!isLoading}
-          leftIcon={<MaterialIcons name='lock-outline' size={22} color={Colors.text} />}
-        />
+    <SafeAreaView style={styles.safeArea}>
+      <View style={[styles.container, isTabletOrLarger && styles.containerTablet]}>
+        {/* Logo centered in the top portion */}
+        <View style={styles.logoContainer}>
+          <LogoSvg width={150} height={150} />
+        </View>
 
-        {isLoading && <ActivityIndicator size='large' color='#ccc' style={styles.loader} />}
-
-        {error && <Text style={styles.errorText}>{error}</Text>}
-
+        {/* Buttons at the bottom */}
         <View style={[styles.buttonContainer, isTabletOrLarger && styles.buttonContainerTablet]}>
           <Button
             title='Sign In'
-            onPress={handleSignIn}
-            style={[genericStyles.button, isTabletOrLarger && styles.signInButtonTablet]}
-            disabled={isLoading || !email.length || !password.length}
-            fullWidth={!isTabletOrLarger}
+            onPress={handleSignInPress}
+            style={styles.signInButton}
+            fullWidth
           />
-          <Button
-            title='Sign Up'
-            variant='ghost'
-            onPress={handleSignUp}
-            style={[styles.signUpButtonBase, isTabletOrLarger && styles.signUpButtonTablet]}
-            disabled={isLoading || !email.length || !password.length}
-            fullWidth={!isTabletOrLarger}
-          />
+          <TouchableOpacity onPress={handleSignUpPress} style={styles.signUpButton}>
+            <Text style={styles.signUpText}>Sign Up</Text>
+          </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: Colors.backgroundDarkest
+  },
   container: {
-    ...genericStyles.container,
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'space-between', // Push logo up, buttons down
+    paddingHorizontal: 24,
+    paddingBottom: 40, // Padding for bottom buttons
+    paddingTop: 60, // Padding for logo
+    width: '100%'
+  },
+  containerTablet: {
+    paddingHorizontal: '20%', // Center content more on tablet
+    paddingBottom: 60,
+    paddingTop: 80
+  },
+  logoContainer: {
+    alignItems: 'center',
     justifyContent: 'center',
-    padding: 30,
-    width: '100%'
-  },
-  containerTablet: {},
-  content: {
-    width: '100%',
-    alignItems: 'center'
-  },
-  contentTablet: {
-    maxWidth: 380
-  },
-  logo: {
-    marginBottom: 40
-  },
-  loader: {
-    marginVertical: 15
-  },
-  errorText: {
-    color: Colors.error,
-    marginBottom: 15,
-    textAlign: 'center',
-    minHeight: 20,
-    width: '100%'
+    flexGrow: 1 // Allows it to take available space pushing buttons down
   },
   buttonContainer: {
-    marginTop: 20,
     width: '100%',
     alignItems: 'center'
   },
   buttonContainerTablet: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 20,
-    marginTop: 30
+    maxWidth: 380 // Limit button width on tablet
   },
-  signUpButtonBase: {
-    ...genericStyles.button,
-    marginTop: 10
+  signInButton: {
+    width: '100%',
+    backgroundColor: Colors.primary,
+    marginBottom: 16
   },
-  signUpButtonTablet: {
-    flex: 1,
-    marginHorizontal: 0,
-    marginTop: 0
+  signUpButton: {
+    paddingVertical: 12 // Make touchable area larger
   },
-  signInButtonTablet: {
-    flex: 1,
-    marginHorizontal: 0,
-    marginTop: 0
+  signUpText: {
+    color: Colors.primary,
+    fontWeight: '600',
+    textAlign: 'center',
+    fontSize: 16
   }
 })

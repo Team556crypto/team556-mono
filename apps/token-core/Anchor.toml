@@ -7,7 +7,7 @@ url = "https://api.apr.dev"
 
 [provider]
 cluster = "https://mainnet.helius-rpc.com/?api-key=5654c7b6-c88b-4cbf-a0aa-68fc3e84adb1"
-wallet = "mainnet-test-wallets/treasury.json"
+wallet = "deploy-wallets/treasury-mainnet.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

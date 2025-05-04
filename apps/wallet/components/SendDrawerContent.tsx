@@ -21,12 +21,13 @@ import { useAuthStore } from '@/store/authStore'
 import { useToastStore } from '@/store/toastStore'
 import { Ionicons } from '@expo/vector-icons'
 import { genericStyles } from '@/constants/GenericStyles'
-import { TEAM_MINT_ADDRESS, teamDecimals } from '@/constants/Tokens'
 import { SecureStoreUtils } from '@/utils/secureStore'
 import { signTransaction } from '@/services/api'
 
 // TODO: Get this from env vars
 const SOLANA_RPC_URL = process.env.EXPO_PUBLIC_GLOBAL__MAINNET_RPC_URL
+
+const LAMPORTS_PER_SOL_DECIMALS = 9;
 
 type SendStatus = 'idle' | 'sending' | 'success' | 'error'
 
@@ -63,6 +64,24 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
 
   // Memoize sender address to avoid re-computation and simplify checks
   const senderWalletAddress = useMemo(() => user?.wallets?.[0]?.address, [user])
+
+  // Memoize TEAM token decimals from environment variable
+  const teamMintDecimals = useMemo(() => {
+    const decimalsRaw = process.env.EXPO_PUBLIC_GLOBAL__MINT_DECIMALS;
+    if (decimalsRaw === undefined) {
+      console.error("EXPO_PUBLIC_GLOBAL__MINT_DECIMALS environment variable is not set!");
+      // Optionally show an alert here or disable TEAM token functionality
+      // Alert.alert("Config Error", "TEAM Token decimal configuration is missing.");
+      return null; // Indicate missing configuration
+    }
+    const decimals = parseInt(decimalsRaw, 10);
+    if (isNaN(decimals)) {
+      console.error("Invalid EXPO_PUBLIC_GLOBAL__MINT_DECIMALS environment variable!");
+      // Alert.alert("Config Error", "Invalid TEAM Token decimal configuration.");
+      return null; // Indicate invalid configuration
+    }
+    return decimals;
+  }, []);
 
   const availableBalance = selectedToken === 'SOL' ? solBalance : teamBalance
 
@@ -118,7 +137,7 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
 
     try {
       // 2. Construct Transaction (reusing logic from original handleSend)
-      // --- Add Guard Clause --- 
+      // --- Add Guard Clause ---
       if (!senderWalletAddress) {
         console.error('Send Error: Sender wallet address is missing from user state.')
         setError('Your wallet information is not available. Please try logging out and back in.')
@@ -144,10 +163,34 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
         )
         console.log(`Prepared SOL transfer of ${numericAmount} SOL`)
       } else {
-        const teamMintPublicKey = new PublicKey(TEAM_MINT_ADDRESS)
-        const amountInSmallestUnit = BigInt(Math.round(numericAmount * 10 ** teamDecimals))
-        const senderTokenAccountAddress = await getAssociatedTokenAddress(teamMintPublicKey, senderPublicKey)
-        const recipientTokenAccountAddress = await getAssociatedTokenAddress(teamMintPublicKey, recipientPublicKey)
+        const teamMintAddress = process.env.EXPO_PUBLIC_GLOBAL__MINT_ADDRESS;
+        if (!teamMintAddress) {
+          console.error("EXPO_PUBLIC_GLOBAL__MINT_ADDRESS environment variable is not set!");
+          Alert.alert(
+            "Configuration Error",
+            "The application is missing essential configuration. Cannot proceed with the transaction."
+          );
+          setSendStatus('idle');
+          return; // Stop execution if the mint address is missing
+        }
+        const teamMintPublicKey = new PublicKey(teamMintAddress); // Use the validated variable
+
+        // Ensure teamMintDecimals were loaded correctly before proceeding
+        if (teamMintDecimals === null) {
+          console.error("Cannot perform TEAM transfer due to missing/invalid decimal configuration.");
+          Alert.alert(
+            "Configuration Error",
+            "Token decimal configuration is invalid. Cannot proceed."
+          );
+          setSendStatus('idle');
+          return;
+        }
+
+        const amountInSmallestUnit = BigInt(
+          Math.round(numericAmount * 10 ** teamMintDecimals) // Use parsed decimal value
+        );
+        const senderTokenAccountAddress = await getAssociatedTokenAddress(teamMintPublicKey, senderPublicKey);
+        const recipientTokenAccountAddress = await getAssociatedTokenAddress(teamMintPublicKey, recipientPublicKey);
 
         console.log('Sender ATA:', senderTokenAccountAddress.toBase58())
         console.log('Recipient ATA:', recipientTokenAccountAddress.toBase58())
@@ -238,8 +281,8 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
     // TODO: Consider subtracting a small buffer for transaction fees, especially for SOL Max
     const calculatedAmount = availableBalance * percentage
 
-    // Format based on token decimals (simplified example)
-    const decimals = selectedToken === 'SOL' ? 9 : teamDecimals // SOL has 9 decimals
+    // Format based on token decimals
+    const decimals = selectedToken === 'SOL' ? LAMPORTS_PER_SOL_DECIMALS : teamMintDecimals! // Use non-null assertion after check
     const formattedAmount = calculatedAmount.toFixed(decimals)
 
     // Avoid setting amount like 0.000000000 for very small balances
@@ -276,8 +319,9 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
             <Text preset='caption' style={styles.balanceLabel}>
               Available Balance:
             </Text>
+            {/* Ensure teamMintDecimals is not null before using */}
             <Text preset='label' style={styles.balanceAmount}>
-              {availableBalance?.toFixed(selectedToken === 'SOL' ? 4 : 2) ?? '0.00'} {selectedToken}
+              {availableBalance?.toFixed(selectedToken === 'SOL' ? 4 : (teamMintDecimals ?? 2)) ?? '0.00'} {selectedToken}
             </Text>
           </View>
         </>
@@ -317,7 +361,7 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
                 variant={
                   amount &&
                   availableBalance !== null &&
-                  amount === (availableBalance * 0.25).toFixed(selectedToken === 'SOL' ? 9 : teamDecimals)
+                  amount === (availableBalance * 0.25).toFixed(selectedToken === 'SOL' ? LAMPORTS_PER_SOL_DECIMALS : (teamMintDecimals ?? 2))
                     ? 'primary'
                     : 'outline'
                 }
@@ -329,7 +373,7 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
                 variant={
                   amount &&
                   availableBalance !== null &&
-                  amount === (availableBalance * 0.5).toFixed(selectedToken === 'SOL' ? 9 : teamDecimals)
+                  amount === (availableBalance * 0.5).toFixed(selectedToken === 'SOL' ? LAMPORTS_PER_SOL_DECIMALS : (teamMintDecimals ?? 2))
                     ? 'primary'
                     : 'outline'
                 }
@@ -341,7 +385,7 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
                 variant={
                   amount &&
                   availableBalance !== null &&
-                  amount === (availableBalance * 0.75).toFixed(selectedToken === 'SOL' ? 9 : teamDecimals)
+                  amount === (availableBalance * 0.75).toFixed(selectedToken === 'SOL' ? LAMPORTS_PER_SOL_DECIMALS : (teamMintDecimals ?? 2))
                     ? 'primary'
                     : 'outline'
                 }
@@ -353,7 +397,7 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
                 variant={
                   amount &&
                   availableBalance !== null &&
-                  amount === (availableBalance * 1.0).toFixed(selectedToken === 'SOL' ? 9 : teamDecimals)
+                  amount === (availableBalance * 1.0).toFixed(selectedToken === 'SOL' ? LAMPORTS_PER_SOL_DECIMALS : (teamMintDecimals ?? 2))
                     ? 'primary'
                     : 'outline'
                 }

@@ -1,7 +1,7 @@
 {
-  "name": "Team556 Coin",
+  "name": "Team556",
   "symbol": "TEAM",
-  "description": "A secure Solana token designed for the firearms industry, offering lower fees, faster settlements, and enhanced privacy.",
+  "description": "A dedicated Solana-based cryptocurrency for the firearms industry offering significant advantages: ~1% transaction fees (vs traditional 3-5%), near-instant settlements, and enhanced privacy without sacrificing regulatory compliance. Team556 helps merchants and customers bypass discriminatory \"high-risk\" classifications while maintaining a comprehensive development roadmap including wallet applications, record-keeping functionality, and merchant services—all supported by transparent tokenomics with structured vesting to ensure stability.",
   "image": "https://mj79u8lfav.ufs.sh/f/8MBjWI2gDtAymnNL5lficxseR9FHPl2gQGMXzAfVKCpqJ7wD",
   "external_url": "https://www.team556.com/",
   "extensions": {
@@ -11,34 +11,8 @@
     "github": "https://github.com/Team556crypto/team556-token-core",
     "facebook": "https://www.facebook.com/profile.php?id=61573136584832"
   },
-  "attributes": [
-    {
-      "trait_type": "Total Supply",
-      "value": "1,000,000,000"
-    },
-    {
-      "trait_type": "Public Circulation",
-      "value": "70%"
-    },
-    {
-      "trait_type": "Primary Presale",
-      "value": "17.2%"
-    },
-    {
-      "trait_type": "Secondary Presale",
-      "value": "5%"
-    },
-    {
-      "trait_type": "Development Team",
-      "value": "5%"
-    },
-    {
-      "trait_type": "Marketing/Project Dev",
-      "value": "2.8%"
-    },
-    {
-      "trait_type": "Blockchain",
-      "value": "Solana"
-    }
-  ]
+  "creator": {
+    "name": "OpenWorth Technologies LLC",
+    "site": "https://www.openworth.io/"
+  }
 }

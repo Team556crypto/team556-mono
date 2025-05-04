@@ -96,6 +96,16 @@ interface SignTransactionResponse {
   signedTransaction: string // base64 encoded signed transaction
 }
 
+// --- Get Recovery Phrase ---
+export interface GetRecoveryPhraseRequest {
+  password: string
+}
+
+export interface GetRecoveryPhraseResponse {
+  recoveryPhrase?: string
+  error?: string // Include error field for potential API errors
+}
+
 // --- SWAP TYPES ---
 
 // Copied basic type from SwapDrawerContent - consider a shared location
@@ -128,14 +138,38 @@ interface GetQuoteResponse {
 interface ExecuteSwapRequest {
   password: string
   quoteResponse: QuoteResponseV6
+  publicKey?: string // Add optional public key for token account creation
 }
 
-interface ExecuteSwapResponse {
-  signature: string // base64 encoded signed transaction
-  message?: string // Optional success message
+// Type for create token account transaction response
+interface CreateTokenAccountsResponse {
+  status: 'needs_token_accounts'
+  createAccountTransaction: string // Base64 encoded unsigned transaction
+  missingAccounts: { mint: string; address: string }[]
+  message: string
 }
 
-// --- END SWAP TYPES ---
+// Type for submit token account transaction request
+interface SubmitTokenAccountsRequest {
+  signedTransaction: string // Base64 encoded signed transaction
+  password: string
+}
+
+// Type for submit token account transaction response
+interface SubmitTokenAccountsResponse {
+  status: 'success'
+  signature: string
+  message: string
+}
+
+// Type for execute swap response with status field
+interface ExecuteSwapResponseWithStatus {
+  status: 'success' | 'needs_token_accounts'
+  signature?: string
+  createAccountTransaction?: string
+  missingAccounts?: { mint: string; address: string }[]
+  message?: string
+}
 
 /**
  * Makes a POST request to the login endpoint.
@@ -246,13 +280,12 @@ export async function logoutUser(token: string | null): Promise<void> {
     if (!response.ok) {
       // Try to parse the error, but don't let server errors block client logout
       try {
-        const data = await response.json()
+        const data = await response.json().catch(() => ({})) // Catch potential JSON parse errors
         const errorData = data as ApiErrorResponse
         const errorMessage = errorData?.error || `Logout failed with status: ${response.status}`
         console.error('Logout API Error:', errorMessage, 'Status:', response.status)
-        // Throw an error to indicate the server logout failed,
-        // but the calling function should still proceed with client-side logout.
-        const error = new Error(errorMessage) as any
+        // Create a structured error object
+        const error = new Error(errorMessage) as any // Use 'any' to add custom properties
         error.response = {
           data: errorData,
           status: response.status
@@ -282,10 +315,7 @@ export async function logoutUser(token: string | null): Promise<void> {
  * @returns A promise that resolves with the create wallet response (message and mnemonic).
  * @throws An error if the request fails.
  */
-export async function createWallet(
-  token: string | null,
-  password: string
-): Promise<CreateWalletResponse> {
+export async function createWallet(token: string | null, password: string): Promise<CreateWalletResponse> {
   if (!process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL) {
     throw new Error('API URL is not configured.')
   }
@@ -346,9 +376,7 @@ export async function getUserProfile(token: string | null): Promise<User> {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({})) // Catch potential JSON parse errors
     // Create a structured error object including the status code
-    const error = new Error(
-      errorData?.error || `Failed to fetch user profile: ${response.statusText}`
-    ) as any // Use 'any' to add custom properties
+    const error = new Error(errorData?.error || `Failed to fetch user profile: ${response.statusText}`) as any // Use 'any' to add custom properties
     error.response = {
       data: errorData,
       status: response.status // Include status code
@@ -467,7 +495,7 @@ export const checkPresaleCode = async (code: string, token: string | null): Prom
   }
 
   try {
-    const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/wallet/check-presale-code`, {
+    const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/wallet/presale/check`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -515,7 +543,11 @@ export const redeemPresaleCode = async (
   }
 
   try {
-    const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/api/wallet/redeem-presale-code`, {
+    // Ensure the MAIN_API_URL does not end with a slash, and the path does not start with one for clean joining.
+    const baseUrl = (process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL || '').replace(/\/$/, '') // Remove trailing slash if present
+    const endpointPath = '/wallet/presale/redeem' // Path without leading /api
+
+    const response = await fetch(`${baseUrl}${endpointPath}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -524,28 +556,45 @@ export const redeemPresaleCode = async (
       body: JSON.stringify(data)
     })
 
-    const responseData = await response.json()
-
+    // Check if the response was successful BEFORE trying to parse JSON
     if (!response.ok) {
-      const errorData = responseData as ApiErrorResponse
-      const errorMessage = errorData?.error || `Redeem presale code failed: ${response.status}`
+      let errorData: any = null
+      let errorMessage = `Redeem presale code failed: ${response.status}`
+      try {
+        // Attempt to read the error response body as text first
+        const errorText = await response.text()
+        errorMessage = errorText || errorMessage // Use the server's message if available
+        // Optionally, try to parse as JSON if text gives clues it might be JSON
+        try {
+          errorData = JSON.parse(errorText)
+          errorMessage = errorData?.error || errorData?.message || errorMessage
+        } catch (jsonError) {
+          // If parsing text as JSON fails, stick with the text message
+          console.warn('Could not parse error response as JSON, using text content.')
+        }
+      } catch (textError) {
+        // If reading as text fails, use the status text
+        errorMessage = response.statusText || errorMessage
+        console.error('Could not read error response body as text.')
+      }
+
       console.error('Redeem Presale Code API Error:', errorMessage, 'Status:', response.status)
       const error = new Error(errorMessage) as any
       error.response = { data: errorData, status: response.status }
-      throw error
+      throw error // Throw the constructed error
     }
 
+    // If response.ok is true, *then* parse the JSON body
+    const responseData = await response.json()
     return responseData as RedeemPresaleCodeResponse
   } catch (error: any) {
+    // Catch errors from fetch itself or the error thrown above
     console.error('Error redeeming presale code:', error.response?.data || error.message)
-    const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to redeem code'
+    const errorMessage =
+      error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to redeem code'
     return { success: false, message: errorMessage }
   }
 }
-
-// ==========================
-// Transaction Signing
-// ==========================
 
 /**
  * Makes a POST request to the sign transaction endpoint.
@@ -576,7 +625,7 @@ export async function signTransaction(
     unsignedTransaction
   }
 
-  const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/wallet/sign`, {
+  const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/wallet/sign-transaction`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -607,6 +656,59 @@ export async function signTransaction(
   return data as SignTransactionResponse
 }
 
+// --- Get Recovery Phrase ---
+/**
+ * Fetches the user's decrypted recovery phrase from the backend.
+ * Requires the user's password for decryption.
+ */
+export const getRecoveryPhrase = async (
+  data: GetRecoveryPhraseRequest,
+  token: string | null
+): Promise<GetRecoveryPhraseResponse> => {
+  const apiUrl = process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL
+  if (!apiUrl) {
+    console.error('API URL is not configured.')
+    return { error: 'API URL is not configured.' }
+  }
+  if (!token) {
+    console.error('Authentication token is missing.')
+    return { error: 'Authentication token is missing.' }
+  }
+
+  try {
+    const response = await fetch(`${apiUrl}/wallet/recovery-phrase`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(data)
+    })
+
+    const responseData = await response.json()
+
+    if (!response.ok) {
+      const errorData = responseData as ApiErrorResponse
+      const errorMessage = errorData?.error || `Failed to fetch recovery phrase: ${response.status}`
+      console.error('Get Recovery Phrase API Error:', errorMessage, 'Status:', response.status)
+      return { error: errorMessage } // Return error message in the response object
+    }
+
+    // Ensure recoveryPhrase field exists in successful response
+    if (typeof responseData.recoveryPhrase !== 'string') {
+      console.error('Get Recovery Phrase API Error: Invalid response format, missing recoveryPhrase.')
+      return { error: 'Invalid response format from server.' }
+    }
+
+    return responseData as GetRecoveryPhraseResponse
+  } catch (error: any) {
+    console.error('Error fetching recovery phrase:', error.message)
+    // Check for specific network error messages if needed
+    const errorMessage = error.message || 'An unexpected error occurred while fetching the recovery phrase.'
+    return { error: errorMessage }
+  }
+}
+
 // --- SWAP FUNCTIONS ---
 
 /**
@@ -621,7 +723,7 @@ export async function getSwapQuote(payload: GetQuoteRequest, token: string): Pro
   }
 
   // Ensure amount is a number before stringifying
-  const numericPayload = { ...payload, amount: Number(payload.amount) };
+  const numericPayload = { ...payload, amount: Number(payload.amount) }
 
   const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/swap/quote`, {
     method: 'POST',
@@ -649,14 +751,74 @@ export async function getSwapQuote(payload: GetQuoteRequest, token: string): Pro
  * Executes a swap transaction via the backend.
  * @param payload - The swap execution details (password and quote).
  * @param token - The user's auth token.
+ * @param publicKey - The user's wallet public key.
  * @returns A promise resolving to the swap execution response (tx signature).
  */
-export async function executeSwap(payload: ExecuteSwapRequest, token: string): Promise<ExecuteSwapResponse> {
+export async function executeSwap(
+  payload: ExecuteSwapRequest,
+  token: string,
+  publicKey?: string
+): Promise<ExecuteSwapResponseWithStatus> {
   if (!process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL) {
     throw new Error('API URL is not configured.')
   }
 
-  const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/swap/execute`, { // Corrected endpoint
+  // Include the user's public key if provided
+  const requestPayload = {
+    ...payload,
+    publicKey: publicKey || payload.publicKey
+  }
+
+  const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/swap/execute`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(requestPayload)
+  })
+
+  const data = await response.json()
+
+  // Check if the response is 202 (needs token accounts)
+  if (response.status === 202 && data.status === 'needs_token_accounts') {
+    console.log('Token accounts need to be created:', data)
+    return data as CreateTokenAccountsResponse
+  }
+
+  if (!response.ok) {
+    const errorData = data as ApiErrorResponse
+    const errorMessage = errorData?.error || `Swap execution failed: ${response.status}`
+    const error = new Error(errorMessage) as any
+    error.response = { data: errorData, status: response.status }
+    throw error
+  }
+
+  return data as ExecuteSwapResponseWithStatus
+}
+
+/**
+ * Submits a signed token account creation transaction to the backend.
+ * @param signedTransaction - The base64 encoded signed transaction.
+ * @param password - The user's password.
+ * @param token - The user's auth token.
+ * @returns A promise resolving to the transaction submission response.
+ */
+export async function submitTokenAccountTransaction(
+  signedTransaction: string,
+  password: string,
+  token: string
+): Promise<SubmitTokenAccountsResponse> {
+  if (!process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL) {
+    throw new Error('API URL is not configured.')
+  }
+
+  const payload: SubmitTokenAccountsRequest = {
+    signedTransaction,
+    password
+  }
+
+  const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/swap/create-token-accounts`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -669,13 +831,13 @@ export async function executeSwap(payload: ExecuteSwapRequest, token: string): P
 
   if (!response.ok) {
     const errorData = data as ApiErrorResponse
-    const errorMessage = errorData?.error || `Swap execution failed: ${response.status}`
+    const errorMessage = errorData?.error || `Token account creation failed: ${response.status}`
     const error = new Error(errorMessage) as any
     error.response = { data: errorData, status: response.status }
     throw error
   }
 
-  return data as ExecuteSwapResponse
+  return data as SubmitTokenAccountsResponse
 }
 
 // --- END SWAP FUNCTIONS ---

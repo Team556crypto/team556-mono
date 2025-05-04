@@ -1,10 +1,14 @@
 import { Request, Response } from 'express'
-import { Keypair, Connection, PublicKey, LAMPORTS_PER_SOL, ParsedAccountData, Transaction } from '@solana/web3.js'
+import { Keypair, Connection, PublicKey, LAMPORTS_PER_SOL, ParsedAccountData, Transaction, TransactionInstruction, SystemProgram } from '@solana/web3.js'
 import * as bip39 from 'bip39'
 import { z } from 'zod'
 import { Alchemy, Network, TokenPrice, GetTokenPriceByAddressResponse, TokenAddressRequest } from 'alchemy-sdk'
 import { Response as FetchResponse } from 'node-fetch'
 import { derivePath } from 'ed25519-hd-key'
+
+// Hardcoded program IDs to avoid ESM import issues
+const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
 
 // --- Zod Schemas ---
 
@@ -156,6 +160,11 @@ export const createWallet = async (req: Request, res: Response) => {
 
     // Generate a keypair from the derived seed
     const keypair = Keypair.fromSeed(derivedSeed)
+    
+    console.log(`Creating new wallet with public key: ${keypair.publicKey.toBase58()}`)
+
+    // No longer creating token accounts during wallet creation
+    // Token accounts will be created on-demand during swaps
 
     res.status(201).json({
       publicKey: keypair.publicKey.toBase58(),
@@ -167,6 +176,53 @@ export const createWallet = async (req: Request, res: Response) => {
       .status(500)
       .json({ message: 'Failed to create wallet', error: error instanceof Error ? error.message : 'Unknown error' })
   }
+}
+
+/**
+ * Get the Team token account address for a wallet
+ */
+async function getTeamTokenAccountAddress(
+  owner: PublicKey,
+  teamMint: PublicKey
+): Promise<PublicKey> {
+  const [address] = PublicKey.findProgramAddressSync(
+    [
+      owner.toBuffer(),
+      TOKEN_PROGRAM_ID.toBuffer(),
+      teamMint.toBuffer(),
+    ],
+    ASSOCIATED_TOKEN_PROGRAM_ID
+  );
+  return address;
+}
+
+/**
+ * Create an instruction to create an associated token account
+ */
+function createAssociatedTokenAccountInstruction(
+  payer: PublicKey,
+  associatedToken: PublicKey,
+  owner: PublicKey,
+  mint: PublicKey
+): TransactionInstruction {
+  const data = Buffer.alloc(0);
+  
+  const keys = [
+    { pubkey: payer, isSigner: true, isWritable: true },
+    { pubkey: associatedToken, isSigner: false, isWritable: true },
+    { pubkey: owner, isSigner: false, isWritable: false },
+    { pubkey: mint, isSigner: false, isWritable: false },
+    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    // Rent sysvar accessed via SysvarRent address
+    { pubkey: new PublicKey('SysvarRent111111111111111111111111111111111'), isSigner: false, isWritable: false },
+  ];
+
+  return new TransactionInstruction({
+    keys,
+    programId: ASSOCIATED_TOKEN_PROGRAM_ID,
+    data,
+  });
 }
 
 export const getBalance = async (req: Request, res: Response) => {
@@ -291,9 +347,7 @@ export const signTransaction = async (req: Request, res: Response) => {
     const { mnemonic, unsignedTransaction } = validationResult.data
 
     // 2. Derive Keypair from Mnemonic
-
     const seed = await bip39.mnemonicToSeed(mnemonic, '') // Use empty passphrase
-    // Use the same derivation path that was used when creating the wallet
     const derivationPath = "m/44'/501'/0'/0'"
     const derivedSeed = derivePath(derivationPath, seed.toString('hex')).key
     const keypair = Keypair.fromSeed(derivedSeed)
@@ -301,38 +355,62 @@ export const signTransaction = async (req: Request, res: Response) => {
     console.log(`Derived PublicKey from Mnemonic (path ${derivationPath}): ${derivedPublicKey}`)
 
     // 3. Deserialize Unsigned Transaction
-    // The unsigned transaction is expected to be sent as a base64 encoded buffer
     const transactionBuffer = Buffer.from(unsignedTransaction, 'base64')
-    const transaction = Transaction.from(transactionBuffer)
+    const oldTransaction = Transaction.from(transactionBuffer)
 
-    // Log expected fee payer and compare
-    const expectedFeePayer = transaction.feePayer?.toBase58()
+    // Log expected fee payer
+    const expectedFeePayer = oldTransaction.feePayer?.toBase58()
     console.log(`Transaction Fee Payer (expected signer): ${expectedFeePayer}`)
-    if (derivedPublicKey !== expectedFeePayer) {
-      console.error(
-        `SIGNER MISMATCH: Derived key ${derivedPublicKey} does not match expected fee payer ${expectedFeePayer}`
-      )
-      // This is likely the cause of the 'unknown signer' error
+    
+    // 4. Check if the transaction's feePayer needs to be updated
+    if (expectedFeePayer && expectedFeePayer !== derivedPublicKey) {
+      console.log(`Fee payer mismatch detected. Updating fee payer from ${expectedFeePayer} to ${derivedPublicKey}`)
+      // Set the fee payer explicitly to our keypair's public key
+      oldTransaction.feePayer = keypair.publicKey
+      // NOTE: We DO NOT modify the instructions themselves, only the transaction's feePayer field.
+    } else {
+      console.log(`Fee payer is correct or not set, using derived keypair: ${derivedPublicKey}`)
+      // Ensure fee payer is set if it was null
+      if (!oldTransaction.feePayer) {
+        oldTransaction.feePayer = keypair.publicKey
+      }
+    }
+    
+    // 5. Ensure the transaction has a recent blockhash
+    if (!oldTransaction.recentBlockhash) {
+      console.log('Transaction missing recent blockhash, fetching latest...')
+      oldTransaction.recentBlockhash = await getLatestBlockhash()
+      console.log(`Using blockhash: ${oldTransaction.recentBlockhash}`)
     }
 
-    // 4. Sign the Transaction
-    // Note: For partially signed transactions, you might need connection.getLatestBlockhash()
-    // and set `recentBlockhash` on the transaction before signing if it's not already set.
-    // Assuming the unsigned tx provided by main-api already has a valid blockhash.
-    transaction.sign(keypair) // Sign with the derived keypair
-
-    // 5. Serialize Signed Transaction
-    const signedTxBuffer = transaction.serialize()
-    const signedTxBase64 = signedTxBuffer.toString('base64')
-
-    // 6. Return Signed Transaction
-    console.log(`Transaction signed successfully for public key: ${keypair.publicKey.toBase58()}`)
-    res.status(200).json({ signedTransaction: signedTxBase64 })
+    // 6. Sign the transaction (original object, potentially with updated feePayer)
+    oldTransaction.sign(keypair)
+    console.log(`Transaction signed with keypair ${keypair.publicKey.toBase58()}`)
+    
+    // 7. Serialize and return
+    try {
+      const signedTxBuffer = oldTransaction.serialize()
+      const signedTxBase64 = signedTxBuffer.toString('base64')
+      console.log(`Transaction successfully serialized`)
+      return res.status(200).json({ signedTransaction: signedTxBase64 })
+    } catch (serializeError) {
+      console.error('Error serializing transaction:', serializeError)
+      throw serializeError
+    }
   } catch (error: unknown) {
     console.error('Error signing transaction:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error during signing'
-    // Provide more context if it's a Solana-specific error
-    // if (error instanceof SolanaJSONRPCError) { ... }
     return res.status(500).json({ message: 'Failed to sign transaction', error: errorMessage })
   }
+}
+
+// Helper function to get latest blockhash if needed
+async function getLatestBlockhash(): Promise<string> {
+  const rpcUrl = process.env.GLOBAL__MAINNET_RPC_URL
+  if (!rpcUrl) {
+    throw new Error('RPC URL not configured')
+  }
+  const connection = new Connection(rpcUrl)
+  const { blockhash } = await connection.getLatestBlockhash()
+  return blockhash
 }

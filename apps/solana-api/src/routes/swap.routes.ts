@@ -1,5 +1,5 @@
 import express from 'express';
-import { handleGetQuote, handlePostSwap } from '../controllers/swap.controller';
+import { handleGetQuote, handlePostSwap, handleCreateTokenAccounts } from '../controllers/swap.controller';
 
 const router = express.Router();
 
@@ -10,5 +10,9 @@ router.post('/quote', handleGetQuote);
 // Route to get swap transaction
 // POST because we send the quote object and user public key in the body
 router.post('/swap', handlePostSwap);
+
+// Route to handle token account creation
+// POST because we send the signed transaction in the body
+router.post('/create-token-accounts', handleCreateTokenAccounts);
 
 export default router;

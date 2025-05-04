@@ -17,7 +17,9 @@ export function CustomSideBar({ state, descriptors, navigation }: BottomTabBarPr
           paddingTop: insets.top,
           paddingBottom: insets.bottom,
           paddingLeft: Platform.OS === 'web' ? 0 : insets.left,
-          backgroundColor: Colors.backgroundDark
+          backgroundColor: Colors.backgroundDarkest,
+          borderRightWidth: 1,
+          borderRightColor: Colors.background
           // borderWidth: 1,
           // borderColor: Colors.backgroundDarker
         }
@@ -70,7 +72,7 @@ export function CustomSideBar({ state, descriptors, navigation }: BottomTabBarPr
                 {options.tabBarIcon &&
                   options.tabBarIcon({
                     focused: isFocused,
-                    color: isFocused ? Colors.tint : Colors.tabIconDefault,
+                    color: isFocused ? Colors.primary : Colors.tabIconDefault,
                     size: 16
                   })}
               </View>
@@ -78,7 +80,7 @@ export function CustomSideBar({ state, descriptors, navigation }: BottomTabBarPr
                 style={[
                   styles.navText,
                   {
-                    color: isFocused ? Colors.tint : Colors.tabIconDefault,
+                    color: isFocused ? Colors.primary : Colors.tabIconDefault,
                     opacity: isFocused ? 1 : 0.8
                   }
                 ]}
@@ -99,12 +101,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     bottom: 0,
-    width: 220,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 5
+    width: 220
     // borderRadius: 10
   },
   header: {
@@ -131,7 +128,7 @@ const styles = StyleSheet.create({
   navButtonActive: {
     // backgroundColor: Colors.background,
     borderLeftWidth: 3,
-    borderLeftColor: Colors.tint
+    borderLeftColor: Colors.primary
     // borderRightWidth: 2,
     // borderRightColor: Colors.backgroundDark,
     // borderTopRightRadius: 10,

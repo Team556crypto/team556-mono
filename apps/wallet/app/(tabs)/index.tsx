@@ -177,14 +177,12 @@ export default function HomeScreen() {
             </TouchableOpacity>
 
             {/* Only show Swap if presale_type is 1 */}
-            {/* {user?.presale_type === 1 && ( */}
             <TouchableOpacity style={styles.actionButton} onPress={handleSwapPress}>
               <View style={styles.actionIconContainer}>
                 <Ionicons name='swap-horizontal-outline' size={20} color={Colors.text} />
               </View>
               <Text style={styles.actionText}>Swap</Text>
             </TouchableOpacity>
-            {/* )} */}
           </View>
         </View>
 
@@ -230,7 +228,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         {/* Recent Activity Section */}
-        {/* <View style={[styles.sectionHeader, { marginTop: 12 }]}>
+        <View style={[styles.sectionHeader, { marginTop: 12 }]}>
           <Text style={styles.sectionTitle}>Recent Activity</Text>
           <TouchableOpacity>
             <Text style={styles.seeAllText}>See all</Text>
@@ -240,7 +238,7 @@ export default function HomeScreen() {
         <View style={styles.emptyActivity}>
           <Ionicons name='time-outline' size={24} color={Colors.textTertiary} />
           <Text style={styles.emptyActivityText}>No recent transactions</Text>
-        </View> */}
+        </View>
       </ScrollView>
     </ScreenLayout>
   )

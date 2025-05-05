@@ -11,7 +11,7 @@ import {
   Easing
 } from 'react-native'
 import { DefaultColors, ThemeColors } from '../constants/Colors'
-import Button from './Button'
+import Button from './button'
 import Text, { TextPreset } from './Text'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')

@@ -1,41 +1,58 @@
 import React from 'react'
-import { View, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native'
+import {
+  View,
+  StyleSheet,
+  SafeAreaView,
+  TouchableOpacity,
+  Platform,
+  ScrollView
+} from 'react-native'
 import { useRouter } from 'expo-router'
 import { Button, Text } from '@team556/ui'
 import LogoSvg from '@/assets/images/logo.svg'
 import { Colors } from '@/constants/Colors'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 
-export default function LandingScreen() {
+import {
+  LandingHeader,
+  HeroSection,
+  StatsSection,
+  FeaturesSection,
+  HowItWorksSection,
+  CtaSection,
+  TestimonialsSection,
+  FooterSection,
+  BackgroundEffects,
+  ScrollToTop
+} from '@/components/landing'
+
+const MobileLandingScreen = () => {
   const router = useRouter()
   const { isTabletOrLarger } = useBreakpoint()
 
   const handleSignInPress = () => {
-    router.push('/signin' as any) // Navigate to the sign-in screen
+    router.push('/signin' as any)
   }
 
   const handleSignUpPress = () => {
-    router.push('/signup' as any) // Navigate to the sign-up screen
+    router.push('/signup' as any)
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={[styles.container, isTabletOrLarger && styles.containerTablet]}>
-        {/* Logo centered in the top portion */}
-        <View style={styles.logoContainer}>
+    <SafeAreaView style={styles.safeAreaMobile}>
+      <View style={[styles.containerMobile, isTabletOrLarger && styles.containerMobileTablet]}>
+        <View style={styles.logoContainerMobile}>
           <LogoSvg width={150} height={150} />
         </View>
-
-        {/* Buttons at the bottom */}
-        <View style={[styles.buttonContainer, isTabletOrLarger && styles.buttonContainerTablet]}>
+        <View style={[styles.buttonContainerMobile, isTabletOrLarger && styles.buttonContainerMobileTablet]}>
           <Button
             title='Sign In'
             onPress={handleSignInPress}
-            style={styles.signInButton}
+            style={styles.signInButtonMobile}
             fullWidth
           />
-          <TouchableOpacity onPress={handleSignUpPress} style={styles.signUpButton}>
-            <Text style={styles.signUpText}>Sign Up</Text>
+          <TouchableOpacity onPress={handleSignUpPress} style={styles.signUpButtonMobile}>
+            <Text style={styles.signUpTextMobile}>Sign Up</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -43,49 +60,87 @@ export default function LandingScreen() {
   )
 }
 
+const WebLandingPage = () => {
+  const router = useRouter()
+
+  return (
+    <View style={styles.webContainer}>
+      <BackgroundEffects />
+      <ScrollView style={styles.webScrollView} contentContainerStyle={styles.webScrollViewContent}>
+        <LandingHeader router={router} colors={Colors} />
+        <HeroSection colors={Colors} />
+        <StatsSection colors={Colors} />
+        <FeaturesSection colors={Colors} />
+        <HowItWorksSection colors={Colors} />
+        <TestimonialsSection colors={Colors} />
+        <CtaSection router={router} colors={Colors} />
+        <FooterSection colors={Colors} />
+      </ScrollView>
+      <ScrollToTop />
+    </View>
+  )
+}
+
+export default function LoginOrLandingScreen() {
+  if (Platform.OS === 'web') {
+    return <WebLandingPage />
+  } else {
+    return <MobileLandingScreen />
+  }
+}
+
 const styles = StyleSheet.create({
-  safeArea: {
+  safeAreaMobile: {
     flex: 1,
     backgroundColor: Colors.backgroundDarkest
   },
-  container: {
+  containerMobile: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'space-between', // Push logo up, buttons down
+    justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingBottom: 40, // Padding for bottom buttons
-    paddingTop: 60, // Padding for logo
+    paddingBottom: 40,
+    paddingTop: 60,
     width: '100%'
   },
-  containerTablet: {
-    paddingHorizontal: '20%', // Center content more on tablet
+  containerMobileTablet: {
+    paddingHorizontal: '20%',
     paddingBottom: 60,
     paddingTop: 80
   },
-  logoContainer: {
+  logoContainerMobile: {
     alignItems: 'center',
     justifyContent: 'center',
-    flexGrow: 1 // Allows it to take available space pushing buttons down
+    flexGrow: 1
   },
-  buttonContainer: {
+  buttonContainerMobile: {
     width: '100%',
     alignItems: 'center'
   },
-  buttonContainerTablet: {
-    maxWidth: 380 // Limit button width on tablet
+  buttonContainerMobileTablet: {
+    maxWidth: 380
   },
-  signInButton: {
+  signInButtonMobile: {
     width: '100%',
     backgroundColor: Colors.primary,
     marginBottom: 16
   },
-  signUpButton: {
-    paddingVertical: 12 // Make touchable area larger
+  signUpButtonMobile: {
+    paddingVertical: 12
   },
-  signUpText: {
+  signUpTextMobile: {
     color: Colors.primary,
     fontWeight: '600',
     textAlign: 'center',
     fontSize: 16
+  },
+  webContainer: {
+    flex: 1,
+    backgroundColor: Colors.background
+  },
+  webScrollView: {
+    flex: 1
+  },
+  webScrollViewContent: {
   }
 })

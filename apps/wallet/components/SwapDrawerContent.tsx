@@ -1,17 +1,14 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { View, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native'
+import React, { useState, useEffect } from 'react'
+import { View, StyleSheet, ActivityIndicator } from 'react-native'
 import { Text, Button, Input } from '@team556/ui'
 import { Colors } from '@/constants/Colors'
 import { useAuthStore } from '@/store/authStore'
 import { useToastStore } from '@/store/toastStore'
-import { useWalletStore } from '@/store/walletStore'
 import { Ionicons } from '@expo/vector-icons'
 import { genericStyles } from '@/constants/GenericStyles'
-import { TEAM_MINT_ADDRESS, teamDecimals } from '@/constants/Tokens'
 import { LAMPORTS_PER_SOL } from '@solana/web3.js'
 import { debounce } from 'lodash'
 import { getSwapQuote, executeSwap, submitTokenAccountTransaction, signTransaction } from '../services/api'
-import axios from 'axios'
 
 // Basic type for Jupiter V6 Quote Response (expand as needed)
 // Consider moving to a shared types package
@@ -45,6 +42,7 @@ type SwapDrawerProps = {
   fetchSolBalance: () => Promise<void>
   fetchTeamBalance: () => Promise<void>
   walletAddress?: string // Add wallet address prop
+  initialInputToken?: TokenOption // NEW: Add prop for initial input token
 }
 
 type TokenOption = 'SOL' | 'TEAM'
@@ -66,11 +64,12 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
   teamBalance,
   fetchSolBalance,
   fetchTeamBalance,
-  walletAddress
+  walletAddress,
+  initialInputToken // NEW: Destructure prop
 }) => {
   // State management
-  const [fromToken, setFromToken] = useState<TokenOption>('SOL')
-  const [toToken, setToToken] = useState<TokenOption>('TEAM')
+  const [fromToken, setFromToken] = useState<TokenOption>(initialInputToken ?? 'SOL') // MODIFIED: Use prop for initial 'from'
+  const [toToken, setToToken] = useState<TokenOption>(initialInputToken === 'TEAM' ? 'SOL' : 'TEAM') // MODIFIED: Set initial 'to' based on 'from'
   const [amount, setAmount] = useState('')
   const [estimatedReceiveAmount, setEstimatedReceiveAmount] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -139,10 +138,29 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
           throw new Error('Authentication token not found.')
         }
 
-        const inputMint = from === 'SOL' ? 'So11111111111111111111111111111111111111112' : TEAM_MINT_ADDRESS
-        const outputMint = to === 'SOL' ? 'So11111111111111111111111111111111111111112' : TEAM_MINT_ADDRESS
+        // --- Check for required environment variables ---
+        const teamMintAddress = process.env.EXPO_PUBLIC_GLOBAL__MINT_ADDRESS
+        const teamMintDecimalsStr = process.env.EXPO_PUBLIC_GLOBAL__MINT_DECIMALS
+
+        if (!teamMintAddress || !teamMintDecimalsStr) {
+          setError('Token configuration missing in environment variables.')
+          setIsQuoteLoading(false)
+          return // Stop execution
+        }
+
+        const teamMintDecimals = Number(teamMintDecimalsStr)
+        if (isNaN(teamMintDecimals)) {
+          setError('Invalid token decimal configuration.')
+          setIsQuoteLoading(false)
+          return
+        }
+        // --- End Check ---
+
+        const inputMint = from === 'SOL' ? 'So11111111111111111111111111111111111111112' : teamMintAddress
+        const outputMint = to === 'SOL' ? 'So11111111111111111111111111111111111111112' : teamMintAddress
+
         const amountInSmallestUnit = Math.floor(
-          parseFloat(fetchAmount) * (from === 'SOL' ? LAMPORTS_PER_SOL : 10 ** teamDecimals)
+          parseFloat(fetchAmount) * (from === 'SOL' ? LAMPORTS_PER_SOL : 10 ** teamMintDecimals)
         )
 
         console.log('Fetching quote with:', {
@@ -166,8 +184,8 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
 
           // Calculate and set exchange rate
           try {
-            const inDecimals = from === 'SOL' ? 9 : teamDecimals
-            const outDecimals = to === 'SOL' ? 9 : teamDecimals
+            const inDecimals = from === 'SOL' ? 9 : teamMintDecimals
+            const outDecimals = to === 'SOL' ? 9 : teamMintDecimals
             const inAmountNum = Number(quote.inAmount) / 10 ** inDecimals
             const outAmountNum = Number(quote.outAmount) / 10 ** outDecimals
 
@@ -183,8 +201,8 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
           }
 
           const outputAmountInDecimal =
-            parseInt(quote.outAmount) / (to === 'SOL' ? LAMPORTS_PER_SOL : 10 ** teamDecimals)
-          setEstimatedReceiveAmount(outputAmountInDecimal.toFixed(to === 'SOL' ? 9 : teamDecimals))
+            parseInt(quote.outAmount) / (to === 'SOL' ? LAMPORTS_PER_SOL : 10 ** teamMintDecimals)
+          setEstimatedReceiveAmount(outputAmountInDecimal.toFixed(to === 'SOL' ? 9 : teamMintDecimals))
           setError(null) // Clear error on success
         } else {
           setError('Could not fetch swap quote.')
@@ -365,36 +383,6 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
     }
   }
 
-  // Swap the tokens when the user clicks the swap icon
-  const handleSwapTokens = () => {
-    setFromToken(toToken)
-    setToToken(fromToken)
-    setAmount('')
-    setEstimatedReceiveAmount('')
-  }
-
-  // Handle the next button
-  const handleNext = async () => {
-    // Reset error
-    setError(null)
-
-    // Validate inputs
-    const numericAmount = parseFloat(amount)
-    if (!amount || isNaN(numericAmount) || numericAmount <= 0) {
-      setError('Please enter a valid amount.')
-      return
-    }
-
-    if (numericAmount > (availableBalance ?? 0)) {
-      setError('Insufficient balance.')
-      return
-    }
-
-    // In a real implementation, this would validate the swap can be done
-    // For now, just move to the confirm step
-    setStep('confirm')
-  }
-
   // Handle setting amount as a percentage of available balance
   const handleSetPercentage = (percentage: number) => {
     if (availableBalance === null || availableBalance === undefined) return
@@ -402,7 +390,8 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
     const calculatedAmount = availableBalance * percentage
 
     // Format based on token decimals
-    const decimals = fromToken === 'SOL' ? 9 : teamDecimals
+    const teamMintDecimalsStr = process.env.EXPO_PUBLIC_GLOBAL__MINT_DECIMALS
+    const decimals = fromToken === 'SOL' ? 9 : teamMintDecimalsStr ? Number(teamMintDecimalsStr) : 9 // Default to 9 if undefined
     const formattedAmount = calculatedAmount.toFixed(decimals)
 
     // Avoid setting amount like 0.000000000 for very small balances
@@ -411,9 +400,10 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
 
   // Function to get a display-friendly token name from mint address
   const getTokenName = (mintAddress: string): string => {
+    const teamMintAddress = process.env.EXPO_PUBLIC_GLOBAL__MINT_ADDRESS
     if (mintAddress === 'So11111111111111111111111111111111111111112') {
       return 'SOL'
-    } else if (mintAddress === TEAM_MINT_ADDRESS) {
+    } else if (teamMintAddress && mintAddress === teamMintAddress) {
       return 'TEAM'
     }
     return `${mintAddress.substring(0, 4)}...${mintAddress.substring(mintAddress.length - 4)}`
@@ -470,120 +460,6 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
     }
   }
 
-  // Execute the swap
-  const handleExecuteSwap = async () => {
-    if (!password) {
-      setError('Password is required')
-      return
-    }
-
-    if (!quoteResponse) {
-      setError('Swap quote not available')
-      return
-    }
-
-    if (!isAuthenticated || !token) {
-      setError('User authentication required')
-      return
-    }
-
-    if (!userWalletAddress) {
-      setError('Wallet address not available')
-      return
-    }
-
-    try {
-      setSwapStatus('swapping')
-
-      // Create the payload for the swap execution
-      const swapPayload = {
-        password,
-        quoteResponse,
-        publicKey: userWalletAddress
-      }
-
-      // Execute the swap using the imported function
-      const result = await executeSwap(swapPayload, token, userWalletAddress)
-
-      // Check if we need to create token accounts
-      if (result.status === 'needs_token_accounts' && result.createAccountTransaction) {
-        setTokenAccountSetup({
-          createAccountTransaction: result.createAccountTransaction,
-          missingAccounts: result.missingAccounts || []
-        })
-        setStep('confirmTokenAccounts')
-        setSwapStatus('idle')
-        return
-      }
-
-      if (result.status === 'success' && result.signature) {
-        setSwapStatus('success')
-        showToast(`Swap submitted! Tx: ${result.signature.substring(0, 10)}...`, 'success')
-
-        // Wait for confirmation and refresh balances
-        await new Promise(resolve => setTimeout(resolve, 5000))
-        await fetchSolBalance()
-        await fetchTeamBalance()
-
-        // Close drawer
-        onClose()
-      } else {
-        throw new Error(result?.message || 'Swap execution failed')
-      }
-    } catch (error: any) {
-      console.error('Error executing swap:', error)
-
-      let errorMessage = 'Failed to execute swap'
-      if (error.response?.data?.error) {
-        errorMessage = error.response.data.error
-      } else if (error.message) {
-        errorMessage = error.message
-      }
-
-      setError(errorMessage)
-      setSwapStatus('error')
-    } finally {
-      setPassword('')
-    }
-  }
-
-  const setupTokenAccount = async (
-    createAccountTransaction: string,
-    missingAccounts: { mint: string; address: string }[]
-  ) => {
-    console.log('Setting up token accounts before swap', { missingAccounts })
-    setSwapStatus('setting_up_token_accounts')
-
-    try {
-      // Get user's password
-      if (!password) {
-        showToast('Password is required for this transaction', 'error')
-        setSwapStatus('error')
-        return false
-      }
-
-      if (!token) {
-        showToast('Authentication token not found', 'error')
-        setSwapStatus('error')
-        return false
-      }
-
-      // Sign the transaction with the user's password
-      const signResponse = await signTransaction(token, password, createAccountTransaction)
-
-      // Submit the signed transaction to create token accounts
-      const result = await submitTokenAccountTransaction(signResponse.signedTransaction, password, token)
-
-      console.log('Token accounts created:', result)
-      return true
-    } catch (error) {
-      console.error('Error setting up token accounts:', error)
-      showToast('Failed to set up token accounts', 'error')
-      setSwapStatus('error')
-      return false
-    }
-  }
-
   const mySignTransaction = async ({
     password,
     unsignedTransaction
@@ -615,138 +491,71 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
         Swap Tokens
       </Text>
 
+      {/* Display From/To Tokens (Non-interactive) */}
+      <View style={styles.tokenDisplayContainer}>
+        <View style={styles.tokenItem}>
+          <Text preset='label'>From:</Text>
+          <Text preset='default' style={styles.tokenName}>
+            {fromToken}
+          </Text>
+        </View>
+        <Ionicons name='arrow-forward' size={24} color={Colors.icon} />
+        <View style={styles.tokenItem}>
+          <Text preset='label'>To:</Text>
+          <Text preset='default' style={styles.tokenName}>
+            {toToken}
+          </Text>
+        </View>
+      </View>
+
+      {/* Amount Input Section */}
       {step === 'form' && (
         <>
-          {/* From Token Section */}
-          <View style={styles.formSection}>
-            <Text preset='error' style={{ marginBottom: 16 }}>
-              Ensure you have at least 0.01 SOL in your wallet to cover transaction fees.
-            </Text>
-            <Text preset='label' style={styles.sectionTitle}>
-              From
-            </Text>
-            <View style={styles.tokenSelectionContainer}>
-              <View style={styles.segmentContainer}>
-                <TouchableOpacity
-                  style={[styles.segmentButton, fromToken === 'SOL' && styles.segmentButtonActive]}
-                  onPress={() => setFromToken('SOL')}
-                >
-                  <Text style={[styles.segmentText, fromToken === 'SOL' && styles.segmentTextActive]}>SOL</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.segmentButton, fromToken === 'TEAM' && styles.segmentButtonActive]}
-                  onPress={() => setFromToken('TEAM')}
-                >
-                  <Text style={[styles.segmentText, fromToken === 'TEAM' && styles.segmentTextActive]}>TEAM</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.balanceContainer}>
-              <Text preset='caption' style={styles.balanceLabel}>
-                Available Balance:
-              </Text>
-              <Text preset='label' style={styles.balanceAmount}>
-                {availableBalance?.toFixed(fromToken === 'SOL' ? 4 : 2) ?? '0.00'} {fromToken}
-              </Text>
-            </View>
-
-            <View style={styles.amountContainer}>
-              <Input
-                label={`Amount (${fromToken})`}
-                placeholder='0.00'
-                value={amount}
-                onChangeText={setAmount}
-                keyboardType='numeric'
-                style={[genericStyles.input, styles.input, styles.amountInput]}
-              />
-            </View>
-
-            {/* Percentage Buttons */}
-            <View style={styles.percentageButtonRow}>
-              <Button
-                title='25%'
-                onPress={() => handleSetPercentage(0.25)}
-                variant={calculateButtonVariant(0.25)}
-                style={styles.percentageButton}
-              />
-              <Button
-                title='50%'
-                onPress={() => handleSetPercentage(0.5)}
-                variant={calculateButtonVariant(0.5)}
-                style={styles.percentageButton}
-              />
-              <Button
-                title='75%'
-                onPress={() => handleSetPercentage(0.75)}
-                variant={calculateButtonVariant(0.75)}
-                style={styles.percentageButton}
-              />
-              <Button
-                title='Max'
-                onPress={() => handleSetPercentage(1.0)}
-                variant={calculateButtonVariant(1.0)}
-                style={styles.percentageButton}
-              />
-            </View>
+          {/* Input Field */}
+          <View style={styles.inputContainer}>
+            <Input
+              placeholder={`Amount of ${fromToken} to swap`}
+              value={amount}
+              onChangeText={setAmount}
+              keyboardType='numeric'
+              style={[styles.amountInput, genericStyles.input]}
+            />
           </View>
 
-          {/* Swap Icon */}
-          <TouchableOpacity onPress={handleSwapTokens} style={styles.swapIconContainer}>
-            <View style={styles.swapIconCircle}>
-              <Ionicons name='swap-vertical' size={24} color={Colors.tint} />
-            </View>
-          </TouchableOpacity>
-
-          {/* To Token Section */}
-          <View style={styles.formSection}>
-            <Text preset='label' style={styles.sectionTitle}>
-              To
+          {/* Estimated Receive Amount / Loading */}
+          <View style={styles.estimatedAmountContainer}>
+            <Text preset='label' style={styles.receiveLabel}>
+              You'll receive approximately:
             </Text>
-            <View style={styles.tokenSelectionContainer}>
-              <View style={styles.segmentContainer}>
-                <TouchableOpacity
-                  style={[styles.segmentButton, toToken === 'SOL' && styles.segmentButtonActive]}
-                  onPress={() => setToToken('SOL')}
-                  disabled={toToken === 'SOL'}
-                >
-                  <Text style={[styles.segmentText, toToken === 'SOL' && styles.segmentTextActive]}>SOL</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.segmentButton, toToken === 'TEAM' && styles.segmentButtonActive]}
-                  onPress={() => setToToken('TEAM')}
-                  disabled={toToken === 'TEAM'}
-                >
-                  <Text style={[styles.segmentText, toToken === 'TEAM' && styles.segmentTextActive]}>TEAM</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.receiveContainer}>
-              <Text preset='label' style={styles.receiveLabel}>
-                You'll receive approximately:
-              </Text>
+            {isQuoteLoading ? (
+              <ActivityIndicator size='small' color={Colors.tint} style={styles.loadingIndicator} />
+            ) : (
               <Text preset='h4' style={styles.receiveAmount}>
-                {estimatedReceiveAmount ? `${estimatedReceiveAmount} ${toToken}` : '-'}
+                {estimatedReceiveAmount ? `${Number(estimatedReceiveAmount).toFixed(4)} ${toToken}` : '-'}
               </Text>
-            </View>
-
-            <View style={styles.exchangeRateContainer}>
-              <Text preset='caption' style={styles.exchangeRateText}>
-                Exchange Rate: 1 {fromToken} ≈ {exchangeRate ? exchangeRate : '-'} {toToken}
-              </Text>
-            </View>
+            )}
           </View>
 
-          {error && <Text style={styles.errorText}>{error}</Text>}
+          {/* Exchange Rate */}
+          <View style={styles.exchangeRateContainer}>
+            <Text preset='caption' style={styles.exchangeRateText}>
+              Exchange Rate: 1 {fromToken} ≈ {exchangeRate ? Number(exchangeRate).toFixed(4) : '-'} {toToken}
+            </Text>
+          </View>
+
+          {/* Error Message - Show only if not loading */}
+          {error && !isQuoteLoading && <Text style={styles.errorText}>{error}</Text>}
 
           <View style={styles.actionButtonsContainer}>
-            <Button title='Cancel' onPress={onClose} variant='secondary' style={styles.button} />
+            <Button title='Cancel' onPress={onClose} variant='secondary' style={[styles.button, { flex: 1 }]} />
             <Button
               title='Next'
-              onPress={handleNext}
+              onPress={() => {
+                setError(null)
+                setStep('confirm')
+              }}
               variant='primary'
-              style={styles.button}
+              style={[styles.button, { flex: 1 }]}
               disabled={!amount || parseFloat(amount) <= 0}
             />
           </View>
@@ -892,12 +701,28 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontWeight: 'bold'
   },
-  tokenSelectionContainer: {
-    marginBottom: 6
+  tokenDisplayContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    marginBottom: 15,
+    paddingVertical: 10,
+    backgroundColor: Colors.backgroundDark, // Subtle background
+    borderRadius: 8
   },
-  balanceContainer: {
-    marginTop: 6,
-    marginBottom: 6,
+  tokenItem: {
+    alignItems: 'center',
+    gap: 4
+  },
+  tokenName: {
+    fontWeight: 'bold',
+    fontSize: 16
+  },
+  balanceText: {
+    color: Colors.textSecondary,
+    flexShrink: 1 // Allow text to shrink if needed
+  },
+  quickActionsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -906,39 +731,21 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundDark,
     borderRadius: 8
   },
-  balanceLabel: {
-    color: Colors.icon
-  },
-  balanceAmount: {
-    fontWeight: 'bold'
-  },
-  formSection: {},
-  amountContainer: {
+  percentageButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     gap: 10
   },
-  swapIconContainer: {
-    alignItems: 'center',
-    marginVertical: 3
+  percentageButton: {
+    flex: 1,
+    marginHorizontal: 2,
+    paddingVertical: 8,
+    height: 'auto',
+    minHeight: 32
   },
-  swapIconCircle: {
-    backgroundColor: Colors.backgroundDark,
-    borderRadius: 20,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3
-  },
-  receiveContainer: {
-    marginTop: 6,
-    padding: 12,
-    backgroundColor: Colors.backgroundDark,
-    borderRadius: 8,
-    alignItems: 'center'
+  estimatedAmountContainer: {
+    marginTop: 10, // Add some space above
+    alignItems: 'center' // Center items vertically
   },
   receiveLabel: {
     marginBottom: 8,
@@ -967,103 +774,20 @@ const styles = StyleSheet.create({
     flex: 1
   },
   errorText: {
-    color: Colors.error,
-    textAlign: 'center',
-    fontSize: 14,
-    marginTop: 6,
-    marginBottom: 6
+    color: Colors.error
   },
   input: {
     backgroundColor: Colors.backgroundDarker,
     borderRadius: 10
   },
+  inputContainer: {
+    // NEW: Style for input wrapper
+    marginBottom: 8
+  },
   amountInput: {
-    marginBottom: 2
+    // Style for amount input
+    // Add specific styles here if default Input style isn't enough
   },
-  passwordInput: {
-    marginBottom: 10,
-    backgroundColor: Colors.backgroundDarker
-  },
-  percentageButtonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8
-  },
-  percentageButton: {
-    flex: 1,
-    marginHorizontal: 2,
-    paddingVertical: 8,
-    height: 'auto',
-    minHeight: 32
-  },
-  segmentContainer: {
-    flexDirection: 'row',
-    backgroundColor: Colors.backgroundDark,
-    borderRadius: 12,
-    overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2
-  },
-  segmentButton: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.backgroundDarker
-  },
-  segmentButtonActive: {
-    backgroundColor: Colors.tint
-  },
-  segmentText: {
-    color: Colors.icon,
-    fontSize: 14,
-    fontWeight: '600'
-  },
-  segmentTextActive: {
-    color: Colors.tabIconSelected
-  },
-  modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between'
-  },
-  confirmationSection: {
-    marginVertical: 8,
-    backgroundColor: Colors.backgroundDark,
-    padding: 12,
-    borderRadius: 10,
-    alignItems: 'center'
-  },
-  confirmationText: {
-    textAlign: 'center',
-    marginBottom: 6
-  },
-  confirmationAmount: {
-    color: Colors.tint,
-    marginVertical: 6,
-    fontWeight: 'bold'
-  },
-  passwordSection: {
-    marginTop: 10,
-    marginBottom: 8
-  },
-  estimatedValueContainer: {
-    minHeight: 24,
-    justifyContent: 'center'
-  },
-  estimatedValue: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.text
-  },
-  slippageText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginTop: 4
-  },
-  // Styles for token account creation UI
   tokenAccountsSection: {
     marginVertical: 8,
     backgroundColor: Colors.backgroundDark,
@@ -1097,6 +821,37 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
     color: Colors.icon
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  confirmationSection: {
+    marginVertical: 8,
+    backgroundColor: Colors.backgroundDark,
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center'
+  },
+  confirmationText: {
+    textAlign: 'center',
+    marginBottom: 6
+  },
+  confirmationAmount: {
+    color: Colors.tint,
+    marginVertical: 6,
+    fontWeight: 'bold'
+  },
+  passwordSection: {
+    marginTop: 10,
+    marginBottom: 8
+  },
+  passwordInput: {
+    marginBottom: 10,
+    backgroundColor: Colors.backgroundDarker
+  },
+  loadingIndicator: {
+    // Add specific styles if needed, e.g., margin
   }
 })
 

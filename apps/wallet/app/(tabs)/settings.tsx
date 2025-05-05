@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   card: {
-    backgroundColor: Colors.cardBackgroundSubtle, // Match HomeScreen card style
+    backgroundColor: Colors.backgroundDark, // Match HomeScreen card style
     borderRadius: 12, // Match HomeScreen card radius
     marginBottom: 16,
     overflow: 'hidden'

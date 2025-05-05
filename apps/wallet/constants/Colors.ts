@@ -15,12 +15,12 @@ export const Colors = {
   text: '#ECEDEE',
   textSecondary: '#9BA1A6',
   textTertiary: '#657786',
-  background: '#23242A',
+  background: '#222222',
   backgroundDark: '#1a1a1a',
   backgroundDarker: '#121212',
   backgroundDarkest: '#0d0d0d',
   errorBackground: '#FFCDD2', // Light red background for errors
-  errorText: '#D32F2F',     // Dark red text for errors
+  errorText: '#D32F2F', // Dark red text for errors
   backgroundCard: '#1E2024',
   backgroundSubtle: 'rgba(255, 255, 255, 0.05)',
   primarySubtle: 'rgba(153, 69, 255, 0.1)',

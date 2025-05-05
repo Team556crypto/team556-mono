@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native'
 export const genericStyles = StyleSheet.create({
   input: {
     height: 50,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.backgroundDarker,
     color: Colors.text,
     paddingHorizontal: 16,
     borderRadius: 8,

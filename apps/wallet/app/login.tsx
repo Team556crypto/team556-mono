@@ -16,11 +16,9 @@ import { useBreakpoint } from '@/hooks/useBreakpoint'
 import {
   LandingHeader,
   HeroSection,
-  StatsSection,
   FeaturesSection,
   HowItWorksSection,
   CtaSection,
-  TestimonialsSection,
   FooterSection,
   BackgroundEffects,
   ScrollToTop
@@ -69,11 +67,9 @@ const WebLandingPage = () => {
       <ScrollView style={styles.webScrollView} contentContainerStyle={styles.webScrollViewContent}>
         <LandingHeader router={router} colors={Colors} />
         <HeroSection colors={Colors} />
-        <StatsSection colors={Colors} />
+        <CtaSection router={router} colors={Colors} />
         <FeaturesSection colors={Colors} />
         <HowItWorksSection colors={Colors} />
-        <TestimonialsSection colors={Colors} />
-        <CtaSection router={router} colors={Colors} />
         <FooterSection colors={Colors} />
       </ScrollView>
       <ScrollToTop />

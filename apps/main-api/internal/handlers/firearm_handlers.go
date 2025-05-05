@@ -10,6 +10,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v5/pgconn" // Import for pgError
 	"gorm.io/gorm"
 
 	"github.com/team556-mono/server/internal/config"
@@ -22,7 +23,6 @@ import (
 // CreateFirearmRequest defines the structure for creating/updating firearms via API.
 // Uses pointers for optional fields. Expects RFC3339 date string.
 type CreateFirearmRequest struct {
-	OwnerUserID          uint       `json:"owner_user_id"` // Should likely come from auth context, not request body
 	Name                 string     `json:"name" binding:"required"`
 	Type                 string     `json:"type" binding:"required"`
 	SerialNumber         string     `json:"serial_number" binding:"required"`
@@ -413,7 +413,7 @@ func newFirearmResponse(firearm *models.Firearm) FirearmResponse {
 // @Tags firearms
 // @Accept json
 // @Produce json
-// @Param firearm body CreateFirearmRequest true "Firearm details (owner_user_id ignored, taken from auth)"
+// @Param firearm body CreateFirearmRequest true "Firearm details"
 // @Success 201 {object} FirearmResponse
 // @Failure 400 {object} map[string]string "Bad request (e.g., validation, date/price parsing, encryption failure)"
 // @Failure 500 {object} map[string]string "Internal server error (e.g., database failure)"
@@ -426,20 +426,16 @@ func CreateFirearmHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON: " + err.Error()})
 		}
 
-		// TODO: Get actual UserID from auth middleware context
-		// For now, using the one from request or a default if needed
-		// Example: userID := c.Locals("userID").(uint)
-		userID := req.OwnerUserID // Replace with auth context later
-		if userID == 0 {
-			// Handle missing user ID appropriately (maybe require it from auth only)
-			// return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "User ID missing from authentication context"})
-			userID = 1 // Temporary default for testing if not from auth
-			log.Println("Warning: UserID not found in context, using default/request value.")
+		// Get UserID from auth middleware context
+		userID, ok := c.Locals("userID").(uint)
+		if !ok || userID == 0 {
+			log.Println("Error: UserID not found or invalid in context")
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized: User ID missing or invalid"})
 		}
 
 		// 2. Map DTO to Model (populate Raw fields, leave encrypted fields blank initially)
 		firearm := models.Firearm{
-			UserID:               userID,
+			UserID:               userID, // Use userID from context
 			Name:                 req.Name,
 			Type:                 req.Type,
 			SerialNumber:         req.SerialNumber,
@@ -447,7 +443,7 @@ func CreateFirearmHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 			ModelName:            derefStringPtr(req.ModelName),    // Dereference DTO *string -> model string
 			Caliber:              derefStringPtr(req.Caliber),
 			BallisticPerformance: derefStringPtr(req.BallisticPerformance), // Dereference DTO *string -> model string
-			// Populate Raw fields, Encrypted fields are nil for now
+			// Populate Raw fields for date/price/others based on request
 			AcquisitionDateRaw: req.AcquisitionDateRaw, // Assign directly from DTO
 			PurchasePriceRaw:   nil,                    // Initialize to nil, handle below
 			ImageRaw:           derefStringPtr(req.ImageRaw),
@@ -477,7 +473,16 @@ func CreateFirearmHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 		result := db.Create(&firearm)
 		if result.Error != nil {
 			log.Printf("Database error during firearm creation: %v", result.Error)
-			// TODO: Check for unique constraint violation on SerialNumber
+			// Check for unique constraint violation (PostgreSQL specific code '23505')
+			var pgErr *pgconn.PgError
+			if errors.As(result.Error, &pgErr) && pgErr.Code == "23505" {
+				// You might want to check pgErr.ConstraintName if needed, but checking the code is often enough
+				log.Printf("Unique constraint violation on serial number: %s", firearm.SerialNumber)
+				return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+					"error": fmt.Sprintf("Firearm with serial number '%s' already exists.", firearm.SerialNumber),
+				})
+			}
+			// Generic error if it's not a unique constraint violation we handled
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to save firearm"})
 		}
 
@@ -501,7 +506,7 @@ func CreateFirearmHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 // @Accept json
 // @Produce json
 // @Param id path int true "Firearm ID"
-// @Param firearm body CreateFirearmRequest true "Updated firearm details (owner_user_id ignored)"
+// @Param firearm body CreateFirearmRequest true "Updated firearm details"
 // @Success 200 {object} FirearmResponse
 // @Failure 400 {object} map[string]string "Bad request (e.g., validation, ID format, encryption failure)"
 // @Failure 404 {object} map[string]string "Firearm not found"
@@ -515,15 +520,23 @@ func UpdateFirearmHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID format"})
 		}
 
-		// 2. Find existing record
+		// Get UserID from auth context
+		userID, ok := c.Locals("userID").(uint)
+		if !ok || userID == 0 {
+			log.Println("Error: UserID not found or invalid in context during update")
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized: User ID missing or invalid"})
+		}
+
+		// 2. Find existing firearm *for the authenticated user*
 		var existingFirearm models.Firearm
-		// TODO: Add user ID check from auth context: db.Where("user_id = ?", userID).First(&existingFirearm, id)
-		if err := db.First(&existingFirearm, id).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Firearm not found"})
+		result := db.Where("user_id = ?", userID).First(&existingFirearm, id)
+		if result.Error != nil {
+			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+				// More specific error: Not found OR not authorized
+				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": fmt.Sprintf("Firearm with ID %d not found or does not belong to user", id)})
 			}
-			log.Printf("Database error finding firearm ID %d for update: %v", id, err)
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to find firearm for update"})
+			log.Printf("Database error finding firearm ID %d for update: %v", id, result.Error)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database error finding firearm"})
 		}
 
 		// 3. Parse Request Body into DTO
@@ -572,7 +585,7 @@ func UpdateFirearmHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 		}
 
 		// 6. Save updated record (GORM automatically updates UpdatedAt)
-		result := db.Save(&existingFirearm)
+		result = db.Save(&existingFirearm)
 		if result.Error != nil {
 			log.Printf("Database error updating firearm ID %d: %v", id, result.Error)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update firearm"})

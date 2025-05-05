@@ -4,7 +4,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { Button, Text } from '@repo/ui';
 import { Colors } from '@/constants/Colors';
 import LogoSvg from '@/assets/images/logo.svg';
-// import DashboardMockup from '../DashboardMockup'; // Commented out - Module not found
+import DashboardMockup from './DashboardMockup'; // Import the DashboardMockup component
 
 interface HeroSectionProps {
   onCreateWallet?: () => void;
@@ -164,7 +164,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
           {Platform.OS === 'web' && (
             <View style={styles.rightColumn}>
               <View style={styles.mockupContainer}>
-                {/* <DashboardMockup /> */}{/* Commented out - Module not found */}
+                <DashboardMockup />
               </View>
             </View>
           )}

@@ -13,11 +13,11 @@ import (
 
 func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *email.Client) {
 	// Middleware
-	app.Use(logger.New()) // Request logging
+	app.Use(logger.New())
 
 	// CORS Middleware
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*", // Reverted back to wildcard for now
+		AllowOrigins: "*",
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 		AllowMethods: "GET, POST, HEAD, PUT, DELETE, PATCH, OPTIONS",
 	}))
@@ -25,13 +25,13 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	api := app.Group("/api")
 
 	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(db, cfg.JWTSecret, emailClient) // Pass emailClient
-	swapHandler := handlers.NewSwapHandler(db, cfg)                        // Instantiate Swap Handler
+	authHandler := handlers.NewAuthHandler(db, cfg.JWTSecret, emailClient)
+	swapHandler := handlers.NewSwapHandler(db, cfg)
 
 	// Groups Routes
 	auth := api.Group("/auth")
 	wallet := api.Group("/wallet")
-	swap := api.Group("/swap", middleware.AuthMiddleware(cfg.JWTSecret)) // Create Swap Group
+	swap := api.Group("/swap", middleware.AuthMiddleware(cfg.JWTSecret))
 	firearms := api.Group("/firearms")
 
 	// Auth Routes
@@ -40,22 +40,22 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	auth.Post("/logout", authHandler.Logout)
 	auth.Get("/me", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.GetMe)
 	auth.Post("/verify-email", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.VerifyEmail)
-	auth.Post("/resend-verification", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.ResendVerificationEmail) // New route
+	auth.Post("/resend-verification", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.ResendVerificationEmail)
 
 	// Wallet Routes
-	wallet.Use(middleware.AuthMiddleware(cfg.JWTSecret)) // Protect all wallet routes
+	wallet.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 	wallet.Post("/create", handlers.CreateWalletHandler(db, cfg))
 	wallet.Get("/balance", handlers.GetWalletBalanceHandler(db, cfg))
 	wallet.Get("/balance/team", handlers.GetWalletTeamTokenBalanceHandler(db, cfg))
-	wallet.Post("/presale/check", handlers.CheckPresaleCode(db))               // Correct handler name
-	wallet.Post("/presale/redeem", handlers.RedeemPresaleCode(db))             // Correct handler name
-	wallet.Post("/sign-transaction", handlers.SignTransactionHandler(db, cfg)) // Add back cfg argument
-	wallet.Post("/recovery-phrase", handlers.GetRecoveryPhraseHandler(db))     // View recovery phrase
+	wallet.Post("/presale/check", handlers.CheckPresaleCode(db))
+	wallet.Post("/presale/redeem", handlers.RedeemPresaleCode(db))
+	wallet.Post("/sign-transaction", handlers.SignTransactionHandler(db, cfg))
+	wallet.Post("/recovery-phrase", handlers.GetRecoveryPhraseHandler(db))
 
 	// Swap Routes
-	swap.Post("/quote", swapHandler.HandleGetSwapQuote)                        // Route for getting quote
-	swap.Post("/execute", swapHandler.HandleExecuteSwap)                       // Route for executing swap
-	swap.Post("/create-token-accounts", swapHandler.HandleCreateTokenAccounts) // Route for submitting signed token account tx
+	swap.Post("/quote", swapHandler.HandleGetSwapQuote)
+	swap.Post("/execute", swapHandler.HandleExecuteSwap)
+	swap.Post("/create-token-accounts", swapHandler.HandleCreateTokenAccounts)
 
 	// --- Firearm Routes ---
 	firearms.Post("/", handlers.CreateFirearmHandler(db))
@@ -63,7 +63,4 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	firearms.Get("/:id", handlers.GetFirearmByIDHandler(db))
 	firearms.Put("/:id", handlers.UpdateFirearmHandler(db))
 	firearms.Delete("/:id", handlers.DeleteFirearmHandler(db))
-
-	// Swagger UI
-	// (Ensure swagger setup is correct if you have it)
 }

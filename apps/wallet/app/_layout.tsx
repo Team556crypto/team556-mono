@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.background // Use app's background color
+    backgroundColor: Colors.backgroundDarkest // Use app's background color
   },
   container: {
     flex: 1

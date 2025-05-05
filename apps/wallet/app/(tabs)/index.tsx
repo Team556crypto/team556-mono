@@ -18,14 +18,78 @@ import { formatWalletAddress, formatBalance, formatPrice } from '@/utils/formatt
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ScreenLayout } from '@/components/ScreenLayout'
 
-const ComingSoonDrawerContent: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+// Define TokenOption type locally
+type TokenOption = 'SOL' | 'TEAM'
+
+const AssetDetailsDrawerContent: React.FC<{
+  assetName: string
+  balance: number | null
+  ticker: string
+  value: number | null
+  IconComponent: React.FC<any>
+  walletAddress: string | undefined
+  onReceivePress: () => void
+  onSendPress: () => void
+  onSwapPress: () => void
+  onClose: () => void
+}> = ({
+  assetName,
+  balance,
+  ticker,
+  value,
+  IconComponent,
+  walletAddress,
+  onReceivePress,
+  onSendPress,
+  onSwapPress,
+  onClose
+}) => {
   return (
-    <View style={{ padding: 20, alignItems: 'center', gap: 15 }}>
-      <Text preset='h4'>Feature Coming Soon!</Text>
-      <Text preset='paragraph' style={{ textAlign: 'center' }}>
-        The ability to change your password directly within the app is under development.
-      </Text>
-      <Button title='Close' onPress={onClose} variant='secondary' />
+    <View style={styles.drawerContentContainer}>
+      <View style={styles.drawerHeader}>
+        <View style={styles.drawerIconContainer}>
+          <IconComponent width={32} height={32} />
+        </View>
+        <Text preset='h4'>{assetName} Details</Text>
+      </View>
+
+      <View style={styles.drawerDetailRow}>
+        <Text style={styles.drawerLabel}>Balance:</Text>
+        <Text style={styles.drawerValue}>
+          {formatBalance(balance)} {ticker}
+        </Text>
+      </View>
+
+      <View style={styles.drawerDetailRow}>
+        <Text style={styles.drawerLabel}>Value:</Text>
+        <Text style={styles.drawerValue}>{formatPrice(value)}</Text>
+      </View>
+
+      {/* Drawer Actions */}
+      <View style={styles.drawerActionsRow}>
+        <View style={styles.actionButtonColumn}>
+          <TouchableOpacity style={styles.circleButton} onPress={onReceivePress}>
+            <Ionicons name='arrow-down' size={24} color='white' />
+          </TouchableOpacity>
+          <Text style={styles.buttonLabel}>Receive</Text>
+        </View>
+
+        <View style={styles.actionButtonColumn}>
+          <TouchableOpacity style={styles.circleButton} onPress={onSendPress}>
+            <Ionicons name='arrow-up' size={24} color='white' />
+          </TouchableOpacity>
+          <Text style={styles.buttonLabel}>Send</Text>
+        </View>
+
+        <View style={styles.actionButtonColumn}>
+          <TouchableOpacity style={styles.circleButton} onPress={onSwapPress}>
+            <Ionicons name='swap-horizontal' size={24} color='white' />
+          </TouchableOpacity>
+          <Text style={styles.buttonLabel}>Swap</Text>
+        </View>
+      </View>
+
+      <Button title='Close' onPress={onClose} variant='secondary' style={styles.drawerCloseButton} />
     </View>
   )
 }
@@ -109,25 +173,72 @@ export default function HomeScreen() {
     }
   }
 
-  const handleSendPress = () => {
+  const handleSendPress = (initialToken?: TokenOption) => {
     openDrawer(
       <SendDrawerContent
         solBalance={solBalance}
         teamBalance={teamBalance}
         fetchSolBalance={fetchSolBalance}
         fetchTeamBalance={fetchTeamBalance}
+        initialSelectedToken={initialToken}
         onClose={closeDrawer}
       />
     )
   }
 
-  const handleSwapPress = () => {
+  const handleSwapPress = (initialToken?: TokenOption) => {
     openDrawer(
       <SwapDrawerContent
         solBalance={solBalance}
         teamBalance={teamBalance}
         fetchSolBalance={fetchSolBalance}
         fetchTeamBalance={fetchTeamBalance}
+        initialInputToken={initialToken}
+        onClose={closeDrawer}
+      />
+    )
+  }
+
+  const handleAssetPress = (
+    assetName: string,
+    balance: number | null,
+    ticker: string,
+    value: number | null,
+    IconComponent: React.FC<any>
+  ) => {
+    const receivePressHandler = () => {
+      if (walletAddress) {
+        // Potentially close this drawer *before* opening the receive one?
+        // closeDrawer(); // Optional: Close asset details before opening receive
+        handleReceivePress() // Call the main handler
+      } else {
+        showToast('Wallet address not found.', 'error')
+      }
+    }
+
+    const sendPressHandler = () => {
+      // Potentially close this drawer before opening send?
+      // closeDrawer();
+      handleSendPress(ticker as TokenOption) // Call main handler with preselected token
+    }
+
+    const swapPressHandler = () => {
+      // Potentially close this drawer before opening swap?
+      // closeDrawer();
+      handleSwapPress(ticker as TokenOption) // Call main handler with preselected token
+    }
+
+    openDrawer(
+      <AssetDetailsDrawerContent
+        assetName={assetName}
+        balance={balance}
+        ticker={ticker}
+        value={value}
+        IconComponent={IconComponent}
+        walletAddress={walletAddress}
+        onReceivePress={receivePressHandler}
+        onSendPress={sendPressHandler}
+        onSwapPress={swapPressHandler}
         onClose={closeDrawer}
       />
     )
@@ -156,79 +267,63 @@ export default function HomeScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Main Balance Card */}
-        <View style={styles.mainBalanceCard}>
-          <Text style={styles.balanceLabel}>Total Balance</Text>
-          <Text style={styles.balanceAmount}>{totalValue ? formatPrice(totalValue) : '--'}</Text>
-
-          <View style={styles.actionsRow}>
-            <TouchableOpacity style={styles.actionButton} onPress={handleReceivePress}>
-              <View style={styles.actionIconContainer}>
-                <Ionicons name='arrow-down-outline' size={20} color={Colors.text} />
-              </View>
-              <Text style={styles.actionText}>Receive</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionButton} onPress={handleSendPress}>
-              <View style={styles.actionIconContainer}>
-                <Ionicons name='arrow-up-outline' size={20} color={Colors.text} />
-              </View>
-              <Text style={styles.actionText}>Send</Text>
-            </TouchableOpacity>
-
-            {/* Only show Swap if presale_type is 1 */}
-            <TouchableOpacity style={styles.actionButton} onPress={handleSwapPress}>
-              <View style={styles.actionIconContainer}>
-                <Ionicons name='swap-horizontal-outline' size={20} color={Colors.text} />
-              </View>
-              <Text style={styles.actionText}>Swap</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
         {/* Assets Section */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Assets</Text>
         </View>
 
         {/* SOL Token */}
-        <TouchableOpacity style={styles.assetItem}>
+        <TouchableOpacity
+          style={styles.assetItem}
+          onPress={() => handleAssetPress('Solana', solBalance, 'SOL', solValue, SolanaIcon)}
+        >
+          {/* Left side: Icon and Token Info */}
           <View style={styles.assetLeft}>
             <View style={styles.assetIconContainer}>
               <SolanaIcon width={24} height={24} />
             </View>
             <View>
               <Text style={styles.assetName}>Solana</Text>
-              <Text style={styles.assetTicker}>SOL</Text>
+              <View style={styles.tickerAndChange}>
+                <Text style={styles.assetTicker}>SOL</Text>
+              </View>
             </View>
           </View>
 
+          {/* Right side: Balance Amount and Value */}
           <View style={styles.assetRight}>
-            <Text style={styles.assetAmount}>{solBalance ? formatBalance(solBalance) : '--'} SOL</Text>
-            <Text style={styles.assetValue}>{solValue ? formatPrice(solValue) : '--'}</Text>
+            <Text style={styles.assetAmount}>{formatBalance(solBalance)} SOL</Text>
+            <Text style={styles.assetValue}>{formatPrice(solValue)}</Text>
           </View>
         </TouchableOpacity>
 
         {/* TEAM Token */}
-        <TouchableOpacity style={styles.assetItem}>
+        <TouchableOpacity
+          style={styles.assetItem}
+          onPress={() => handleAssetPress('Team', teamBalance, 'TEAM', teamValue, TeamIcon)}
+        >
+          {/* Left side: Icon and Token Info */}
           <View style={styles.assetLeft}>
-            <View style={[styles.assetIconContainer, { backgroundColor: Colors.secondarySubtle }]}>
-              <TeamIcon width={24} height={24} />
+            <View style={styles.assetIconContainer}>
+              <TeamIcon width={34} height={34} />
             </View>
             <View>
               <Text style={styles.assetName}>Team556</Text>
-              <Text style={styles.assetTicker}>TEAM</Text>
+              <View style={styles.tickerAndChange}>
+                <Text style={styles.assetTicker}>TEAM</Text>
+              </View>
             </View>
           </View>
 
+          {/* Right side: Balance Amount and Value */}
           <View style={styles.assetRight}>
-            <Text style={styles.assetAmount}>{teamBalance ? formatBalance(teamBalance) : '--'} TEAM</Text>
-            <Text style={styles.assetValue}>{teamValue ? formatPrice(teamValue) : '--'}</Text>
+            <Text style={styles.assetAmount}>{formatBalance(teamBalance)} TEAM</Text>
+            <Text style={styles.assetValue}>{formatPrice(teamValue)}</Text>
           </View>
         </TouchableOpacity>
 
         {/* Recent Activity Section */}
-        <View style={[styles.sectionHeader, { marginTop: 12 }]}>
+        <View style={[styles.sectionHeader, { marginTop: 20 }]}>
           <Text style={styles.sectionTitle}>Recent Activity</Text>
           <TouchableOpacity>
             <Text style={styles.seeAllText}>See all</Text>
@@ -236,8 +331,11 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.emptyActivity}>
-          <Ionicons name='time-outline' size={24} color={Colors.textTertiary} />
-          <Text style={styles.emptyActivityText}>No recent transactions</Text>
+          {/* <Ionicons name='time-outline' size={24} color={Colors.textTertiary} />
+          <Text style={styles.emptyActivityText}>No recent transactions</Text> */}
+          <Text style={styles.emptyActivityText} preset='h4'>
+            Coming Soon
+          </Text>
         </View>
       </ScrollView>
     </ScreenLayout>
@@ -315,9 +413,10 @@ const styles = StyleSheet.create({
     marginTop: 8
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.text
+    fontSize: 20,
+    fontWeight: '800',
+    color: Colors.text,
+    opacity: 0.7
   },
   seeAllText: {
     fontSize: 14,
@@ -340,7 +439,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.primarySubtle, // Use subtle primary for icon bg
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12
@@ -353,6 +451,16 @@ const styles = StyleSheet.create({
   assetTicker: {
     fontSize: 12,
     color: Colors.textSecondary
+  },
+  tickerAndChange: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  assetPriceChange: {
+    color: Colors.success, // Using the success color from Colors constants
+    fontWeight: '600',
+    fontSize: 14
   },
   assetRight: {
     alignItems: 'flex-end'
@@ -369,7 +477,7 @@ const styles = StyleSheet.create({
   },
   emptyActivity: {
     height: 120,
-    backgroundColor: Colors.cardBackgroundSubtle, // Use defined subtle card background
+    backgroundColor: Colors.backgroundDark, // Use defined subtle card background
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center'
@@ -377,5 +485,79 @@ const styles = StyleSheet.create({
   emptyActivityText: {
     color: Colors.textTertiary, // Use tertiary text color
     marginTop: 8
+  },
+  drawerContentContainer: {
+    padding: 20,
+    alignItems: 'stretch', // Stretch items for better row layout
+    gap: 20 // Increased gap
+  },
+  drawerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
+    marginBottom: 10 // Add space below header
+  },
+  drawerIconContainer: {
+    width: 40, // Consistent sizing
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.backgroundSubtle, // Use subtle background
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  drawerDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  drawerLabel: {
+    fontSize: 16,
+    color: Colors.textSecondary
+  },
+  drawerValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text
+  },
+  drawerActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between', // Evenly distribute with space-between
+    marginTop: 15,
+    gap: 12 // Exactly 8px gap between buttons
+  },
+  drawerActionButton: {
+    flex: 1 // Make buttons take equal space
+  },
+  drawerCloseButton: {
+    marginTop: 16
+  },
+  actionButtonColumn: {
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 10,
+    backgroundColor: Colors.background,
+    padding: 16,
+    flex: 1, // Take 1/3 of available space (minus the gaps)
+    maxWidth: '32%' // Ensure buttons don't get too wide
+  },
+  squareBackground: {
+    width: 70,
+    height: 70,
+    backgroundColor: Colors.backgroundDarker,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  circleButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: Colors.tint,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  buttonLabel: {
+    color: Colors.text,
+    fontSize: 14
   }
 })

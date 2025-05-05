@@ -1,15 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react'
-import { View, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from 'react-native'
+import React, { useState, useMemo } from 'react'
+import { View, StyleSheet, ActivityIndicator, Alert } from 'react-native'
 import { Text, Button, Input } from '@team556/ui'
-import {
-  Connection,
-  PublicKey,
-  SystemProgram,
-  Transaction,
-  LAMPORTS_PER_SOL,
-  Keypair,
-  sendAndConfirmTransaction
-} from '@solana/web3.js'
+import { Connection, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } from '@solana/web3.js'
 import {
   getAssociatedTokenAddress,
   createTransferInstruction as createSplTransferInstruction,
@@ -19,15 +11,13 @@ import { Buffer } from 'buffer'
 import { Colors } from '@/constants/Colors'
 import { useAuthStore } from '@/store/authStore'
 import { useToastStore } from '@/store/toastStore'
-import { Ionicons } from '@expo/vector-icons'
 import { genericStyles } from '@/constants/GenericStyles'
-import { SecureStoreUtils } from '@/utils/secureStore'
 import { signTransaction } from '@/services/api'
 
 // TODO: Get this from env vars
 const SOLANA_RPC_URL = process.env.EXPO_PUBLIC_GLOBAL__MAINNET_RPC_URL
 
-const LAMPORTS_PER_SOL_DECIMALS = 9;
+const LAMPORTS_PER_SOL_DECIMALS = 9
 
 type SendStatus = 'idle' | 'sending' | 'success' | 'error'
 
@@ -38,6 +28,7 @@ type SendDrawerProps = {
   teamBalance: number | null
   fetchSolBalance: () => Promise<void>
   fetchTeamBalance: () => Promise<void>
+  initialSelectedToken?: 'SOL' | 'TEAM'
 }
 
 type TokenOption = 'SOL' | 'TEAM'
@@ -48,9 +39,10 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
   solBalance,
   teamBalance,
   fetchSolBalance,
-  fetchTeamBalance
+  fetchTeamBalance,
+  initialSelectedToken
 }: SendDrawerProps) => {
-  const [selectedToken, setSelectedToken] = useState<TokenOption>('SOL')
+  const [selectedToken, setSelectedToken] = useState<TokenOption>(initialSelectedToken ?? 'SOL')
   const [recipientAddress, setRecipientAddress] = useState('')
   const [amount, setAmount] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -67,21 +59,21 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
 
   // Memoize TEAM token decimals from environment variable
   const teamMintDecimals = useMemo(() => {
-    const decimalsRaw = process.env.EXPO_PUBLIC_GLOBAL__MINT_DECIMALS;
+    const decimalsRaw = process.env.EXPO_PUBLIC_GLOBAL__MINT_DECIMALS
     if (decimalsRaw === undefined) {
-      console.error("EXPO_PUBLIC_GLOBAL__MINT_DECIMALS environment variable is not set!");
+      console.error('EXPO_PUBLIC_GLOBAL__MINT_DECIMALS environment variable is not set!')
       // Optionally show an alert here or disable TEAM token functionality
       // Alert.alert("Config Error", "TEAM Token decimal configuration is missing.");
-      return null; // Indicate missing configuration
+      return null // Indicate missing configuration
     }
-    const decimals = parseInt(decimalsRaw, 10);
+    const decimals = parseInt(decimalsRaw, 10)
     if (isNaN(decimals)) {
-      console.error("Invalid EXPO_PUBLIC_GLOBAL__MINT_DECIMALS environment variable!");
+      console.error('Invalid EXPO_PUBLIC_GLOBAL__MINT_DECIMALS environment variable!')
       // Alert.alert("Config Error", "Invalid TEAM Token decimal configuration.");
-      return null; // Indicate invalid configuration
+      return null // Indicate invalid configuration
     }
-    return decimals;
-  }, []);
+    return decimals
+  }, [])
 
   const availableBalance = selectedToken === 'SOL' ? solBalance : teamBalance
 
@@ -163,34 +155,31 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
         )
         console.log(`Prepared SOL transfer of ${numericAmount} SOL`)
       } else {
-        const teamMintAddress = process.env.EXPO_PUBLIC_GLOBAL__MINT_ADDRESS;
+        const teamMintAddress = process.env.EXPO_PUBLIC_GLOBAL__MINT_ADDRESS
         if (!teamMintAddress) {
-          console.error("EXPO_PUBLIC_GLOBAL__MINT_ADDRESS environment variable is not set!");
+          console.error('EXPO_PUBLIC_GLOBAL__MINT_ADDRESS environment variable is not set!')
           Alert.alert(
-            "Configuration Error",
-            "The application is missing essential configuration. Cannot proceed with the transaction."
-          );
-          setSendStatus('idle');
-          return; // Stop execution if the mint address is missing
+            'Configuration Error',
+            'The application is missing essential configuration. Cannot proceed with the transaction.'
+          )
+          setSendStatus('idle')
+          return // Stop execution if the mint address is missing
         }
-        const teamMintPublicKey = new PublicKey(teamMintAddress); // Use the validated variable
+        const teamMintPublicKey = new PublicKey(teamMintAddress) // Use the validated variable
 
         // Ensure teamMintDecimals were loaded correctly before proceeding
         if (teamMintDecimals === null) {
-          console.error("Cannot perform TEAM transfer due to missing/invalid decimal configuration.");
-          Alert.alert(
-            "Configuration Error",
-            "Token decimal configuration is invalid. Cannot proceed."
-          );
-          setSendStatus('idle');
-          return;
+          console.error('Cannot perform TEAM transfer due to missing/invalid decimal configuration.')
+          Alert.alert('Configuration Error', 'Token decimal configuration is invalid. Cannot proceed.')
+          setSendStatus('idle')
+          return
         }
 
         const amountInSmallestUnit = BigInt(
           Math.round(numericAmount * 10 ** teamMintDecimals) // Use parsed decimal value
-        );
-        const senderTokenAccountAddress = await getAssociatedTokenAddress(teamMintPublicKey, senderPublicKey);
-        const recipientTokenAccountAddress = await getAssociatedTokenAddress(teamMintPublicKey, recipientPublicKey);
+        )
+        const senderTokenAccountAddress = await getAssociatedTokenAddress(teamMintPublicKey, senderPublicKey)
+        const recipientTokenAccountAddress = await getAssociatedTokenAddress(teamMintPublicKey, recipientPublicKey)
 
         console.log('Sender ATA:', senderTokenAccountAddress.toBase58())
         console.log('Recipient ATA:', recipientTokenAccountAddress.toBase58())
@@ -297,34 +286,15 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
 
       {/* Custom Segmented Control */}
       {step !== 'confirm' && (
-        <>
-          <View style={styles.tokenSelectionContainer}>
-            <View style={styles.segmentContainer}>
-              <TouchableOpacity
-                style={[styles.segmentButton, selectedToken === 'SOL' && styles.segmentButtonActive]}
-                onPress={() => setSelectedToken('SOL')}
-              >
-                <Text style={[styles.segmentText, selectedToken === 'SOL' && styles.segmentTextActive]}>SOL</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.segmentButton, selectedToken === 'TEAM' && styles.segmentButtonActive]}
-                onPress={() => setSelectedToken('TEAM')}
-              >
-                <Text style={[styles.segmentText, selectedToken === 'TEAM' && styles.segmentTextActive]}>TEAM</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.balanceContainer}>
-            <Text preset='caption' style={styles.balanceLabel}>
-              Available Balance:
-            </Text>
-            {/* Ensure teamMintDecimals is not null before using */}
-            <Text preset='label' style={styles.balanceAmount}>
-              {availableBalance?.toFixed(selectedToken === 'SOL' ? 4 : (teamMintDecimals ?? 2)) ?? '0.00'} {selectedToken}
-            </Text>
-          </View>
-        </>
+        <View style={styles.balanceContainer}>
+          <Text preset='caption' style={styles.balanceLabel}>
+            Available Balance:
+          </Text>
+          {/* Ensure teamMintDecimals is not null before using */}
+          <Text preset='label' style={styles.balanceAmount}>
+            {availableBalance?.toFixed(selectedToken === 'SOL' ? 4 : (teamMintDecimals ?? 2)) ?? '0.00'} {selectedToken}
+          </Text>
+        </View>
       )}
 
       {step === 'form' && (
@@ -361,7 +331,10 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
                 variant={
                   amount &&
                   availableBalance !== null &&
-                  amount === (availableBalance * 0.25).toFixed(selectedToken === 'SOL' ? LAMPORTS_PER_SOL_DECIMALS : (teamMintDecimals ?? 2))
+                  amount ===
+                    (availableBalance * 0.25).toFixed(
+                      selectedToken === 'SOL' ? LAMPORTS_PER_SOL_DECIMALS : (teamMintDecimals ?? 2)
+                    )
                     ? 'primary'
                     : 'outline'
                 }
@@ -373,7 +346,10 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
                 variant={
                   amount &&
                   availableBalance !== null &&
-                  amount === (availableBalance * 0.5).toFixed(selectedToken === 'SOL' ? LAMPORTS_PER_SOL_DECIMALS : (teamMintDecimals ?? 2))
+                  amount ===
+                    (availableBalance * 0.5).toFixed(
+                      selectedToken === 'SOL' ? LAMPORTS_PER_SOL_DECIMALS : (teamMintDecimals ?? 2)
+                    )
                     ? 'primary'
                     : 'outline'
                 }
@@ -385,7 +361,10 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
                 variant={
                   amount &&
                   availableBalance !== null &&
-                  amount === (availableBalance * 0.75).toFixed(selectedToken === 'SOL' ? LAMPORTS_PER_SOL_DECIMALS : (teamMintDecimals ?? 2))
+                  amount ===
+                    (availableBalance * 0.75).toFixed(
+                      selectedToken === 'SOL' ? LAMPORTS_PER_SOL_DECIMALS : (teamMintDecimals ?? 2)
+                    )
                     ? 'primary'
                     : 'outline'
                 }
@@ -397,7 +376,10 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
                 variant={
                   amount &&
                   availableBalance !== null &&
-                  amount === (availableBalance * 1.0).toFixed(selectedToken === 'SOL' ? LAMPORTS_PER_SOL_DECIMALS : (teamMintDecimals ?? 2))
+                  amount ===
+                    (availableBalance * 1.0).toFixed(
+                      selectedToken === 'SOL' ? LAMPORTS_PER_SOL_DECIMALS : (teamMintDecimals ?? 2)
+                    )
                     ? 'primary'
                     : 'outline'
                 }
@@ -496,7 +478,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 10,
     backgroundColor: Colors.backgroundDark,
     borderRadius: 8
   },
@@ -513,14 +494,12 @@ const styles = StyleSheet.create({
     gap: 10
   },
   actionButtonsContainer: {
-    borderTopWidth: 1,
-    borderTopColor: Colors.backgroundDark, // Add a separator line
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10
+    gap: 10,
+    marginTop: 'auto',
+    paddingTop: 16
   },
   button: {
-    flex: 1 // Make buttons share space
+    flex: 1
   },
   errorText: {
     color: Colors.error,
@@ -543,21 +522,21 @@ const styles = StyleSheet.create({
   percentageButtonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8 // Add space above the error message
+    marginBottom: 8
   },
   percentageButton: {
-    flex: 1, // Make buttons share space
-    marginHorizontal: 2, // Add small horizontal gap between buttons
-    paddingVertical: 8, // Adjust vertical padding for smaller buttons
-    height: 'auto', // Let height be determined by content
-    minHeight: 32 // Ensure a minimum tap area
+    flex: 1,
+    marginHorizontal: 2,
+    paddingVertical: 8,
+    height: 'auto',
+    minHeight: 32
   },
   // Styles for custom Segmented Control
   segmentContainer: {
     flexDirection: 'row',
     backgroundColor: Colors.backgroundDark,
     borderRadius: 12,
-    overflow: 'hidden', // Ensures children adhere to border radius
+    overflow: 'hidden',
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -572,15 +551,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundDarker
   },
   segmentButtonActive: {
-    backgroundColor: Colors.tint // Active background color
+    backgroundColor: Colors.tint
   },
   segmentText: {
-    color: Colors.icon, // Use icon color for inactive text
+    color: Colors.icon,
     fontSize: 14,
     fontWeight: '600'
   },
   segmentTextActive: {
-    color: Colors.tabIconSelected // Use tabIconSelected for white
+    color: Colors.tabIconSelected
   },
   modalActions: {
     flexDirection: 'row',

@@ -58,9 +58,11 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	swap.Post("/create-token-accounts", swapHandler.HandleCreateTokenAccounts)
 
 	// --- Firearm Routes ---
-	firearms.Post("/", handlers.CreateFirearmHandler(db))
-	firearms.Get("/", handlers.GetFirearmsHandler(db))
-	firearms.Get("/:id", handlers.GetFirearmByIDHandler(db))
-	firearms.Put("/:id", handlers.UpdateFirearmHandler(db))
-	firearms.Delete("/:id", handlers.DeleteFirearmHandler(db))
+	firearms.Post("/", handlers.CreateFirearmHandler(db, cfg))
+	firearms.Get("/", handlers.GetFirearmsHandler(db, cfg))
+	firearms.Get("/:id", handlers.GetFirearmByIDHandler(db, cfg))
+	firearms.Put("/:id", handlers.UpdateFirearmHandler(db, cfg))
+	firearms.Delete("/:id", handlers.DeleteFirearmHandler(db, cfg)) 
+
+	// --- Add other route groups here ---
 }

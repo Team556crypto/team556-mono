@@ -14,6 +14,7 @@ type Config struct {
 	JWTSecret    string
 	SolanaAPIURL string
 	ResendAPIKey string
+	ArmorySecret string
 }
 
 // LoadConfig loads environment variables from the .env file at the project root.
@@ -37,6 +38,7 @@ func LoadConfig() (*Config, error) {
 		JWTSecret:    os.Getenv("MAIN_API__JWT_SECRET"),
 		SolanaAPIURL: os.Getenv("MAIN_API__SOLANA_API_URL"),
 		ResendAPIKey: os.Getenv("GLOBAL__RESEND_API_KEY"),
+		ArmorySecret: os.Getenv("MAIN_API__ARMORY_SECRET"),
 	}
 
 	if cfg.DatabaseURL == "" {
@@ -47,6 +49,12 @@ func LoadConfig() (*Config, error) {
 	}
 	if cfg.SolanaAPIURL == "" {
 		log.Fatal("Error: MAIN_API__SOLANA_API_URL environment variable not set.")
+	}
+	if cfg.ArmorySecret == "" {
+		log.Println("CRITICAL WARNING: MAIN_API__ARMORY_SECRET environment variable not set. Firearm data encryption/decryption will fail.")
+		// Decide if the application should start without the secret.
+		// For security, it might be better to return an error:
+		// return nil, fmt.Errorf("MAIN_API__ARMORY_SECRET environment variable is required for firearm data encryption")
 	}
 
 	return cfg, nil

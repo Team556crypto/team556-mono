@@ -384,8 +384,6 @@ export default function SettingsScreen() {
     openDrawer(<ViewRecoveryPhraseDrawerContent onClose={closeDrawer} />)
   }
 
-  const walletAddress = user?.wallets && user.wallets.length > 0 ? user.wallets[0].address : 'No wallet linked'
-
   return (
     <ScreenLayout title='Settings' headerIcon={<Ionicons name='settings' size={24} color={Colors.primary} />}>
       {user ? (
@@ -440,7 +438,7 @@ export default function SettingsScreen() {
                 onPress={handleChangePasswordPress} // <--- ADD THIS onPress PROP
               >
                 <View style={styles.menuItemIcon}>
-                  <Ionicons name='lock-closed-outline' size={22} color={Colors.text} />
+                  <Ionicons name='lock-closed-outline' size={22} color={Colors.primary} />
                 </View>
                 <View style={styles.menuItemContent}>
                   <Text preset='label'>Change Password</Text>
@@ -451,7 +449,7 @@ export default function SettingsScreen() {
 
               <TouchableOpacity style={styles.menuItem} onPress={handleViewRecoveryPhrasePress}>
                 <View style={styles.menuItemIcon}>
-                  <Ionicons name='shield-checkmark-outline' size={22} color={Colors.text} />
+                  <Ionicons name='shield-checkmark-outline' size={22} color={Colors.primary} />
                 </View>
                 <View style={styles.menuItemContent}>
                   <Text preset='label'>View Recovery Phrase</Text>
@@ -469,7 +467,7 @@ export default function SettingsScreen() {
             <View style={styles.cardContent}>
               <TouchableOpacity style={styles.menuItem} onPress={handleHelpPress}>
                 <View style={styles.menuItemIcon}>
-                  <Ionicons name='help-circle-outline' size={22} color={Colors.text} />
+                  <Ionicons name='help-circle-outline' size={22} color={Colors.primary} />
                 </View>
                 <View style={styles.menuItemContent}>
                   <Text preset='label'>Help & Support</Text>
@@ -481,7 +479,7 @@ export default function SettingsScreen() {
 
               <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/terms')}>
                 <View style={styles.menuItemIcon}>
-                  <Ionicons name='document-text-outline' size={22} color={Colors.text} />
+                  <Ionicons name='document-text-outline' size={22} color={Colors.primary} />
                 </View>
                 <View style={styles.menuItemContent}>
                   <Text preset='label'>Terms of Service</Text>
@@ -493,7 +491,7 @@ export default function SettingsScreen() {
 
               <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/privacy')}>
                 <View style={styles.menuItemIcon}>
-                  <Ionicons name='document-text-outline' size={22} color={Colors.text} />
+                  <Ionicons name='document-text-outline' size={22} color={Colors.primary} />
                 </View>
                 <View style={styles.menuItemContent}>
                   <Text preset='label'>Privacy Policy</Text>
@@ -520,7 +518,7 @@ export default function SettingsScreen() {
               {user?.has_redeemed_presale ? (
                 <TouchableOpacity style={styles.menuItem} onPress={handleOpenRedeemDashboard}>
                   <View style={styles.menuItemIcon}>
-                    <Ionicons name='speedometer-outline' size={22} color={Colors.text} />
+                    <Ionicons name='speedometer-outline' size={22} color={Colors.primary} />
                   </View>
                   <View style={styles.menuItemContent}>
                     <Text preset='label'>Presale Dashboard</Text>
@@ -531,7 +529,7 @@ export default function SettingsScreen() {
               ) : (
                 <TouchableOpacity style={styles.menuItem} onPress={handleOpenSheet}>
                   <View style={styles.menuItemIcon}>
-                    <Ionicons name='ticket-outline' size={22} color={Colors.text} />
+                    <Ionicons name='ticket-outline' size={22} color={Colors.primary} />
                   </View>
                   <View style={styles.menuItemContent}>
                     <Text preset='label'>Redeem Presale</Text>
@@ -573,31 +571,25 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   card: {
-    backgroundColor: Colors.backgroundDark, // Match HomeScreen card style
-    borderRadius: 12, // Match HomeScreen card radius
+    backgroundColor: Colors.backgroundDark,
+    borderRadius: 12,
     marginBottom: 16,
     overflow: 'hidden'
-    // Remove shadow to match HomeScreen style
-    // shadowColor: '#000',
-    // shadowOffset: { width: 0, height: 2 },
-    // shadowOpacity: 0.1,
-    // shadowRadius: 4,
-    // elevation: 3
   },
   cardHeader: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.backgroundSubtle // Use a more subtle border
+    borderBottomColor: Colors.backgroundSubtle
   },
   cardContent: {
-    paddingVertical: 8, // Adjusted padding
-    paddingHorizontal: 0 // Let menuItem handle horizontal padding
+    paddingVertical: 8,
+    paddingHorizontal: 0
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16, // Add horizontal padding back here
+    paddingHorizontal: 16,
     paddingVertical: 12
   },
   walletContainer: {
@@ -618,13 +610,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
-    paddingHorizontal: 16 // Add horizontal padding here
+    paddingHorizontal: 16
   },
   menuItemIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20, // Match HomeScreen icon container radius
-    backgroundColor: Colors.primarySubtle, // Match HomeScreen icon bg
+    borderRadius: 20,
+    backgroundColor: Colors.primarySubtle,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16
@@ -673,7 +665,7 @@ const styles = StyleSheet.create({
   },
   phraseContainer: {
     padding: 20,
-    backgroundColor: Colors.backgroundCard, // Use existing color
+    backgroundColor: Colors.backgroundCard,
     borderRadius: 16,
     marginBottom: 20
   },
@@ -687,11 +679,11 @@ const styles = StyleSheet.create({
   wordBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.backgroundDark, // Use existing color
+    backgroundColor: Colors.backgroundDark,
     borderRadius: 4,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    width: '48%', // Set exact width for consistent sizing
+    width: '48%',
     marginBottom: 10
   },
   wordNumber: {
@@ -710,13 +702,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
     marginTop: 20,
-    gap: 10 // Add gap between buttons
+    gap: 10
   },
   flexButton: {
-    flex: 1 // Make buttons share space equally
+    flex: 1
   },
   warningText: {
-    color: Colors.error, // Use existing color instead of warning
+    color: Colors.error,
     textAlign: 'center',
     marginBottom: 15,
     fontWeight: '500'

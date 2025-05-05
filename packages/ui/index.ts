@@ -17,6 +17,8 @@ export * from './src/Drawer'
 export * from './src/StepForm'
 export * from './src/IconSymbol'
 export * from './src/TabBarBackground'
+export * from './src/Badge'
+export * from './src/HorizontalBadgeScroll'
 export * from './src/ThemeContext'
 
 // Export the colors and themes

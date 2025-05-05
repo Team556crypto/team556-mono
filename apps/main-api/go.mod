@@ -10,6 +10,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/lyonnee/key25519 v1.0.0
 	github.com/resend/resend-go/v2 v2.17.0
+	github.com/shopspring/decimal v1.3.1
 	github.com/tyler-smith/go-bip39 v1.1.0
 	golang.org/x/crypto v0.37.0
 	gorm.io/datatypes v1.2.5

@@ -8,7 +8,7 @@
  */
 
 export const Colors = {
-  primary: '#AE6CFE',
+  primary: '#C293FB',
   secondary: '#14F195',
   error: '#ff5252',
   success: '#4caf50',
@@ -23,13 +23,13 @@ export const Colors = {
   errorText: '#D32F2F', // Dark red text for errors
   backgroundCard: '#1E2024',
   backgroundSubtle: 'rgba(255, 255, 255, 0.05)',
-  primarySubtle: 'rgba(153, 69, 255, 0.1)',
+  primarySubtle: 'rgba(194, 147, 251, 0.1)',
   primarySubtleDark: 'rgba(153, 69, 255, 0.2)',
   secondarySubtle: 'rgba(20, 241, 149, 0.1)',
   cardBackground: 'rgba(22, 25, 30, 0.8)',
   cardBackgroundSubtle: 'rgba(22, 25, 30, 0.5)',
   black: '#000',
-  tint: '#AE6CFE',
+  tint: '#C293FB',
   icon: '#9BA1A6',
   tabIconDefault: '#9BA1A6',
   tabIconSelected: '#fff'

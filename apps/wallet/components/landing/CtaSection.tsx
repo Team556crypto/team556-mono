@@ -1,9 +1,10 @@
 import React, { useRef } from 'react';
-import { View, StyleSheet, Platform, Dimensions, Animated, Pressable } from 'react-native';
+import { View, StyleSheet, Platform, Animated, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button, Text } from '@repo/ui';
 import { Colors } from '@/constants/Colors';
-import { Feather, Ionicons } from '@expo/vector-icons'; // Import Feather and Ionicons
+import { Feather, Ionicons } from '@expo/vector-icons';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 
 interface CtaSectionProps {
   onCreateWallet?: () => void;
@@ -20,6 +21,7 @@ const CtaSection: React.FC<CtaSectionProps> = ({
   onLogin,
 }) => {
   const router = useRouter();
+  const { isTabletOrLarger } = useBreakpoint();
 
   // Navigation functions
   const navigateToCreateWallet = () => {
@@ -70,9 +72,9 @@ const CtaSection: React.FC<CtaSectionProps> = ({
 
           <View style={styles.cardContent}>
             {/* Main content - split into two columns on larger screens */}
-            <View style={styles.contentLayout}>
+            <View style={[styles.contentLayout, isTabletOrLarger ? styles.contentLayoutLarge : {}]}>
               {/* Left Column - CTA Content */}
-              <View style={styles.leftColumn}>
+              <View style={[styles.leftColumn, isTabletOrLarger ? styles.leftColumnLarge : {}]}>
                 {/* Badge */}
                 <View style={styles.badgeContainer}>
                   <View style={styles.badgeDot} />
@@ -85,7 +87,8 @@ const CtaSection: React.FC<CtaSectionProps> = ({
                     fontSize: 44, 
                     fontWeight: 'bold', 
                     color: Colors.text, 
-                    textAlign: isLargeScreen ? 'left' : 'center',
+                    // Apply text align conditionally
+                    textAlign: isTabletOrLarger ? 'left' : 'center',
                     marginTop: 16,
                   }}>
                     Protect Your
@@ -97,20 +100,22 @@ const CtaSection: React.FC<CtaSectionProps> = ({
                     borderRadius: 8,
                     borderLeftWidth: 4,
                     borderLeftColor: Colors.secondary,
-                    alignSelf: isLargeScreen ? 'flex-start' : 'center'
+                    // Apply alignSelf conditionally
+                    alignSelf: isTabletOrLarger ? 'flex-start' : 'center'
                   }}>
                     <Text style={{ 
                       fontSize: 44, 
                       fontWeight: 'bold', 
                       color: Colors.text, 
-                      textAlign: isLargeScreen ? 'left' : 'center',
+                      // Apply text align conditionally
+                      textAlign: isTabletOrLarger ? 'left' : 'center',
                     }}>
                       Digital Armory
                     </Text>
                   </View>
                 </View>
 
-                <Text style={styles.description}>
+                <Text style={[styles.description, isTabletOrLarger ? {} : styles.descriptionCentered]}>
                   Join the growing community of firearm owners turning to Team556 for secure, private, blockchain-connected tools. Take control of your collection with confidence—on your terms.
                 </Text>
 
@@ -149,7 +154,7 @@ const CtaSection: React.FC<CtaSectionProps> = ({
               </View>
 
               {/* Right Column - Feature Showcase */}
-              <View style={styles.rightColumn}>
+              <View style={[styles.rightColumn, isTabletOrLarger ? styles.rightColumnLarge : {}]}>
                 <View style={styles.featureShowcaseWrapper}>
                   <View style={styles.featureShowcaseInner}>
                     {/* Feature cards */}
@@ -205,9 +210,6 @@ const CtaSection: React.FC<CtaSectionProps> = ({
   );
 };
 
-const { width } = Dimensions.get('window');
-const isLargeScreen = width >= 768;
-
 const styles = StyleSheet.create({
   container: {
     paddingVertical: 64,
@@ -254,23 +256,41 @@ const styles = StyleSheet.create({
     // For web, we'd include a background pattern
   },
   cardContent: {
-    padding: isLargeScreen ? 64 : 24,
+    padding: 24,
     position: 'relative',
   },
   contentLayout: {
-    flexDirection: isLargeScreen ? 'row' : 'column',
+    // Base styles (mobile: column)
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: isLargeScreen ? 48 : 32,
+    gap: 32,
+  },
+  contentLayoutLarge: {
+    // Tablet+ styles: row
+    flexDirection: 'row',
+    gap: 48,
   },
   leftColumn: {
-    flex: isLargeScreen ? 0.6 : 1,
-    alignItems: isLargeScreen ? 'flex-start' : 'center',
+    // Base styles (mobile: full width, centered)
+    flex: 1,
+    alignItems: 'center',
+  },
+  leftColumnLarge: {
+    // Tablet+ styles: 60% width, left-aligned
+    flex: 0.6,
+    alignItems: 'flex-start',
   },
   rightColumn: {
-    flex: isLargeScreen ? 0.4 : 1,
+    // Base styles (mobile: full width, centered)
+    flex: 1,
     position: 'relative',
     alignItems: 'center',
-    marginTop: isLargeScreen ? 0 : 40,
+    marginTop: 40,
+  },
+  rightColumnLarge: {
+    // Tablet+ styles: 40% width, no top margin
+    flex: 0.4,
+    marginTop: 0,
   },
   badgeContainer: {
     flexDirection: 'row',
@@ -282,7 +302,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(128, 128, 128, 0.3)',
     marginBottom: 24,
-    alignSelf: isLargeScreen ? 'flex-start' : 'center',
+    alignSelf: 'center',
   },
   badgeDot: {
     width: 8,
@@ -301,55 +321,19 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     color: 'rgba(255, 255, 255, 0.7)',
     marginBottom: 32,
-    maxWidth: 560,
-    textAlign: isLargeScreen ? 'left' : 'center',
+    maxWidth: 550,
+    // Base alignment (mobile: center)
+    textAlign: 'center',
   },
-  ctaButtons: {
-    flexDirection: isLargeScreen ? 'row' : 'column',
-    gap: 20,
-    marginBottom: 32,
-    width: isLargeScreen ? 'auto' : '100%',
-  },
-  createVaultButton: {
-    backgroundColor: Colors.primary || '#9945FF',
-    shadowColor: 'rgba(153, 69, 255, 0.3)',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  arrowIcon: {
-    width: 16,
-    height: 16,
-    marginLeft: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  arrowLine: {
-    position: 'absolute',
-    width: 14,
-    height: 2,
-    backgroundColor: Colors.text || '#FFFFFF',
-  },
-  arrowPoint: {
-    position: 'absolute',
-    right: 0,
-    width: 7,
-    height: 7,
-    borderTopWidth: 2,
-    borderRightWidth: 2,
-    borderColor: Colors.text || '#FFFFFF',
-    transform: [{ rotate: '45deg' }],
-  },
-  loginButton: {
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+  descriptionCentered: { // Explicit centered style for mobile
+    textAlign: 'center',
   },
   trustIndicators: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 24,
     alignItems: 'center',
-    justifyContent: isLargeScreen ? 'flex-start' : 'center',
+    justifyContent: 'center',
   },
   trustItem: {
     flexDirection: 'row',
@@ -399,53 +383,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  featureIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-    borderWidth: 1,
-  },
-  primaryIconContainer: {
-    backgroundColor: 'rgba(153, 69, 255, 0.2)',
-    borderColor: 'rgba(153, 69, 255, 0.3)',
-  },
-  blueIconContainer: {
-    backgroundColor: 'rgba(68, 176, 255, 0.2)',
-    borderColor: 'rgba(68, 176, 255, 0.3)',
-  },
-  secondaryIconContainer: {
-    backgroundColor: 'rgba(20, 241, 149, 0.2)',
-    borderColor: 'rgba(20, 241, 149, 0.3)',
-  },
-  ammoIconContainer: {
-    width: 18,
-    height: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  ammoIconBody: {
-    width: 12,
-    height: 16,
-    borderRadius: 3,
-    backgroundColor: Colors.secondary || '#14F195',
-  },
-  ammoIconTop: {
-    position: 'absolute',
-    top: 0,
-    width: 12,
-    height: 2,
-    backgroundColor: Colors.secondary || '#14F195',
-  },
-  ammoIconDot: {
-    position: 'absolute',
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(30, 30, 40, 0.8)',
-  },
   featureTextContainer: {
     flex: 1,
   },
@@ -458,19 +395,6 @@ const styles = StyleSheet.create({
   featureDescription: {
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.5)',
-  },
-  newBadge: {
-    backgroundColor: 'rgba(20, 241, 149, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(20, 241, 149, 0.3)',
-  },
-  newBadgeText: {
-    color: Colors.secondary || '#14F195',
-    fontSize: 10,
-    fontWeight: 'bold',
   },
   usersCounter: {
     marginTop: 12,
@@ -489,15 +413,6 @@ const styles = StyleSheet.create({
   userTextContainer: {
     width: '100%',
     marginBottom: 4,
-  },
-  usersCount: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: Colors.text || '#FFFFFF',
-  },
-  usersDescription: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.5)',
   },
   userAvatars: {
     flexDirection: 'row',

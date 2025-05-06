@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons'; // Import Feather
 import { Button, Text } from '@repo/ui';
 import { Colors } from '@/constants/Colors';
 import LogoSvg from '@/assets/images/logo.svg';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
 
 interface LandingHeaderProps {
   scrolled?: boolean;
@@ -13,6 +14,7 @@ interface LandingHeaderProps {
 
 const LandingHeader: React.FC<LandingHeaderProps> = ({ scrolled = false, onLogin }) => {
   const router = useRouter();
+  const { isTabletOrLarger, width } = useBreakpoint();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
 
@@ -108,177 +110,176 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({ scrolled = false, onLogin
       style={[
         styles.header,
         scrolled ? styles.headerScrolled : styles.headerTransparent,
+        isTabletOrLarger ? styles.headerLarge : styles.headerSmall,
       ]}
     >
-      <View style={styles.container}>
+      <View style={[styles.container, isTabletOrLarger && styles.containerLarge]}>
         {/* Logo */}
         <View style={styles.logoContainer}>
           {Platform.OS === 'web' ? (
-            <LogoSvg width={120} height={40} />
+            <LogoSvg width={isTabletOrLarger ? 120 : 100} height={isTabletOrLarger ? 40 : 32} />
           ) : (
             <Text style={styles.logoText}>TEAM556</Text>
           )}
         </View>
 
         {/* Desktop Navigation - only visible on larger screens */}
-        <View style={styles.desktopNav}>
-          <Pressable
-            onPress={() => scrollToSection('features')}
-            style={({ pressed }) => [
-              styles.navLink,
-              activeSection === 'features' && styles.activeNavLink,
-              pressed && styles.pressedNavLink,
-            ]}
-          >
-            <Text
-              style={[
-                styles.navLinkText,
-                activeSection === 'features' && styles.activeNavLinkText,
-              ]}
-            >
-              Features
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => scrollToSection('how-it-works')}
-            style={({ pressed }) => [
-              styles.navLink,
-              activeSection === 'how-it-works' && styles.activeNavLink,
-              pressed && styles.pressedNavLink,
-            ]}
-          >
-            <Text
-              style={[
-                styles.navLinkText,
-                activeSection === 'how-it-works' && styles.activeNavLinkText,
-              ]}
-            >
-              How It Works
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => scrollToSection('testimonials')}
-            style={({ pressed }) => [
-              styles.navLink,
-              activeSection === 'testimonials' && styles.activeNavLink,
-              pressed && styles.pressedNavLink,
-            ]}
-          >
-            <Text
-              style={[
-                styles.navLinkText,
-                activeSection === 'testimonials' && styles.activeNavLinkText,
-              ]}
-            >
-              Testimonials
-            </Text>
-          </Pressable>
-
-          <View style={styles.ctaButtons}>
-            <Button
-              title="Login"
-              variant="outline"
-              size="small"
-              style={styles.loginButton}
-              onPress={navigateToLogin}
-            />
-            <Button
-              title="Get Started"
-              variant="primary"
-              size="small"
-              style={styles.getStartedButton}
-              onPress={navigateToCreateWallet}
-            />
-          </View>
-        </View>
-
-        {/* Mobile Menu Button */}
-        <Pressable
-          style={styles.mobileMenuButton}
-          onPress={toggleMobileMenu}
-          android_ripple={{ color: 'rgba(255,255,255,0.1)', borderless: true }}
-        >
-          {mobileMenuOpen ? (
-            <Feather name="x" size={20} color={Colors.text} /> // Replace X
-          ) : (
-            <Feather name="menu" size={20} color={Colors.text} /> // Replace Menu
-          )}
-        </Pressable>
-      </View>
-
-      {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
-        <View style={styles.mobileMenu}>
-          <ScrollView style={styles.mobileMenuContent}>
+        {isTabletOrLarger && (
+          <View style={styles.desktopNav}>
             <Pressable
-              style={[
-                styles.mobileNavItem,
-                activeSection === 'features' && styles.activeMobileNavItem,
-              ]}
               onPress={() => scrollToSection('features')}
+              style={({ pressed }) => [
+                styles.navLink,
+                activeSection === 'features' && styles.activeNavLink,
+                pressed && styles.pressedNavLink,
+              ]}
             >
-              <View style={styles.mobileNavItemContent}>
-                <View style={styles.mobileNavItemDot} />
-                <Text style={styles.mobileNavItemText}>Features</Text>
-              </View>
-              <View style={styles.mobileNavItemArrow}>
-                {/* Arrow icon could be added here */}
-              </View>
+              <Text
+                style={[
+                  styles.navLinkText,
+                  activeSection === 'features' && styles.activeNavLinkText,
+                ]}
+              >
+                Features
+              </Text>
             </Pressable>
 
             <Pressable
-              style={[
-                styles.mobileNavItem,
-                activeSection === 'how-it-works' && styles.activeMobileNavItem,
-              ]}
               onPress={() => scrollToSection('how-it-works')}
+              style={({ pressed }) => [
+                styles.navLink,
+                activeSection === 'how-it-works' && styles.activeNavLink,
+                pressed && styles.pressedNavLink,
+              ]}
             >
-              <View style={styles.mobileNavItemContent}>
-                <View style={styles.mobileNavItemDot} />
-                <Text style={styles.mobileNavItemText}>How It Works</Text>
-              </View>
-              <View style={styles.mobileNavItemArrow}>
-                {/* Arrow icon could be added here */}
-              </View>
+              <Text
+                style={[
+                  styles.navLinkText,
+                  activeSection === 'how-it-works' && styles.activeNavLinkText,
+                ]}
+              >
+                How It Works
+              </Text>
             </Pressable>
 
             <Pressable
-              style={[
-                styles.mobileNavItem,
-                activeSection === 'testimonials' && styles.activeMobileNavItem,
-              ]}
               onPress={() => scrollToSection('testimonials')}
+              style={({ pressed }) => [
+                styles.navLink,
+                activeSection === 'testimonials' && styles.activeNavLink,
+                pressed && styles.pressedNavLink,
+              ]}
             >
-              <View style={styles.mobileNavItemContent}>
-                <View style={styles.mobileNavItemDot} />
-                <Text style={styles.mobileNavItemText}>Testimonials</Text>
-              </View>
-              <View style={styles.mobileNavItemArrow}>
-                {/* Arrow icon could be added here */}
-              </View>
+              <Text
+                style={[
+                  styles.navLinkText,
+                  activeSection === 'testimonials' && styles.activeNavLinkText,
+                ]}
+              >
+                Testimonials
+              </Text>
             </Pressable>
 
-            <View style={styles.mobileCTAContainer}>
+            {/* CTA Buttons */}
+            <View style={styles.ctaButtons}>
               <Button
                 title="Login"
                 variant="outline"
-                size="large"
-                style={styles.mobileLoginButton}
+                style={styles.loginButton}
                 onPress={navigateToLogin}
               />
               <Button
                 title="Get Started"
                 variant="primary"
-                size="large"
-                style={styles.mobileGetStartedButton}
+                style={styles.getStartedButton}
                 onPress={navigateToCreateWallet}
               />
             </View>
-          </ScrollView>
-        </View>
-      )}
+          </View>
+        )}
+
+        {/* Mobile menu toggle - only visible on mobile screens */}
+        {!isTabletOrLarger && (
+          <Pressable
+            style={styles.mobileMenuButton}
+            onPress={toggleMobileMenu}
+          >
+            <Feather name={mobileMenuOpen ? 'x' : 'menu'} size={20} color="#FFFFFF" />
+          </Pressable>
+        )}
+
+        {/* Mobile Menu Overlay */}
+        {mobileMenuOpen && (
+          <View style={styles.mobileMenu}>
+            <ScrollView style={styles.mobileMenuContent}>
+              <Pressable
+                style={[
+                  styles.mobileNavItem,
+                  activeSection === 'features' && styles.activeMobileNavItem,
+                ]}
+                onPress={() => scrollToSection('features')}
+              >
+                <View style={styles.mobileNavItemContent}>
+                  <View style={styles.mobileNavItemDot} />
+                  <Text style={styles.mobileNavItemText}>Features</Text>
+                </View>
+                <View style={styles.mobileNavItemArrow}>
+                  {/* Arrow icon could be added here */}
+                </View>
+              </Pressable>
+
+              <Pressable
+                style={[
+                  styles.mobileNavItem,
+                  activeSection === 'how-it-works' && styles.activeMobileNavItem,
+                ]}
+                onPress={() => scrollToSection('how-it-works')}
+              >
+                <View style={styles.mobileNavItemContent}>
+                  <View style={styles.mobileNavItemDot} />
+                  <Text style={styles.mobileNavItemText}>How It Works</Text>
+                </View>
+                <View style={styles.mobileNavItemArrow}>
+                  {/* Arrow icon could be added here */}
+                </View>
+              </Pressable>
+
+              <Pressable
+                style={[
+                  styles.mobileNavItem,
+                  activeSection === 'testimonials' && styles.activeMobileNavItem,
+                ]}
+                onPress={() => scrollToSection('testimonials')}
+              >
+                <View style={styles.mobileNavItemContent}>
+                  <View style={styles.mobileNavItemDot} />
+                  <Text style={styles.mobileNavItemText}>Testimonials</Text>
+                </View>
+                <View style={styles.mobileNavItemArrow}>
+                  {/* Arrow icon could be added here */}
+                </View>
+              </Pressable>
+
+              <View style={styles.mobileCTAContainer}>
+                <Button
+                  title="Login"
+                  variant="outline"
+                  size="large"
+                  style={styles.mobileLoginButton}
+                  onPress={navigateToLogin}
+                />
+                <Button
+                  title="Get Started"
+                  variant="primary"
+                  size="large"
+                  style={styles.mobileGetStartedButton}
+                  onPress={navigateToCreateWallet}
+                />
+              </View>
+            </ScrollView>
+          </View>
+        )}
+      </View>
     </View>
   );
 };
@@ -286,7 +287,6 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({ scrolled = false, onLogin
 const styles = StyleSheet.create({
   header: {
     width: '100%',
-    paddingVertical: 16,
     position: 'absolute',
     top: 0,
     left: 0,
@@ -302,12 +302,23 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(10, 10, 10, 0.9)',
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
+  headerLarge: {
+    paddingVertical: 20,
+  },
+  headerSmall: {
+    paddingVertical: 12,
+  },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     height: 56,
+  },
+  containerLarge: {
+    paddingHorizontal: 48,
+    maxWidth: 1280,
+    marginHorizontal: 'auto',
   },
   logoContainer: {
     flexDirection: 'row',
@@ -321,8 +332,6 @@ const styles = StyleSheet.create({
   desktopNav: {
     flexDirection: 'row',
     alignItems: 'center',
-    display: 'none', // Hidden by default, shown via media query on web
-    // Using inline style on web to show: '@media (min-width: 768px)': { display: 'flex' }
   },
   navLink: {
     paddingVertical: 8,

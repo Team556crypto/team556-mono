@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Platform, Dimensions, Pressable, Image, Linking, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Platform, Pressable, Image, Linking, TouchableOpacity } from 'react-native';
 import { Text } from '@repo/ui';
 import { Colors } from '@/constants/Colors';
 import { Feather, FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import LogoSvg from '@/assets/images/logo.svg';
 import SolanaSvg from '@/assets/images/solana.svg';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 
 // Define types
 interface NavLink {
@@ -25,6 +26,7 @@ const FooterSection: React.FC = () => {
   const currentYear = new Date().getFullYear();
   const [copied, setCopied] = useState(false);
   const tokenAddress = "AMNfeXpjD6kXyyTDB4LMKzNWypqNHwtgJUACHUmuKLD5";
+  const { isTabletOrLarger } = useBreakpoint();
 
   // Main links
   const mainLinks: NavLink[] = [
@@ -90,9 +92,9 @@ const FooterSection: React.FC = () => {
     <View style={styles.container}>
       <View style={styles.contentContainer}>
         {/* Top section with CTA and links */}
-        <View style={styles.topSection}>
+        <View style={[styles.topSection, isTabletOrLarger ? styles.topSectionLarge : {}]}>
           {/* CTA section */}
-          <View style={styles.ctaSection}>
+          <View style={[styles.ctaSection, isTabletOrLarger ? styles.ctaSectionLarge : {}]}>
             <View style={styles.logoContainer}>
               {Platform.OS === 'web' ? (
                 <LogoSvg width={36} height={36} />
@@ -112,8 +114,9 @@ const FooterSection: React.FC = () => {
           </View>
 
           {/* Main links section */}
-          <View style={styles.linksSection}>
-            <View style={styles.mainLinksGroup}>
+          <View style={[styles.linksSection, isTabletOrLarger ? styles.linksSectionLarge : {}]}>
+            {/* Navigation links */}
+            <View style={[styles.mainLinksGroup, isTabletOrLarger ? styles.linksGroupLarge : {}]}>
               <Text style={styles.linksHeader}>Navigation</Text>
               {mainLinks.map((link, index) => (
                 <Pressable 
@@ -130,36 +133,36 @@ const FooterSection: React.FC = () => {
             </View>
 
             {/* Social links */}
-            <View style={styles.socialLinksGroup}>
-              <Text style={styles.linksHeader}>Connect</Text>
-              {socialLinks.map((social, index) => (
+            <View style={[styles.socialLinksGroup, isTabletOrLarger ? styles.linksGroupLarge : {}]}>
+              <Text style={styles.linksHeader}>Community</Text>
+              {socialLinks.map((link, index) => (
                 <Pressable 
                   key={index} 
                   style={({ pressed }) => [
                     styles.linkItem,
                     pressed && styles.pressedItem
                   ]}
-                  onPress={() => handleLinkPress(social.url)}
+                  onPress={() => handleLinkPress(link.url)}
                 >
                   <View style={styles.socialLinkContent}>
-                    {social.iconComponent === 'Feather' && (
-                      <Feather name={social.iconName as any} size={16} color={Colors.textSecondary} style={styles.socialIcon} />
+                    {link.iconComponent === 'Feather' && (
+                      <Feather name={link.iconName as any} size={16} color={Colors.textSecondary} style={styles.socialIcon} />
                     )}
-                    {social.iconComponent === 'FontAwesome' && (
-                      <FontAwesome name={social.iconName as any} size={16} color={Colors.textSecondary} style={styles.socialIcon} />
+                    {link.iconComponent === 'FontAwesome' && (
+                      <FontAwesome name={link.iconName as any} size={16} color={Colors.textSecondary} style={styles.socialIcon} />
                     )}
-                    {social.iconComponent === 'MaterialCommunityIcons' && (
-                      <MaterialCommunityIcons name={social.iconName as any} size={16} color={Colors.textSecondary} style={styles.socialIcon} />
+                    {link.iconComponent === 'MaterialCommunityIcons' && (
+                      <MaterialCommunityIcons name={link.iconName as any} size={16} color={Colors.textSecondary} style={styles.socialIcon} />
                     )}
-                    <Text style={styles.linkText}>{social.name}</Text>
+                    <Text style={styles.linkText}>{link.name}</Text>
                   </View>
                 </Pressable>
               ))}
             </View>
-            
-            {/* Built on Solana */}
-            <View style={styles.platformSection}>
-              <Text style={styles.linksHeader}>Built on</Text>
+
+            {/* Platform/Token links */}
+            <View style={[styles.platformSection, isTabletOrLarger ? styles.linksGroupLarge : {}]}>
+              <Text style={styles.linksHeader}>Platform</Text>
               <View style={styles.solanaContainer}>
                 {Platform.OS === 'web' ? (
                   <SolanaSvg width={100} height={24} />
@@ -197,9 +200,9 @@ const FooterSection: React.FC = () => {
           </View>
         </View>
 
-        {/* Bottom section */}
-        <View style={styles.bottomSection}>
-          <Text style={styles.copyright}>
+        {/* Bottom section with copyright and legal links */}
+        <View style={[styles.bottomSection, isTabletOrLarger ? styles.bottomSectionLarge : {}]}>
+          <Text style={[styles.copyright, isTabletOrLarger ? styles.copyrightLeft : styles.copyrightCentered]}>
             &copy; {currentYear.toString()} Team556. All rights reserved.
           </Text>
           
@@ -225,10 +228,6 @@ const FooterSection: React.FC = () => {
   );
 };
 
-const { width } = Dimensions.get('window');
-const isTablet = width >= 768;
-const isDesktop = width >= 1024;
-
 const styles = StyleSheet.create({
   container: {
     paddingTop: 80,
@@ -236,6 +235,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundDarkest,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.06)',
+    marginHorizontal: 'auto',
   },
   contentContainer: {
     paddingHorizontal: 24,
@@ -244,15 +244,21 @@ const styles = StyleSheet.create({
     marginHorizontal: 'auto',
   },
   topSection: {
-    flexDirection: isTablet ? 'row' : 'column',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
     marginBottom: 60,
   },
+  topSectionLarge: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   ctaSection: {
-    flex: isTablet ? 1 : undefined,
-    marginRight: isTablet ? 40 : 0,
-    marginBottom: isTablet ? 0 : 40,
-    maxWidth: isTablet ? 320 : '100%',
+    marginBottom: 40,
+  },
+  ctaSectionLarge: {
+    flex: 1,
+    marginRight: 40,
+    marginBottom: 0,
+    maxWidth: 320,
   },
   logoContainer: {
     flexDirection: 'row',
@@ -272,20 +278,24 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   linksSection: {
-    flex: isTablet ? 2 : undefined,
-    flexDirection: isDesktop ? 'row' : 'column',
+    flexDirection: 'column',
+  },
+  linksSectionLarge: {
+    flex: 2,
+    flexDirection: 'row',
     justifyContent: 'space-between',
   },
   mainLinksGroup: {
-    marginBottom: isDesktop ? 0 : 32,
-    flex: isDesktop ? 1 : undefined,
+    marginBottom: 32,
   },
   socialLinksGroup: {
-    marginBottom: isDesktop ? 0 : 32,
-    flex: isDesktop ? 1 : undefined,
+    marginBottom: 32,
   },
   platformSection: {
-    flex: isDesktop ? 1 : undefined,
+  },
+  linksGroupLarge: {
+    flex: 1,
+    marginBottom: 0,
   },
   linksHeader: {
     fontSize: 14,
@@ -363,14 +373,24 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.06)',
     paddingTop: 24,
-    flexDirection: isTablet ? 'row' : 'column',
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  bottomSectionLarge: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: isTablet ? 'center' : 'center',
+    alignItems: 'center',
   },
   copyright: {
     fontSize: 14,
     color: Colors.textTertiary,
-    marginBottom: isTablet ? 0 : 16,
+  },
+  copyrightCentered: {
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  copyrightLeft: {
+    marginBottom: 0,
   },
   legalLinks: {
     flexDirection: 'row',

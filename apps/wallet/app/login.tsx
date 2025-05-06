@@ -60,17 +60,57 @@ const MobileLandingScreen = () => {
 
 const WebLandingPage = () => {
   const router = useRouter()
+  const { isTabletOrLarger, width } = useBreakpoint()
+
+  // Responsive layout values
+  const sectionPadding = isTabletOrLarger ? styles.webSectionPaddingLarge : styles.webSectionPaddingSmall
+  const contentWidth = isTabletOrLarger ? styles.webContentWidthLarge : styles.webContentWidthSmall
 
   return (
     <View style={styles.webContainer}>
       <BackgroundEffects />
       <ScrollView style={styles.webScrollView} contentContainerStyle={styles.webScrollViewContent}>
-        <LandingHeader router={router} colors={Colors} />
-        <HeroSection colors={Colors} />
-        <CtaSection router={router} colors={Colors} />
-        <FeaturesSection colors={Colors} />
-        <HowItWorksSection colors={Colors} />
-        <FooterSection colors={Colors} />
+        <View style={sectionPadding}>
+          <View style={contentWidth}>
+            <LandingHeader />
+          </View>
+        </View>
+        
+        <View style={sectionPadding}>
+          <View style={contentWidth}>
+            <HeroSection 
+              onCreateWallet={() => router.push('/onboarding')}
+              onLogin={() => router.push('/signin')}
+            />
+          </View>
+        </View>
+        
+        <View style={sectionPadding}>
+          <View style={contentWidth}>
+            <CtaSection 
+              onCreateWallet={() => router.push('/onboarding')}
+              onLogin={() => router.push('/signin')}
+            />
+          </View>
+        </View>
+        
+        <View style={sectionPadding}>
+          <View style={contentWidth}>
+            <FeaturesSection />
+          </View>
+        </View>
+        
+        <View style={sectionPadding}>
+          <View style={contentWidth}>
+            <HowItWorksSection />
+          </View>
+        </View>
+        
+        <View style={sectionPadding}>
+          <View style={contentWidth}>
+            <FooterSection />
+          </View>
+        </View>
       </ScrollView>
       <ScrollToTop />
     </View>
@@ -138,5 +178,20 @@ const styles = StyleSheet.create({
     flex: 1
   },
   webScrollViewContent: {
+  },
+  // Responsive layout styles
+  webSectionPaddingSmall: {
+    paddingHorizontal: 16,
+  },
+  webSectionPaddingLarge: {
+    paddingHorizontal: 48,
+  },
+  webContentWidthSmall: {
+    width: '100%',
+  },
+  webContentWidthLarge: {
+    width: '100%',
+    maxWidth: 1280,
+    marginHorizontal: 'auto',
   }
 })

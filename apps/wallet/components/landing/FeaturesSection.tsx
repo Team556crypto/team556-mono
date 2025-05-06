@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, StyleSheet, Pressable, Platform, Dimensions } from 'react-native';
+import { View, StyleSheet, Pressable, Platform } from 'react-native';
 import { Text } from '@repo/ui';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 
 interface Feature {
   title: string;
@@ -12,6 +13,8 @@ interface Feature {
 }
 
 const FeaturesSection: React.FC = () => {
+  const { isTabletOrLarger } = useBreakpoint();
+
   const getFeatureIconColor = (colorName: string): string => {
     switch (colorName) {
       case 'solana-icon': return Colors.secondary || '#14F195';
@@ -113,7 +116,7 @@ const FeaturesSection: React.FC = () => {
   };
 
   return (
-    <View style={styles.container} id="features">
+    <View style={styles.container}>
       {/* Background decorative elements */}
       <View style={styles.backgroundElements}>
         <View style={styles.blob1} />
@@ -126,53 +129,46 @@ const FeaturesSection: React.FC = () => {
           {/* Decorative badge */}
           <View style={styles.badgeContainer}>
             <View style={styles.badgeDot} />
-            <Text style={styles.badgeText}>Enterprise-Grade Features</Text>
+            <Text style={styles.badgeText}>Built for the Community</Text>
           </View>
 
-          <Text style={styles.heading}>Crypto Wallet & Secure Digital Armory</Text>
-
-          <Text style={styles.subheading}>
-            All-in-one platform to manage your digital assets and firearms collection with uncompromising security,
-            blockchain verification, and powerful analytics
+          <Text style={[styles.heading, isTabletOrLarger ? styles.headingLarge : {}]}>Core Features</Text>
+          <Text style={[styles.subheading, isTabletOrLarger ? styles.subheadingLarge : {}]}>
+            Team556 Wallet combines secure Solana transactions with practical tools for firearms enthusiasts.
           </Text>
         </View>
 
         {/* Features grid */}
         <View style={styles.featuresGrid}>
           {features.map((feature, index) => (
-            <Pressable 
-              key={index}
-              style={({ pressed }) => [
-                styles.featureCard,
-                pressed && styles.featureCardPressed
-              ]}
-            >
-              <View style={styles.featureCardContent}>
-                {/* Top indicator */}
-                <View style={[styles.topIndicator, getTopIndicatorStyle(feature.color)]} />
+            <View key={index} style={[styles.featureCard, isTabletOrLarger ? styles.featureCardTablet : {}]}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.featureCardContent,
+                  pressed && styles.featureCardPressed
+                ]}
+              >
+                <View style={styles.featureCardContent}>
+                  {/* Top indicator */}
+                  <View style={[styles.topIndicator, getTopIndicatorStyle(feature.color)]} />
 
-                {/* Icon */}
-                <View style={[styles.iconContainer, getFeatureIconContainerStyle(feature.color)]}>
-                  {feature.iconElement}
+                  {/* Icon */}
+                  <View style={[styles.iconContainer, getFeatureIconContainerStyle(feature.color)]}>
+                    {feature.iconElement}
+                  </View>
+
+                  {/* Title and description */}
+                  <Text style={styles.featureTitle}>{feature.title}</Text>
+                  <Text style={styles.featureDescription}>{feature.description}</Text>
                 </View>
-
-                {/* Title and description */}
-                <Text style={styles.featureTitle}>{feature.title}</Text>
-                <Text style={styles.featureDescription}>{feature.description}</Text>
-              </View>
-            </Pressable>
+              </Pressable>
+            </View>
           ))}
         </View>
       </View>
     </View>
   );
 };
-
-const { width } = Dimensions.get('window');
-const isTablet = width >= 768;
-const isDesktop = width >= 1024;
-
-const numColumns = isDesktop ? 3 : (isTablet ? 2 : 1);
 
 const styles = StyleSheet.create({
   container: {
@@ -250,18 +246,25 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
   },
   heading: {
-    fontSize: isTablet ? 40 : 32,
+    fontSize: 32,
     fontWeight: 'bold',
     color: Colors.text,
     marginBottom: 16,
     textAlign: 'center',
   },
+  headingLarge: {
+    fontSize: 40,
+  },
   subheading: {
-    fontSize: isTablet ? 18 : 16,
-    lineHeight: isTablet ? 28 : 24,
+    fontSize: 16,
+    lineHeight: 24,
     color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
     maxWidth: 640,
+  },
+  subheadingLarge: {
+    fontSize: 18,
+    lineHeight: 28,
   },
   featuresGrid: {
     flexDirection: 'row',
@@ -270,9 +273,12 @@ const styles = StyleSheet.create({
     marginHorizontal: -8,
   },
   featureCard: {
-    width: isDesktop ? '33.333%' : (isTablet ? '50%' : '100%'),
+    width: '100%',
     paddingHorizontal: 8,
     paddingVertical: 8,
+  },
+  featureCardTablet: {
+    width: '50%', 
   },
   featureCardPressed: {
     opacity: 0.9,

@@ -5,6 +5,7 @@ import { Button, Text } from '@repo/ui';
 import { Colors } from '@/constants/Colors';
 import LogoSvg from '@/assets/images/logo.svg';
 import DashboardMockup from './DashboardMockup'; // Import the DashboardMockup component
+import { useBreakpoint } from '@/hooks/useBreakpoint'; // Import the hook
 
 interface HeroSectionProps {
   onCreateWallet?: () => void;
@@ -18,7 +19,10 @@ const HeroSection: React.FC<HeroSectionProps> = ({
   const [isVisible, setIsVisible] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateAnim = useRef(new Animated.Value(20)).current;
-  
+  const rotateXAnim = useRef(new Animated.Value(0)).current;
+  const rotateYAnim = useRef(new Animated.Value(0)).current;
+  const { isTabletOrLarger } = useBreakpoint(); // Use the hook
+
   // Trigger animations after component mount
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -42,16 +46,38 @@ const HeroSection: React.FC<HeroSectionProps> = ({
     return () => clearTimeout(timer);
   }, [fadeAnim, translateAnim]);
 
+  const animatedStyle = {
+    opacity: fadeAnim,
+    transform: [
+      {
+        translateY: translateAnim,
+      },
+      {
+        rotateX: rotateXAnim.interpolate({
+          inputRange: [-1, 1],
+          outputRange: ['-5deg', '5deg'], 
+        }),
+      },
+      {
+        rotateY: rotateYAnim.interpolate({
+          inputRange: [-1, 1],
+          outputRange: ['15deg', '-15deg'], 
+        }),
+      },
+    ],
+  };
+
   return (
     <View style={styles.container}>
-      <View style={styles.contentContainer}>
-        <View style={styles.heroFlexContainer}>
+      <View style={[styles.contentContainer, isTabletOrLarger && styles.contentContainerLarge]}>
+        <View style={[styles.heroFlexContainer, isTabletOrLarger && styles.heroFlexContainerLarge]}>
           {/* Left Column - Hero Content */}
-          <View style={styles.leftColumn}>
+          <View style={[styles.leftColumn, isTabletOrLarger && styles.leftColumnLarge]}>
             {/* Animated status badge */}
             <Animated.View 
               style={[
                 styles.statusBadge,
+                isTabletOrLarger && styles.statusBadgeLarge,
                 {
                   opacity: fadeAnim,
                   transform: [{ translateY: translateAnim }]
@@ -81,6 +107,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
             <Animated.View
               style={[
                 styles.headingContainer,
+                isTabletOrLarger && styles.headingContainerLarge,
                 {
                   opacity: fadeAnim,
                   transform: [{ 
@@ -89,12 +116,12 @@ const HeroSection: React.FC<HeroSectionProps> = ({
                 }
               ]}
             >
-              <Text style={styles.heading}>Your Complete</Text>
-              <Text style={[styles.heading, { color: Colors.secondary, marginTop: 4, marginBottom: 24 }]}>
+              <Text style={[styles.heading, isTabletOrLarger && styles.headingLarge]}>Your Complete</Text>
+              <Text style={[styles.heading, isTabletOrLarger && styles.headingLarge, { color: Colors.secondary, marginTop: 4, marginBottom: 24 }]}>
                 Digital Armory
               </Text>
               
-              <Text style={styles.subheading}>
+              <Text style={[styles.subheading, isTabletOrLarger && styles.subheadingLarge]}>
                 Secure Your Assets, On Your Terms
                 {'\n\n'}
                 Manage your Team556 tokens, SOL, and firearm-related records in one streamlined wallet built for privacy and control. All data stays local to your device—never on-chain or in the cloud. With secure transaction handling on the Solana blockchain and offline storage for sensitive info, it's a purpose-built platform for those who value freedom, privacy, and preparedness.
@@ -105,6 +132,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
             <Animated.View 
               style={[
                 styles.buttonContainer,
+                isTabletOrLarger && styles.buttonContainerLarge,
                 {
                   opacity: fadeAnim,
                   transform: [{ 
@@ -135,6 +163,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
             <Animated.View 
               style={[
                 styles.featuresGrid,
+                isTabletOrLarger && styles.featuresGridLarge,
                 {
                   opacity: fadeAnim,
                   transform: [{ 
@@ -160,12 +189,17 @@ const HeroSection: React.FC<HeroSectionProps> = ({
             </Animated.View>
           </View>
 
-          {/* Right Column - App Preview on larger screens */}
-          {Platform.OS === 'web' && (
+          {/* Right Column - Mockup */}
+          {isTabletOrLarger && (
             <View style={styles.rightColumn}>
-              <View style={styles.mockupContainer}>
+              <Animated.View
+                style={[
+                  styles.mockupContainer,
+                  animatedStyle
+                ]}
+              >
                 <DashboardMockup />
-              </View>
+              </Animated.View>
             </View>
           )}
         </View>
@@ -193,24 +227,36 @@ const styles = StyleSheet.create({
     width: '100%',
     justifyContent: 'center',
   },
+  contentContainerLarge: {
+    maxWidth: 1280,
+    marginHorizontal: 'auto',
+  },
   heroFlexContainer: {
-    flexDirection: isLargeScreen ? 'row' : 'column',
+    flexDirection: 'column', // Default to column
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  heroFlexContainerLarge: {
+    flexDirection: 'row', // Row on large screens
+  },
   leftColumn: {
-    width: isLargeScreen ? '50%' : '100%',
-    alignItems: isLargeScreen ? 'flex-start' : 'center',
+    width: '100%', // Full width on small screens
+    alignItems: 'center', // Center on small screens
+  },
+  leftColumnLarge: {
+    width: '50%', // Half width on large screens
+    alignItems: 'flex-start', // Align left on large screens
   },
   rightColumn: {
     width: '50%',
-    display: isLargeScreen ? 'flex' : 'none',
+    display: 'flex', // Only display needs to be managed here
     justifyContent: 'center',
     alignItems: 'center',
     perspective: '2000px', // Changed from number to string for TypeScript compatibility
   },
   statusBadge: {
     marginBottom: 24,
+    alignSelf: 'center', // Center on small screens
     overflow: 'hidden',
     borderRadius: 30,
     shadowColor: '#000',
@@ -218,6 +264,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 10,
     elevation: 5,
+  },
+  statusBadgeLarge: {
+    alignSelf: 'flex-start', // Align left on large screens
   },
   statusBadgeInner: {
     backgroundColor: Colors.backgroundDarker,
@@ -269,44 +318,40 @@ const styles = StyleSheet.create({
   },
   headingContainer: {
     marginBottom: 24,
-    alignItems: isLargeScreen ? 'flex-start' : 'center',
+    alignItems: 'center', // Center on small screens
+  },
+  headingContainerLarge: {
+    alignItems: 'flex-start', // Align left on large screens
   },
   heading: {
     color: Colors.text,
-    fontSize: 46,
+    fontSize: 36, // Smaller on mobile
     fontWeight: 'bold',
-    textAlign: isLargeScreen ? 'left' : 'center',
+    textAlign: 'center', // Center on small screens
     marginBottom: 8,
   },
-  gradientHeading: {
-    fontSize: 46,
-    fontWeight: 'bold',
-    textAlign: isLargeScreen ? 'left' : 'center',
-    marginBottom: 16,
-    // Web browsers can use background clips
-    ...(Platform.OS === 'web' ? {
-      background: `linear-gradient(90deg, ${Colors.primary}, ${Colors.secondary})`,
-      backgroundClip: 'text',
-      textFillColor: 'transparent',
-      WebkitBackgroundClip: 'text',
-      WebkitTextFillColor: 'transparent',
-    } : {
-      // For native, we'll just use a color
-      color: Colors.primary,
-    }),
+  headingLarge: {
+    fontSize: 46, // Larger on desktop
+    textAlign: 'left', // Align left on large screens
   },
   subheading: {
     color: Colors.textSecondary,
     fontSize: 16,
-    textAlign: isLargeScreen ? 'left' : 'center',
+    textAlign: 'center', // Center on small screens
     maxWidth: 600,
+  },
+  subheadingLarge: {
+    textAlign: 'left', // Align left on large screens
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: isLargeScreen ? 'flex-start' : 'center',
+    justifyContent: 'center', // Center on small screens
     flexWrap: 'wrap',
     gap: 12,
     marginBottom: 32,
+  },
+  buttonContainerLarge: {
+    justifyContent: 'flex-start', // Align left on large screens
   },
   createWalletButton: {
     backgroundColor: Colors.primary,
@@ -321,11 +366,14 @@ const styles = StyleSheet.create({
   },
   featuresGrid: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'center', // Center on small screens
     flexWrap: 'wrap',
     gap: 12,
     width: '100%',
     maxWidth: 600,
+  },
+  featuresGridLarge: {
+    justifyContent: 'flex-start', // Align left on large screens
   },
   featureCard: {
     flex: 1,

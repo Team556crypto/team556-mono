@@ -6,6 +6,7 @@ import { Colors } from '@/constants/Colors';
 import LogoSvg from '@/assets/images/logo.svg';
 import DashboardMockup from './DashboardMockup'; // Import the DashboardMockup component
 import { useBreakpoint } from '@/hooks/useBreakpoint'; // Import the hook
+import { useRouter } from 'expo-router'; // Import useRouter
 
 interface HeroSectionProps {
   onCreateWallet?: () => void;
@@ -22,6 +23,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
   const rotateXAnim = useRef(new Animated.Value(0)).current;
   const rotateYAnim = useRef(new Animated.Value(0)).current;
   const { isTabletOrLarger } = useBreakpoint(); // Use the hook
+  const router = useRouter(); // Initialize router
 
   // Trigger animations after component mount
   useEffect(() => {
@@ -147,7 +149,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
                 size="large"
                 leftIcon={<Feather name="edit-2" color="white" size={18} />}
                 style={styles.createWalletButton}
-                onPress={onCreateWallet}
+                onPress={() => router.push('/signup')} // Add onPress handler
               />
               
               <Button

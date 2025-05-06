@@ -105,7 +105,6 @@ const FooterSection: React.FC = () => {
                   resizeMode="contain" 
                 />
               )}
-              <Text style={styles.logoText}>Team556</Text>
             </View>
             
             <Text style={styles.ctaText}>

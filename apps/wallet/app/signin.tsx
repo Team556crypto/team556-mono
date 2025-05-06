@@ -7,6 +7,7 @@ import { Colors } from '@/constants/Colors'
 import { Ionicons } from '@expo/vector-icons'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useAuthStore } from '@/store/authStore'
+import LogoSvg from '@/assets/images/logo.svg';
 
 const SignInScreen = () => {
   const [email, setEmail] = useState('')
@@ -38,6 +39,7 @@ const SignInScreen = () => {
         <View style={[styles.contentContainer, isTabletOrLarger && styles.contentContainerDesktop]}>
           {/* Simple Header */}
           <View style={styles.headerContainer}>
+            <LogoSvg width={60} height={60} style={styles.logo} />
             <Text preset='h1'>Sign In</Text>
           </View>
           {/* Display Auth Error */}
@@ -88,8 +90,11 @@ const styles = StyleSheet.create({
     paddingTop: 20
   },
   headerContainer: {
-    marginBottom: 20,
+    marginBottom: 30,
     alignItems: 'center'
+  },
+  logo: {
+    marginBottom: 15,
   },
   contentContainer: {
     flexGrow: 1,

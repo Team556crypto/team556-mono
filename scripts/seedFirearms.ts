@@ -36,7 +36,7 @@ const firearmsToSeed = [
     caliber: '9mm',
     ballistic_performance: JSON.stringify({ muzzle_velocity: 1200, energy: 400 }),
     last_fired: new Date('2024-01-10T14:30:00Z'),
-    image: '/images/glock19.jpg',
+    image: 'https://mj79u8lfav.ufs.sh/f/8MBjWI2gDtAy8aWKjF2gDtAyJp3VW6H0LQRK4sMw7ikhOBvX',
     round_count: 500,
     last_cleaned: new Date('2024-01-01T12:00:00Z'),
     value: 500.0,
@@ -54,7 +54,7 @@ const firearmsToSeed = [
     caliber: '5.56 NATO',
     ballistic_performance: JSON.stringify({ effective_range: 500, accuracy: '1 MOA' }),
     last_fired: new Date('2024-02-15T11:00:00Z'),
-    image: '/images/ar15.jpg',
+    image: 'https://mj79u8lfav.ufs.sh/f/8MBjWI2gDtAyCom5bi8k4vMyxGtfrdpaPR8IscQSW6u0Uinz',
     round_count: 1500,
     last_cleaned: new Date('2024-02-01T10:00:00Z'),
     value: 1400.0,
@@ -75,25 +75,25 @@ async function encryptAESGCM(plaintext: string, secret: string): Promise<string>
 
   // Constants matching Go implementation
   const saltLength = 16 // crypto/aes.go
-  const keyLength = 32  // crypto/aes.go
+  const keyLength = 32 // crypto/aes.go
   const scryptN = 32768 // crypto/aes.go
-  const scryptR = 8     // crypto/aes.go
-  const scryptP = 1     // crypto/aes.go
+  const scryptR = 8 // crypto/aes.go
+  const scryptP = 1 // crypto/aes.go
 
   // 1. Generate a new random salt for each encryption (matching Go)
   const salt = crypto.randomBytes(saltLength)
 
   // 2. Derive the key using scrypt with parameters matching Go
-  const derivedKey = await scrypt(Buffer.from(secret), salt, scryptN, scryptR, scryptP, keyLength);
+  const derivedKey = await scrypt(Buffer.from(secret), salt, scryptN, scryptR, scryptP, keyLength)
 
   // 3. Encrypt using AES-256-GCM
   const iv = crypto.randomBytes(12) // AES-GCM standard nonce size (IV)
   const cipher = crypto.createCipheriv('aes-256-gcm', derivedKey, iv)
 
   // Perform encryption
-  const encryptedPart1 = cipher.update(plaintext, 'utf8');
-  const encryptedPart2 = cipher.final();
-  const actualCiphertext = Buffer.concat([encryptedPart1, encryptedPart2]);
+  const encryptedPart1 = cipher.update(plaintext, 'utf8')
+  const encryptedPart2 = cipher.final()
+  const actualCiphertext = Buffer.concat([encryptedPart1, encryptedPart2])
   const authTag = cipher.getAuthTag()
 
   // 4. Combine salt + nonce + ciphertext + auth tag (matching Go)

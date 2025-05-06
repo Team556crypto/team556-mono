@@ -69,7 +69,7 @@ export default function Button({
     secondary: { color: colors.text },
     outline: { color: colors.text },
     danger: { color: '#fff' },
-    ghost: { color: colors.text }
+    ghost: { color: colors.primary }
   }
 
   return (

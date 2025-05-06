@@ -36,6 +36,7 @@
     "deploy:wallet-web:full": "yarn build:wallet-web && yarn deploy:wallet-web"
   },
   "devDependencies": {
+    "@types/node": "^22.15.9",
     "concurrently": "^9.1.2",
     "prettier": "^3.5.3",
     "turbo": "^2.5.0",

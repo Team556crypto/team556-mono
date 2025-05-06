@@ -2,7 +2,7 @@ import React, { useEffect } from 'react'
 import { View, ScrollView, ActivityIndicator, StyleSheet } from 'react-native'
 import { useFirearmStore } from '@/store/firearmStore'
 import { useAuthStore } from '@/store/authStore'
-import { FirearmCard, Text, Badge } from '@team556/ui'
+import { FirearmCard, Text, Badge, Button } from '@team556/ui'
 import { useTheme } from '@team556/ui'
 
 const AllItemsView = () => {
@@ -28,6 +28,11 @@ const AllItemsView = () => {
     scrollViewContent: {
       paddingVertical: 16,
       gap: 14
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between'
     },
     centerMessage: {
       flex: 1,
@@ -68,7 +73,10 @@ const AllItemsView = () => {
   return (
     <View style={styles.container}>
       <View>
-        <Text preset='h4'>Firearms</Text>
+        <View style={styles.header}>
+          <Text preset='h4'>Firearms</Text>
+          <Button variant='ghost' style={{ marginLeft: 'auto' }} title='See All' onPress={() => {}} />
+        </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollViewContent}>
           {firearms.map(firearm => (
             <FirearmCard key={firearm.id} firearm={firearm} />

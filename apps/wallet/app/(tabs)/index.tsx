@@ -428,6 +428,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     backgroundColor: Colors.backgroundDark, // Use defined subtle card background
+    borderWidth: 1,
+    borderColor: Colors.backgroundSubtle,
     borderRadius: 12,
     marginBottom: 12
   },
@@ -478,6 +480,8 @@ const styles = StyleSheet.create({
   emptyActivity: {
     height: 120,
     backgroundColor: Colors.backgroundDark, // Use defined subtle card background
+    borderColor: Colors.backgroundSubtle,
+    borderWidth: 1,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center'

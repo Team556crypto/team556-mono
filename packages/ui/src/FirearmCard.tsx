@@ -12,8 +12,8 @@ interface FirearmCardProps {
 }
 
 const { width } = Dimensions.get('window')
-const CARD_WIDTH = width * 0.42
-const CARD_HEIGHT = CARD_WIDTH * 1.4
+export const CARD_WIDTH = width * 0.42
+export const CARD_HEIGHT = CARD_WIDTH * 1.4
 
 export default function FirearmCard({ firearm, onPress }: FirearmCardProps) {
   const { colors } = useTheme()
@@ -29,7 +29,9 @@ export default function FirearmCard({ firearm, onPress }: FirearmCardProps) {
       width: CARD_WIDTH,
       height: CARD_HEIGHT,
       borderRadius: 16,
-      overflow: 'hidden'
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: colors.backgroundSubtle
     },
     cardGradient: {
       width: '100%',

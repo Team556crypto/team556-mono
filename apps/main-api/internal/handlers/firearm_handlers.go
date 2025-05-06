@@ -36,6 +36,8 @@ type CreateFirearmRequest struct {
 	RoundCountRaw        *int       `json:"round_count_raw,omitempty"`               // Use Raw for input
 	ValueRaw             *float64   `json:"value_raw,omitempty"`                     // Use Raw for input
 	StatusRaw            *string    `json:"status_raw,omitempty" validate:"max=255"` // Use Raw for input
+	LastFired            *time.Time `json:"last_fired,omitempty"`
+	LastCleaned          *time.Time `json:"last_cleaned,omitempty"`
 }
 
 // FirearmResponse defines the structure returned by the API.
@@ -54,11 +56,11 @@ type FirearmResponse struct {
 	PurchasePrice        *string    `json:"purchase_price,omitempty"`       // String representation of decimal
 	BallisticPerformance *string    `json:"ballistic_performance"`          // Return decrypted JSON string
 	LastFired            *time.Time `json:"last_fired"`
+	LastCleaned          *time.Time `json:"last_cleaned"`
 	Image                *string    `json:"image,omitempty"`           // Encrypted string
 	ImageRaw             string     `json:"image_raw,omitempty"`       // Decrypted string
 	RoundCount           *string    `json:"round_count,omitempty"`     // Encrypted string
 	RoundCountRaw        int        `json:"round_count_raw,omitempty"` // Decrypted int
-	LastCleaned          *time.Time `json:"last_cleaned"`
 	Value                *string    `json:"value,omitempty"`      // Encrypted string
 	ValueRaw             float64    `json:"value_raw,omitempty"`  // Decrypted float64
 	Status               *string    `json:"status,omitempty"`     // Encrypted string
@@ -364,6 +366,18 @@ func newFirearmResponse(firearm *models.Firearm) FirearmResponse {
 		acqDate = &t
 	}
 
+	var lastFired *time.Time
+	if firearm.LastFired != nil {
+		t := *firearm.LastFired
+		lastFired = &t
+	}
+
+	var lastCleaned *time.Time
+	if firearm.LastCleaned != nil {
+		t := *firearm.LastCleaned
+		lastCleaned = &t
+	}
+
 	response := FirearmResponse{
 		ID:                   firearm.ID,
 		OwnerUserID:          firearm.UserID, // Corrected field name from OwnerUserID
@@ -377,12 +391,12 @@ func newFirearmResponse(firearm *models.Firearm) FirearmResponse {
 		AcquisitionDateRaw:   acqDate,                                             // Decrypted date (pointer to copy)
 		PurchasePrice:        nil,                                                 // Will be set below based on PurchasePriceRaw
 		BallisticPerformance: ptrToStringIfNotBlank(firearm.BallisticPerformance), // Use helper
-		LastFired:            firearm.LastFired,                                   // Not encrypted
+		LastFired:            lastFired,                                           // Not encrypted
+		LastCleaned:          lastCleaned,                                         // Not encrypted
 		Image:                firearm.Image,                                       // Encrypted string
 		ImageRaw:             firearm.ImageRaw,                                    // Decrypted string
 		RoundCount:           firearm.RoundCount,                                  // Encrypted string
 		RoundCountRaw:        firearm.RoundCountRaw,                               // Decrypted int
-		LastCleaned:          firearm.LastCleaned,                                 // Not encrypted
 		Value:                firearm.Value,                                       // Encrypted string
 		ValueRaw:             firearm.ValueRaw,                                    // Decrypted float64
 		Status:               firearm.Status,                                      // Encrypted string
@@ -450,7 +464,8 @@ func CreateFirearmHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 			RoundCountRaw:      derefIntPtr(req.RoundCountRaw),
 			ValueRaw:           derefFloat64Ptr(req.ValueRaw),
 			StatusRaw:          derefStringPtr(req.StatusRaw),
-			// LastFired, LastCleaned might be set separately or have defaults?
+			LastFired:          req.LastFired,
+			LastCleaned:        req.LastCleaned,
 		}
 
 		// Handle PurchasePrice (string -> *decimal.Decimal) - Moved outside struct literal
@@ -539,6 +554,14 @@ func UpdateFirearmHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database error finding firearm"})
 		}
 
+		// Decrypt existing firearm data before applying updates
+		if err := decryptFirearmData(&existingFirearm, cfg.ArmorySecret); err != nil {
+			log.Printf("Error decrypting existing firearm %d before update: %v", existingFirearm.ID, err)
+			// Depending on policy, you might want to abort or proceed cautiously.
+			// For now, logging and returning an error is safer.
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to prepare firearm for update (decryption error)"})
+		}
+
 		// 3. Parse Request Body into DTO
 		req := new(CreateFirearmRequest)
 		if err := c.BodyParser(req); err != nil {
@@ -546,22 +569,39 @@ func UpdateFirearmHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 		}
 
 		// 4. Update fields of the existing model instance using data from request DTO
-		// We overwrite the existingFirearm's fields with potentially new unencrypted data
-		// before re-encrypting everything.
-		// existingFirearm.UserID = userID // Usually don't allow changing owner
-		existingFirearm.Name = req.Name
-		existingFirearm.Type = req.Type
-		existingFirearm.SerialNumber = req.SerialNumber                 // Should changing SN be allowed?
-		existingFirearm.Manufacturer = derefStringPtr(req.Manufacturer) // Deref DTO *string -> model string
-		existingFirearm.ModelName = derefStringPtr(req.ModelName)       // Deref DTO *string -> model string
-		existingFirearm.Caliber = derefStringPtr(req.Caliber)
-		existingFirearm.BallisticPerformance = derefStringPtr(req.BallisticPerformance) // Deref DTO *string -> model string
-		// Update Raw fields for date/price/others based on request
-		existingFirearm.AcquisitionDateRaw = req.AcquisitionDateRaw           // Assign directly from DTO
-		// Handle PurchasePrice (string -> *decimal.Decimal)
+		// existingFirearm is now in plaintext. Only update if fields are present in the request.
+
+		// Required string fields: update if non-empty in request
+		if req.Name != "" {
+			existingFirearm.Name = req.Name
+		}
+		if req.Type != "" {
+			existingFirearm.Type = req.Type
+		}
+		if req.SerialNumber != "" { // Consider implications of allowing SN change
+			existingFirearm.SerialNumber = req.SerialNumber
+		}
+
+		// Optional pointer fields: update if not nil in request
+		if req.Manufacturer != nil {
+			existingFirearm.Manufacturer = *req.Manufacturer
+		}
+		if req.ModelName != nil {
+			existingFirearm.ModelName = *req.ModelName
+		}
+		if req.Caliber != nil {
+			existingFirearm.Caliber = *req.Caliber
+		}
+		if req.BallisticPerformance != nil {
+			existingFirearm.BallisticPerformance = *req.BallisticPerformance
+		}
+
+		// Raw fields (which are pointers in CreateFirearmRequest)
+		if req.AcquisitionDateRaw != nil {
+			existingFirearm.AcquisitionDateRaw = req.AcquisitionDateRaw
+		}
 		if req.PurchasePrice != nil {
-			if *req.PurchasePrice == "" {
-				// Explicitly clear if an empty string is sent
+			if *req.PurchasePrice == "" { // Allow explicit clearing of purchase price
 				existingFirearm.PurchasePriceRaw = nil
 			} else {
 				price, err := decimal.NewFromString(*req.PurchasePrice)
@@ -569,16 +609,32 @@ func UpdateFirearmHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 					log.Printf("Error parsing PurchasePrice string '%s' to decimal: %v", *req.PurchasePrice, err)
 					return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("Invalid PurchasePrice format: %s", *req.PurchasePrice))
 				}
-				existingFirearm.PurchasePriceRaw = &price // Store pointer to the decimal
+				existingFirearm.PurchasePriceRaw = &price
 			}
-		} // If req.PurchasePrice is nil, we ignore it and leave existingFirearm.PurchasePriceRaw as is
-		existingFirearm.ImageRaw = derefStringPtr(req.ImageRaw)
-		existingFirearm.RoundCountRaw = derefIntPtr(req.RoundCountRaw)
-		existingFirearm.ValueRaw = derefFloat64Ptr(req.ValueRaw)
-		existingFirearm.StatusRaw = derefStringPtr(req.StatusRaw)
-		// Handle LastFired, LastCleaned updates if included in DTO
+		}
+		if req.ImageRaw != nil {
+			existingFirearm.ImageRaw = *req.ImageRaw
+		}
+		if req.RoundCountRaw != nil {
+			existingFirearm.RoundCountRaw = *req.RoundCountRaw
+		}
+		if req.ValueRaw != nil {
+			existingFirearm.ValueRaw = *req.ValueRaw
+		}
+		if req.StatusRaw != nil {
+			existingFirearm.StatusRaw = *req.StatusRaw
+		}
+
+		// Direct time fields (pointers in CreateFirearmRequest)
+		if req.LastFired != nil {
+			existingFirearm.LastFired = req.LastFired
+		}
+		if req.LastCleaned != nil {
+			existingFirearm.LastCleaned = req.LastCleaned
+		}
 
 		// 5. Re-encrypt all sensitive fields IN PLACE before saving
+		//    encryptFirearmData operates on existingFirearm's fields (Name, Manufacturer, etc.)
 		if err := encryptFirearmData(&existingFirearm, cfg.ArmorySecret); err != nil {
 			log.Printf("Encryption failed during firearm update for ID %d: %v", id, err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to process firearm data for update (encryption)"})

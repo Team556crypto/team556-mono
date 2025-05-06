@@ -21,6 +21,7 @@ export * from './src/TabBarBackground'
 export * from './src/Badge'
 export * from './src/HorizontalBadgeScroll'
 export * from './src/ThemeContext'
+export * from './src/FirearmCard'
 
 // Export types
 export * from './src/types';

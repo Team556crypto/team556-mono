@@ -173,26 +173,28 @@ interface ExecuteSwapResponseWithStatus {
 
 // --- Firearm Types ---
 export interface Firearm {
-  id: number;
-  owner_user_id: number; // snake_case matches JSON
-  name: string;
-  type: string;
-  serial_number: string; // snake_case
-  manufacturer?: string | null; // Optional string
-  model_name?: string | null; // Optional string
-  caliber: string;
-  acquisition_date_raw?: string | null; // ISO string
-  purchase_price?: string | null; // String representation of decimal
-  ballistic_performance?: string | null; // Assuming JSON string for now
-  last_fired?: string | null; // ISO string
-  image_raw?: string | null; // Optional string
-  round_count_raw?: number | null; // Optional number
-  last_cleaned?: string | null; // ISO string
-  value_raw?: number | null; // Optional number
-  status_raw?: string | null; // Optional string
-  created_at: string; // ISO string
-  updated_at: string; // ISO string
+  id: number
+  owner_user_id: number // snake_case matches JSON
+  name: string
+  type: string
+  serial_number: string // snake_case
+  manufacturer?: string | null // Optional string
+  model_name?: string | null // Optional string
+  caliber: string
+  acquisition_date_raw?: string | null // ISO string
+  purchase_price?: string | null // String representation of decimal
+  ballistic_performance?: string | null // Assuming JSON string for now
+  last_fired?: string | null // ISO string
+  image_raw?: string | null // Optional string
+  round_count_raw?: number | null // Optional number
+  last_cleaned?: string | null // ISO string
+  value_raw?: number | null // Optional number
+  status_raw?: string | null // Optional string
+  created_at: string // ISO string
+  updated_at: string // ISO string
 }
+
+export type UpdateFirearmPayload = Partial<Omit<Firearm, 'id' | 'owner_user_id' | 'created_at' | 'updated_at'>>
 
 /**
  * Makes a POST request to the login endpoint.
@@ -873,7 +875,10 @@ export async function submitTokenAccountTransaction(
  * @returns A promise that resolves with an array of the user's firearms.
  * @throws An error if the request fails or the user is not authenticated.
  */
-export async function getFirearms(token: string | null, params?: { limit?: number; page?: number }): Promise<Firearm[]> {
+export async function getFirearms(
+  token: string | null,
+  params?: { limit?: number; page?: number }
+): Promise<Firearm[]> {
   if (!token) {
     throw new Error('Authentication token is required.')
   }
@@ -881,34 +886,84 @@ export async function getFirearms(token: string | null, params?: { limit?: numbe
     throw new Error('API URL is not configured.')
   }
 
-  const url = new URL(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/firearms`);
+  const url = new URL(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/firearms`)
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined) {
-        url.searchParams.append(key, String(value));
+        url.searchParams.append(key, String(value))
       }
-    });
+    })
   }
 
   const response = await fetch(url.toString(), {
     method: 'GET',
     headers: {
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`
       // 'Content-Type': 'application/json', // Not needed for GET
-    },
-  });
+    }
+  })
 
-  const data = await response.json();
+  const data = await response.json()
 
   if (!response.ok) {
-    const errorData = data as ApiErrorResponse;
-    const errorMessage = errorData?.error || `Failed to fetch firearms with status: ${response.status}`;
-    console.error('Get Firearms API Error:', errorMessage, 'Status:', response.status);
-    const error = new Error(errorMessage) as any;
-    error.status = response.status;
-    throw error;
+    const errorData = data as ApiErrorResponse
+    const errorMessage = errorData?.error || `Failed to fetch firearms with status: ${response.status}`
+    console.error('Get Firearms API Error:', errorMessage, 'Status:', response.status)
+    const error = new Error(errorMessage) as any
+    error.status = response.status
+    throw error
   }
 
   // Assuming the API returns an array of Firearm objects directly
-  return data as Firearm[];
+  return data as Firearm[]
+}
+
+/**
+ * Updates an existing firearm.
+ * @param firearmId - The ID of the firearm to update.
+ * @param payload - The data to update for the firearm.
+ * @param token - The authentication token.
+ * @returns A promise that resolves with the updated firearm data.
+ * @throws An error if the request fails.
+ */
+export async function updateFirearm(
+  firearmId: number,
+  payload: UpdateFirearmPayload,
+  token: string | null
+): Promise<Firearm> {
+  if (!token) {
+    throw new Error('Authentication token is required.')
+  }
+  if (!process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL) {
+    throw new Error('API URL is not configured.')
+  }
+
+  console.debug(`[api.ts] Updating firearm ${firearmId} with payload:`, payload)
+
+  const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/firearms/${firearmId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  })
+
+  const responseData = await response.json()
+
+  if (!response.ok) {
+    const error = responseData.error || response.statusText
+    console.error(
+      `[api.ts] Update firearm ${firearmId} failed:`,
+      error,
+      'Status:',
+      response.status,
+      'Response Data:',
+      responseData
+    )
+    throw new Error(error || 'Failed to update firearm')
+  }
+
+  console.debug(`[api.ts] Firearm ${firearmId} updated successfully:`, responseData)
+  return responseData.firearm || responseData // Backend might return { firearm: ... } or just the firearm
 }

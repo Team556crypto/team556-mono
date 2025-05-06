@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Firearm, getFirearms } from '@/services/api';
+import { Firearm, getFirearms, updateFirearm, UpdateFirearmPayload } from '@/services/api';
 
 // Define the state structure for the firearm store
 interface FirearmState {
@@ -8,7 +8,8 @@ interface FirearmState {
   error: string | null;
   hasAttemptedInitialFetch: boolean;
   addFirearm: (firearm: Firearm) => void;
-  updateFirearm: (updatedFirearm: Firearm) => void;
+  updateFirearm: (firearmId: number, payload: UpdateFirearmPayload, token: string | null) => Promise<void>;
+  _updateLocalFirearm: (updatedFirearm: Firearm) => void;
   removeFirearm: (firearmId: number) => void;
   setFirearms: (firearms: Firearm[]) => void;
   getFirearmById: (firearmId: number) => Firearm | undefined;
@@ -33,13 +34,36 @@ export const useFirearmStore = create<FirearmState>((set, get) => ({
       firearms: [...state.firearms, firearm],
     })),
 
-  // Action to update an existing firearm
-  updateFirearm: (updatedFirearm) =>
+  // Internal action to update an existing firearm in local state
+  _updateLocalFirearm: (updatedFirearm) =>
     set((state) => ({
       firearms: state.firearms.map((f) =>
         f.id === updatedFirearm.id ? updatedFirearm : f
       ),
     })),
+
+  // Action to update firearm via API and then update local state
+  updateFirearm: async (firearmId, payload, token) => {
+    const currentFirearm = get().firearms.find(f => f.id === firearmId);
+    if (!currentFirearm) {
+      console.error(`[FirearmStore] Firearm with id ${firearmId} not found for update.`);
+      throw new Error(`Firearm with id ${firearmId} not found.`);
+    }
+
+    set({ isLoading: true, error: null });
+    console.debug(`[FirearmStore] Attempting to update firearm ${firearmId} via API...`);
+    try {
+      const updatedFirearmFromApi = await updateFirearm(firearmId, payload, token);
+      get()._updateLocalFirearm(updatedFirearmFromApi); // Use internal action to update state
+      set({ isLoading: false });
+      console.debug(`[FirearmStore] Firearm ${firearmId} updated successfully.`);
+    } catch (error: any) {
+      console.error(`[FirearmStore] Failed to update firearm ${firearmId}:`, error);
+      const errorMessage = error?.response?.data?.error || error?.message || 'Failed to update firearm';
+      set({ error: errorMessage, isLoading: false });
+      throw error; // Re-throw to allow UI to handle it if needed
+    }
+  },
 
   // Action to remove a firearm by its ID
   removeFirearm: (firearmId) =>

@@ -16,7 +16,7 @@ export const Badge = ({ label, isActive, style, ...rest }: BadgeProps) => {
   const textColor = isActive ? colors.background : colors.text
   const textWeight = isActive ? 'bold' : '500'
 
-  const borderColor = colors.textTertiary
+  const borderColor = colors.backgroundSubtle
 
   return (
     <Pressable

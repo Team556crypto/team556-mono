@@ -171,6 +171,29 @@ interface ExecuteSwapResponseWithStatus {
   message?: string
 }
 
+// --- Firearm Types ---
+export interface Firearm {
+  id: number;
+  owner_user_id: number; // snake_case matches JSON
+  name: string;
+  type: string;
+  serial_number: string; // snake_case
+  manufacturer?: string | null; // Optional string
+  model_name?: string | null; // Optional string
+  caliber: string;
+  acquisition_date_raw?: string | null; // ISO string
+  purchase_price?: string | null; // String representation of decimal
+  ballistic_performance?: string | null; // Assuming JSON string for now
+  last_fired?: string | null; // ISO string
+  image_raw?: string | null; // Optional string
+  round_count_raw?: number | null; // Optional number
+  last_cleaned?: string | null; // ISO string
+  value_raw?: number | null; // Optional number
+  status_raw?: string | null; // Optional string
+  created_at: string; // ISO string
+  updated_at: string; // ISO string
+}
+
 /**
  * Makes a POST request to the login endpoint.
  * @param credentials - The user's email and password.
@@ -841,3 +864,51 @@ export async function submitTokenAccountTransaction(
 }
 
 // --- END SWAP FUNCTIONS ---
+
+// --- Firearm API Calls ---
+/**
+ * Fetches the list of firearms for the authenticated user.
+ * @param token - The authentication token.
+ * @param params - Optional query parameters (e.g., { limit: 10 }).
+ * @returns A promise that resolves with an array of the user's firearms.
+ * @throws An error if the request fails or the user is not authenticated.
+ */
+export async function getFirearms(token: string | null, params?: { limit?: number; page?: number }): Promise<Firearm[]> {
+  if (!token) {
+    throw new Error('Authentication token is required.')
+  }
+  if (!process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL) {
+    throw new Error('API URL is not configured.')
+  }
+
+  const url = new URL(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}/firearms`);
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) {
+        url.searchParams.append(key, String(value));
+      }
+    });
+  }
+
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      // 'Content-Type': 'application/json', // Not needed for GET
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorData = data as ApiErrorResponse;
+    const errorMessage = errorData?.error || `Failed to fetch firearms with status: ${response.status}`;
+    console.error('Get Firearms API Error:', errorMessage, 'Status:', response.status);
+    const error = new Error(errorMessage) as any;
+    error.status = response.status;
+    throw error;
+  }
+
+  // Assuming the API returns an array of Firearm objects directly
+  return data as Firearm[];
+}

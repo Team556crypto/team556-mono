@@ -7,6 +7,7 @@ export { default as Drawer } from './src/Drawer'
 export { default as StepForm } from './src/StepForm'
 export { default as TabBarBackground } from './src/TabBarBackground'
 export { default as IconSymbol } from './src/IconSymbol'
+export { default as FirearmCard } from './src/FirearmCard'
 
 // Named exports for specific functionality
 export * from './src/Input'
@@ -20,6 +21,9 @@ export * from './src/TabBarBackground'
 export * from './src/Badge'
 export * from './src/HorizontalBadgeScroll'
 export * from './src/ThemeContext'
+
+// Export types
+export * from './src/types';
 
 // Export the colors and themes
 export * from './constants/Colors'

@@ -32,7 +32,7 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	auth := api.Group("/auth")
 	wallet := api.Group("/wallet")
 	swap := api.Group("/swap", middleware.AuthMiddleware(cfg.JWTSecret))
-	firearms := api.Group("/firearms")
+	firearms := api.Group("/firearms", middleware.AuthMiddleware(cfg.JWTSecret))
 
 	// Auth Routes
 	auth.Post("/register", authHandler.Register)

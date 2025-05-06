@@ -72,26 +72,34 @@ const firearmsToSeed = [
 // **Assuming** we have a Node crypto setup compatible with Go's AES-GCM:
 async function encryptAESGCM(plaintext: string, secret: string): Promise<string> {
   // IMPORTANT: This needs to produce output IDENTICAL to Go's crypto.EncryptAESGCM
-  // Using scrypt-js for key derivation matching Go's potential use (adjust if different)
-  // Use a fixed salt or derive one and store/prefix it if needed, must match Go approach.
-  const salt = Buffer.from('fixed-salt-team556') // Example fixed salt - MUST MATCH GO
-  const keyLength = 32 // For AES-256
 
-  const derivedKey = await scrypt(Buffer.from(secret), salt, 16384, 8, 1, keyLength)
+  // Constants matching Go implementation
+  const saltLength = 16 // crypto/aes.go
+  const keyLength = 32  // crypto/aes.go
+  const scryptN = 32768 // crypto/aes.go
+  const scryptR = 8     // crypto/aes.go
+  const scryptP = 1     // crypto/aes.go
 
-  const iv = crypto.randomBytes(12) // AES-GCM standard nonce size
+  // 1. Generate a new random salt for each encryption (matching Go)
+  const salt = crypto.randomBytes(saltLength)
+
+  // 2. Derive the key using scrypt with parameters matching Go
+  const derivedKey = await scrypt(Buffer.from(secret), salt, scryptN, scryptR, scryptP, keyLength);
+
+  // 3. Encrypt using AES-256-GCM
+  const iv = crypto.randomBytes(12) // AES-GCM standard nonce size (IV)
   const cipher = crypto.createCipheriv('aes-256-gcm', derivedKey, iv)
 
-  let encrypted = cipher.update(plaintext, 'utf8', 'base64')
-  encrypted += cipher.final('base64')
+  // Perform encryption
+  const encryptedPart1 = cipher.update(plaintext, 'utf8');
+  const encryptedPart2 = cipher.final();
+  const actualCiphertext = Buffer.concat([encryptedPart1, encryptedPart2]);
   const authTag = cipher.getAuthTag()
 
-  // Combine nonce, encrypted data, and auth tag
-  // Format must be compatible with Go's decryption function
-  // Example: base64(nonce) + ":" + base64(encrypted_data) + ":" + base64(auth_tag)
-  // Or just nonce + ciphertext + tag and base64 the whole thing?
-  // --> Let's assume Go expects: base64(nonce + ciphertext + authTag)
-  const combined = Buffer.concat([iv, Buffer.from(encrypted, 'base64'), authTag])
+  // 4. Combine salt + nonce + ciphertext + auth tag (matching Go)
+  const combined = Buffer.concat([salt, iv, actualCiphertext, authTag])
+
+  // 5. Encode the entire combined buffer as Base64
   return combined.toString('base64')
 }
 

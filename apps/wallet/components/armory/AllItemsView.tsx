@@ -7,6 +7,7 @@ import { useTheme } from '@team556/ui'
 import { Firearm } from '@/services/api'
 import { useDrawerStore } from '@/store/drawerStore'
 import { FirearmDetailsDrawerContent } from './FirearmDetailsDrawerContent'
+import { AddFirearmDrawerContent } from './AddFirearmDrawerContent'
 import { Ionicons } from '@expo/vector-icons'
 import { CARD_HEIGHT, CARD_WIDTH } from '@team556/ui'
 
@@ -19,7 +20,7 @@ const AllItemsView = () => {
   const error = useFirearmStore(state => state.error)
   const fetchInitialFirearms = useFirearmStore(state => state.fetchInitialFirearms)
   const hasAttemptedInitialFetch = useFirearmStore(state => state.hasAttemptedInitialFetch)
-  const openDrawer = useDrawerStore(state => state.openDrawer)
+  const { openDrawer } = useDrawerStore()
 
   useEffect(() => {
     if (token && !hasAttemptedInitialFetch && !isLoading) {
@@ -110,7 +111,12 @@ const AllItemsView = () => {
               <FirearmCard key={firearm.id} firearm={firearm} onPress={() => handleFirearmPress(firearm)} />
             ))}
           {!isLoading && firearms.length >= 0 && (
-            <TouchableOpacity style={styles.addFirearmCard} onPress={() => console.log('Add new firearm pressed')}>
+            <TouchableOpacity 
+              style={styles.addFirearmCard} 
+              onPress={() => {
+                openDrawer(<AddFirearmDrawerContent />)
+              }}
+            >
               <Ionicons name='add-circle-outline' size={48} color={colors.primary} />
               <Text preset='label' style={styles.addFirearmText}>
                 Add Firearm

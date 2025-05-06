@@ -4,6 +4,9 @@ import { useFirearmStore } from '@/store/firearmStore'
 import { useAuthStore } from '@/store/authStore'
 import { FirearmCard, Text, Badge, Button } from '@team556/ui'
 import { useTheme } from '@team556/ui'
+import { Firearm } from '@/services/api'
+import { useDrawerStore } from '@/store/drawerStore'
+import { FirearmDetailsDrawerContent } from './FirearmDetailsDrawerContent'
 
 const AllItemsView = () => {
   const { colors } = useTheme()
@@ -14,12 +17,17 @@ const AllItemsView = () => {
   const error = useFirearmStore(state => state.error)
   const fetchInitialFirearms = useFirearmStore(state => state.fetchInitialFirearms)
   const hasAttemptedInitialFetch = useFirearmStore(state => state.hasAttemptedInitialFetch)
+  const openDrawer = useDrawerStore(state => state.openDrawer)
 
   useEffect(() => {
     if (token && !hasAttemptedInitialFetch && !isLoading) {
       fetchInitialFirearms(token)
     }
   }, [token, hasAttemptedInitialFetch, isLoading, fetchInitialFirearms])
+
+  const handleFirearmPress = (firearm: Firearm) => {
+    openDrawer(<FirearmDetailsDrawerContent firearm={firearm} />, { maxHeight: '90%' })
+  }
 
   const styles = StyleSheet.create({
     container: {
@@ -79,7 +87,7 @@ const AllItemsView = () => {
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollViewContent}>
           {firearms.map(firearm => (
-            <FirearmCard key={firearm.id} firearm={firearm} />
+            <FirearmCard key={firearm.id} firearm={firearm} onPress={() => handleFirearmPress(firearm)} />
           ))}
         </ScrollView>
       </View>

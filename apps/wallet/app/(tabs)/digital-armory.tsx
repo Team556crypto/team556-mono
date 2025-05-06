@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { StyleSheet, View, Dimensions } from 'react-native'
 import { ScreenLayout } from '@/components/ScreenLayout'
 import { Colors } from '@/constants/Colors'
 import { Ionicons } from '@expo/vector-icons'

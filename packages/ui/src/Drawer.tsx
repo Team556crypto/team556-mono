@@ -8,7 +8,8 @@ import {
   TouchableWithoutFeedback,
   LayoutChangeEvent,
   Platform,
-  ScrollView
+  ScrollView,
+  Text
 } from 'react-native'
 import Animated, {
   useSharedValue,
@@ -39,13 +40,14 @@ interface DrawerProps {
   children: React.ReactNode
   isVisible: boolean
   onClose: () => void
-  maxHeight?: number
-  minHeight?: number
+  maxHeight?: number | string
+  minHeight?: number | string
   style?: StyleProp<ViewStyle>
   containerStyle?: StyleProp<ViewStyle>
   handleBarStyle?: StyleProp<ViewStyle>
   backdropOpacity?: number
   colors?: Partial<ThemeColors>
+  title?: string
 }
 
 export default function Drawer({
@@ -58,7 +60,8 @@ export default function Drawer({
   containerStyle,
   handleBarStyle,
   backdropOpacity = 0.5,
-  colors = {}
+  colors = {},
+  title
 }: DrawerProps): JSX.Element {
   // Merge provided colors with defaults
   const themeColors = { ...DefaultColors, ...colors }
@@ -68,11 +71,30 @@ export default function Drawer({
   const [shouldRender, setShouldRender] = useState(isVisible)
   const isInitialRender = useRef(true)
 
+  // Function to parse height values that can be numbers or percentage strings
+  const parseHeightValue = (value: number | string | undefined, defaultValue: number): number => {
+    if (value === undefined) return defaultValue;
+    
+    if (typeof value === 'number') return value;
+    
+    // Handle percentage string
+    if (typeof value === 'string' && value.endsWith('%')) {
+      const percentage = parseFloat(value) / 100;
+      return SCREEN_HEIGHT * percentage;
+    }
+    
+    // Try to parse as a number
+    const parsed = parseFloat(String(value));
+    return isNaN(parsed) ? defaultValue : parsed;
+  };
+  
   // Calculate drawer height based on content with min/max constraints
   // Add padding, handle height, and a bit extra for shadow/spacing
   const totalPadding = HANDLE_HEIGHT + CONTENT_PADDING + SHADOW_OFFSET
-  const calculatedHeight = contentHeight > 0 ? contentHeight + totalPadding : minHeight
-  const drawerHeight = Math.min(maxHeight, Math.max(minHeight, calculatedHeight))
+  const calculatedHeight = contentHeight > 0 ? contentHeight + totalPadding : parseHeightValue(minHeight, MIN_DRAWER_HEIGHT)
+  const maxHeightValue = parseHeightValue(maxHeight, MAX_DRAWER_HEIGHT)
+  const minHeightValue = parseHeightValue(minHeight, MIN_DRAWER_HEIGHT)
+  const drawerHeight = Math.min(maxHeightValue, Math.max(minHeightValue, calculatedHeight))
 
   const translateY = useSharedValue(SCREEN_HEIGHT)
   const context = useSharedValue({ y: 0 })
@@ -246,6 +268,11 @@ export default function Drawer({
           <View style={styles.handleBarContainer}>
             <View style={[styles.handleBar, handleBarStyle]} />
           </View>
+          {title && (
+            <View style={styles.titleContainer}>
+              <Text style={styles.title}>{title}</Text>
+            </View>
+          )}
           <View style={[styles.contentContainer, containerStyle]} onLayout={handleContentLayout}>
             <ScrollView>{drawerContent}</ScrollView>
           </View>
@@ -308,5 +335,14 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 20
+  },
+  titleContainer: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc'
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold'
   }
 })

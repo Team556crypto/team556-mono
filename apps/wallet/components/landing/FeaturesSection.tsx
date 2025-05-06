@@ -52,13 +52,13 @@ const FeaturesSection: React.FC = () => {
       color: 'ammo-icon'
     },
     {
-      title: 'Document Vault',
+      title: 'Documents',
       description: "Keep your important firearm-related documents safe and organized. Store encrypted copies of your licenses, training certificates, purchase records, and legal paperwork—all in one private, easy-to-access location. Everything stays on your device, under your control, with no third-party access or cloud syncing.",
       iconElement: <Ionicons name="document-text-outline" size={24} color={getFeatureIconColor('documents-icon')} />,
       color: 'documents-icon'
     },
     {
-      title: 'Privacy & Security',
+      title: 'Advanced Security',
       description: "Your data stays private and protected with end-to-end encryption, secure local key storage, and robust authentication protocols. Whether you're managing firearm details, documents, or transaction history, everything is locked to your device—never shared, never stored in the cloud, and never accessible without your permission. Built for those who value control, privacy, and peace of mind.",
       iconElement: <Feather name="shield" size={24} color={getFeatureIconColor('security-icon')} />,
       color: 'security-icon'

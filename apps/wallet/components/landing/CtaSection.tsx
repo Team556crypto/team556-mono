@@ -174,7 +174,7 @@ const CtaSection: React.FC<CtaSectionProps> = ({
                     {/* Users counter */}
                     <View style={styles.usersCounter}>
                       <View style={styles.usersCounterContent}>
-                        <View>
+                        <View style={styles.userTextContainer}>
                           <Text style={styles.featureTitle}>Firearms enthusiasts trust Team556</Text>
                         </View>
                         <View style={styles.userAvatars}>
@@ -481,9 +481,14 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   usersCounterContent: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  userTextContainer: {
+    width: '100%',
+    marginBottom: 4,
   },
   usersCount: {
     fontSize: 24,
@@ -496,7 +501,8 @@ const styles = StyleSheet.create({
   },
   userAvatars: {
     flexDirection: 'row',
-    marginLeft: -8, // To create overlap effect
+    alignSelf: 'flex-start',
+    marginTop: 4,
   },
   userAvatar: {
     width: 32,
@@ -506,7 +512,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#0a0a0f',
-    marginLeft: -8, // Creates overlap
+    marginRight: 6,
   },
   userAvatar1: {
     backgroundColor: Colors.primary || '#9945FF',

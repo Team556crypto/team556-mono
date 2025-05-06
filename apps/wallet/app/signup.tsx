@@ -1,10 +1,19 @@
-import React, { useState } from 'react'
-import { View, StyleSheet, Alert, SafeAreaView, Platform, TouchableOpacity } from 'react-native'
+import React, { useState, useRef, useEffect } from 'react'
+import { 
+  View, 
+  StyleSheet, 
+  Alert, 
+  SafeAreaView, 
+  Platform, 
+  TouchableOpacity,
+  ScrollView,
+  Animated
+} from 'react-native'
 import { Button, Input, Text } from '@repo/ui'
-import { useRouter } from 'expo-router'
+import { useRouter, Link } from 'expo-router'
 import { genericStyles } from '@/constants/GenericStyles'
 import { Colors } from '@/constants/Colors'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useAuthStore } from '@/store/authStore'
 import LogoSvg from '@/assets/images/logo.svg';
@@ -16,6 +25,26 @@ const SignUpScreen = () => {
   const { isTabletOrLarger } = useBreakpoint()
   const { signup, isLoading, error: authError, setError: setAuthError } = useAuthStore()
   const router = useRouter()
+
+  // Animation references for left side
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateAnim = useRef(new Animated.Value(20)).current;
+  
+  // Trigger animations on component mount
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 700,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateAnim, {
+        toValue: 0,
+        duration: 700,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const handleSignUp = async () => {
     setAuthError(null)
@@ -32,61 +61,207 @@ const SignUpScreen = () => {
     }
   }
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      {/* Back Button */}
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-        <Ionicons name="arrow-back" size={24} color={Colors.text} />
-      </TouchableOpacity>
-      <View style={styles.outerContainer}>
-        {/* Form Content Centered */}
-        <View style={[styles.contentContainer, isTabletOrLarger && styles.contentContainerDesktop]}>
-          {/* Simple Header */}
-          <View style={styles.headerContainer}>
-            <LogoSvg width={60} height={60} style={styles.logo} />
-            <Text preset='h1'>Create Account</Text>
+  const renderInfoSide = () => (
+    <View style={styles.infoSide}>
+      <View style={styles.infoContent}>
+        <Animated.View style={[styles.logoContainer, { opacity: fadeAnim }]}>
+          <LogoSvg width={60} height={60} style={styles.logo} />
+        </Animated.View>
+
+        {/* Status badge */}
+        <Animated.View 
+          style={[
+            styles.statusBadge,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: Animated.multiply(translateAnim, 1.2) }]
+            }
+          ]}
+        >
+          <View style={styles.statusBadgeInner}>
+            <View style={[styles.badgeGradientOverlay, { backgroundColor: Colors.secondary }]} />
+            <View style={styles.badgeContent}>
+              <View style={styles.liveDotContainer}>
+                <Animated.View style={[styles.liveDotPulse, {
+                  opacity: fadeAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, 0.75]
+                  }),
+                  backgroundColor: Colors.secondary
+                }]} />
+                <View style={[styles.liveDot, { backgroundColor: Colors.secondary }]} />
+              </View>
+              <Text style={styles.badgeText}>
+                Non-Custodial Wallet • Self-Sovereign Identity • Asset Management
+              </Text>
+            </View>
           </View>
-          {/* Display Auth Error */}
+        </Animated.View>
+
+        {/* Main heading */}
+        <Animated.View
+          style={[
+            styles.headingContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ 
+                translateY: Animated.multiply(translateAnim, 1.4) 
+              }]
+            }
+          ]}
+        >
+          <Text style={styles.heading}>
+            Join the Future of 
+          </Text>
+          <Text style={[styles.heading, styles.headingHighlight]}>
+            Digital & Physical
+          </Text>
+          <Text style={styles.heading}>
+            Asset Ownership
+          </Text>
+        </Animated.View>
+
+        {/* Subheading text */}
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ 
+              translateY: Animated.multiply(translateAnim, 1.6) 
+            }]
+          }}
+        >
+          <Text style={styles.subheading}>
+            Create your secure wallet to start managing your digital tokens and physical assets using advanced blockchain technology.
+          </Text>
+        </Animated.View>
+
+        {/* Benefits */}
+        <Animated.View 
+          style={[
+            styles.featuresGrid,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: Animated.multiply(translateAnim, 1.8) }]
+            }
+          ]}
+        >
+          <View style={styles.featureCard}>
+            <MaterialCommunityIcons name="shield-key" color={Colors.secondary} size={24} style={styles.featureIcon} />
+            <Text style={styles.featureTitle}>Self-Sovereign</Text>
+            <Text style={styles.featureDescription}>You own your private keys & control your identity</Text>
+          </View>
+          
+          <View style={styles.featureCard}>
+            <MaterialCommunityIcons name="database-lock" color={Colors.secondary} size={24} style={styles.featureIcon} />
+            <Text style={styles.featureTitle}>Data Sovereignty</Text>
+            <Text style={styles.featureDescription}>Your data stays private & encrypted on your device</Text>
+          </View>
+          
+          <View style={styles.featureCard}>
+            <FontAwesome5 name="wallet" color={Colors.secondary} size={24} style={styles.featureIcon} />
+            <Text style={styles.featureTitle}>Multi-Asset Wallet</Text>
+            <Text style={styles.featureDescription}>Manage crypto, NFTs & physical assets in one place</Text>
+          </View>
+          
+          <View style={styles.featureCard}>
+            <MaterialCommunityIcons name="account-check" color={Colors.secondary} size={24} style={styles.featureIcon} />
+            <Text style={styles.featureTitle}>Easy Onboarding</Text>
+            <Text style={styles.featureDescription}>Simple setup with powerful security & backup options</Text>
+          </View>
+        </Animated.View>
+      </View>
+    </View>
+  );
+
+  const renderFormSide = () => (
+    <ScrollView 
+      contentContainerStyle={styles.formScrollContainer}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View style={styles.formContainer}>
+        <View style={styles.formCard}>
+          <Text preset='h2' style={styles.formTitle}>Create Your Wallet</Text>
+          <Text style={styles.formSubtitle}>Sign up to start managing your assets securely</Text>
+
           {authError && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{authError}</Text>
             </View>
           )}
+
+          <Text style={styles.label}>Email</Text>
           <Input
-            placeholder='Email'
+            placeholder='your@email.com'
             value={email}
             onChangeText={setEmail}
             keyboardType='email-address'
             autoCapitalize='none'
-            style={[genericStyles.input, styles.input, isTabletOrLarger && styles.inputDesktop]}
+            style={[genericStyles.input, styles.input]} 
             placeholderTextColor={Colors.textSecondary}
             leftIcon={<Ionicons name='mail-outline' size={20} color={Colors.icon} />}
           />
+
+          <Text style={styles.label}>Password</Text>
           <Input
-            placeholder='Password'
+            placeholder='••••••••'
             value={password}
             onChangeText={setPassword}
             secureTextEntry
-            style={[genericStyles.input, styles.input, isTabletOrLarger && styles.inputDesktop]}
+            style={[genericStyles.input, styles.input]}
             placeholderTextColor={Colors.textSecondary}
             leftIcon={<Ionicons name='lock-closed-outline' size={20} color={Colors.icon} />}
           />
+
+          <Text style={styles.label}>Confirm Password</Text>
           <Input
-            placeholder='Confirm Password'
+            placeholder='••••••••'
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
-            style={[genericStyles.input, styles.input, isTabletOrLarger && styles.inputDesktop]}
+            style={[genericStyles.input, styles.input]}
             placeholderTextColor={Colors.textSecondary}
             leftIcon={<Ionicons name='lock-closed-outline' size={20} color={Colors.icon} />}
           />
-          <Button
-            title={isLoading ? 'Creating Account...' : 'Sign Up'}
-            onPress={handleSignUp}
-            style={[styles.button, isTabletOrLarger && styles.buttonDesktop]}
-            disabled={isLoading}
-          />
+
+          <TouchableOpacity onPress={handleSignUp} disabled={isLoading} style={styles.signUpButtonContainer}>
+            <View style={styles.signUpButton}>
+              <Ionicons name='person-add-outline' size={20} color={Colors.backgroundDarkest} style={{marginRight: 8}}/>
+              <Text style={styles.signUpButtonText}>
+                {isLoading ? 'Creating Account...' : 'Create Wallet'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+          
+          <View style={styles.loginContainer}>
+            <Text style={styles.loginText}>Already have a wallet? </Text>
+            <Link href="/signin">
+               <Text style={styles.linkText}>Sign In</Text>
+            </Link>
+          </View>
         </View>
+      </View>
+    </ScrollView>
+  );
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      {/* Show back button ONLY on native platforms AND when NOT in two-column layout */}
+      {Platform.OS !== 'web' && !isTabletOrLarger && (
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButtonMobile}>
+          <Ionicons name="arrow-back" size={24} color={Colors.text} />
+        </TouchableOpacity>
+      )}
+      <View style={styles.outerContainer}>
+        {/* Use two-column layout if the screen is large enough (tablet or desktop/web) */}
+        {isTabletOrLarger ? (
+          <View style={styles.desktopContainer}>
+            {renderInfoSide()} 
+            {renderFormSide()}
+          </View>
+        ) : (
+          /* Otherwise (smaller screen, likely mobile), show only the form */
+          renderFormSide()
+        )}
       </View>
     </SafeAreaView>
   )
@@ -95,70 +270,265 @@ const SignUpScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.backgroundDarkest // Match ScreenLayout background
-  },
-  backButton: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 50 : 20, // Adjust based on OS status bar
-    left: 20,
-    zIndex: 1, // Ensure it's above other content
-    padding: 10 // Make tap area larger
+    backgroundColor: Colors.backgroundDarkest,
   },
   outerContainer: {
     flex: 1,
-    paddingHorizontal: 20, // Add horizontal padding
-    paddingTop: 20 // Add some top padding
   },
-  headerContainer: {
-    marginBottom: 30, // Increased margin
-    alignItems: 'center' // Center title
+  desktopContainer: {
+    flex: 1,
+    flexDirection: 'row',
   },
-  logo: { // Style for the logo
-    marginBottom: 15, 
+  infoSide: {
+    flex: 1,
+    backgroundColor: Colors.backgroundDarkest,
+    padding: 40,
+    justifyContent: 'space-between',
   },
-  contentContainer: {
+  infoContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  // Logo styles
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  logo: {
+    marginRight: 12,
+  },
+  logoText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.text,
+    letterSpacing: 1,
+  },
+  // Status badge styles
+  statusBadge: {
+    marginBottom: 32,
+    alignSelf: 'flex-start',
+    overflow: 'hidden',
+    borderRadius: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  statusBadgeInner: {
+    backgroundColor: Colors.backgroundDarker,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 30,
+    padding: 12,
+    position: 'relative',
+  },
+  badgeGradientOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    opacity: 0.2,
+    borderRadius: 30,
+  },
+  badgeContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  liveDotContainer: {
+    width: 8,
+    height: 8,
+    marginRight: 8,
+    position: 'relative',
+  },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  liveDotPulse: {
+    position: 'absolute',
+    top: -4,
+    left: -4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  badgeText: {
+    fontSize: 14,
+    color: Colors.text,
+  },
+  // Heading styles
+  headingContainer: {
+    marginBottom: 24,
+  },
+  heading: {
+    color: Colors.text,
+    fontSize: 36,
+    fontWeight: 'bold',
+    lineHeight: 44,
+  },
+  headingHighlight: {
+    color: Colors.secondary,
+  },
+  subheading: {
+    color: Colors.textSecondary,
+    fontSize: 16,
+    marginBottom: 40,
+    lineHeight: 24,
+    maxWidth: 500,
+  },
+  // Feature grid
+  featuresGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 40,
+    gap: 16,
+  },
+  featureCard: {
+    flex: 1, 
+    minWidth: '45%',
+    backgroundColor: Colors.backgroundDarker,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  featureIcon: {
+    marginBottom: 12,
+  },
+  featureTitle: {
+    color: Colors.text,
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  featureDescription: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  footer: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 20,
+    textAlign: 'center',
+  },
+  // Form styles
+  formScrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
-    alignItems: 'stretch',
+  },
+  formContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.backgroundDark,
+    padding: Platform.OS === 'web' ? 40 : 20,
+  },
+  formCard: {
     width: '100%',
-    paddingHorizontal: 20,
-    paddingBottom: 40 // Add some padding at the bottom
+    maxWidth: 420,
+    backgroundColor: Colors.backgroundDarker,
+    borderRadius: 12,
+    padding: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 5,
   },
-  contentContainerDesktop: {
-    maxWidth: 500,
-    alignSelf: 'center',
-    paddingHorizontal: 40
+  formTitle: {
+    marginBottom: 8,
+    textAlign: 'center',
+    color: Colors.text,
   },
-  container: {
-    // This style might be redundant now, check if needed
-    // padding: 20, // Moved padding to outerContainer
+  formSubtitle: {
+    marginBottom: 30,
+    textAlign: 'center',
+    color: Colors.textSecondary,
+    fontSize: 14,
+  },
+  label: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 8,
+    fontWeight: '500',
   },
   input: {
-    width: '100%' // Make inputs take full width
+    backgroundColor: Colors.backgroundDark,
+    borderWidth: 1,
+    borderColor: Colors.background,
+    borderRadius: 8,
+    marginBottom: 15,
+    color: Colors.text,
+    height: 50,
   },
-  inputDesktop: {
-    height: 56, // Slightly larger input for desktop
-    fontSize: 16, // Larger font size
-    minWidth: 400 // Set minimum width for desktop
+  signUpButtonContainer: {
+    borderRadius: 8,
+    height: 50,
+    marginBottom: 25,
   },
-  button: {
-    marginTop: 20
+  signUpButton: {
+    flex: 1, 
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'row',
+    backgroundColor: Colors.secondary,
   },
-  buttonDesktop: {
-    height: 56, // Taller button for desktop
-    marginTop: 30 // More space above button
+  signUpButtonText: {
+    color: Colors.backgroundDarkest,
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  loginContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loginText: {
+    color: Colors.textSecondary,
+    fontSize: 13,
+  },
+  linkText: {
+    color: Colors.secondary,
+    fontSize: 13,
+    fontWeight: '500',
   },
   errorContainer: {
     marginBottom: 15,
     padding: 10,
     backgroundColor: Colors.errorBackground,
     borderRadius: 8,
-    alignItems: 'center'
+    alignItems: 'center',
   },
   errorText: {
     color: Colors.errorText,
-    textAlign: 'center'
-  }
+    textAlign: 'center',
+    fontSize: 13,
+  },
+  backButtonMobile: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 20,
+    left: 20,
+    zIndex: 1,
+    padding: 10,
+    backgroundColor: Colors.backgroundDarker,
+    borderRadius: 20,
+  },
 })
 
 export default SignUpScreen

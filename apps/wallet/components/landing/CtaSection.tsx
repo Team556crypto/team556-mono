@@ -212,8 +212,9 @@ const CtaSection: React.FC<CtaSectionProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 64,
+    paddingVertical: 100,
     position: 'relative',
+    backgroundColor: Colors.solanaNavy,
     overflow: 'hidden',
   },
   contentContainer: {
@@ -223,28 +224,26 @@ const styles = StyleSheet.create({
     marginHorizontal: 'auto',
   },
   ctaCard: {
-    backgroundColor: Colors.backgroundDarkest, // Use consistent background color from Colors
+    backgroundColor: Colors.solanaDark,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(128, 128, 128, 0.3)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 10,
+    borderColor: 'rgba(128, 128, 128, 0.2)',
     overflow: 'hidden',
     position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.4,
+    shadowRadius: 30,
+    elevation: 10,
   },
   decorativeBorder: {
+    height: 4,
+    width: '100%',
+    backgroundColor: Colors.solanaMain,
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: 4,
-    backgroundColor: Colors.primary || '#9945FF',
-    ...(Platform.OS === 'web' ? {
-      background: 'linear-gradient(90deg, #9945FF, #44b0ff, #14F195)',
-    } : {}),
   },
   gridPatternOverlay: {
     position: 'absolute',
@@ -308,7 +307,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.secondary || '#14F195',
+    backgroundColor: Colors.solanaMain,
     marginRight: 8,
   },
   badgeText: {
@@ -360,7 +359,7 @@ const styles = StyleSheet.create({
     } : {}),
   },
   featureShowcaseInner: {
-    backgroundColor: '#0a0a0f',
+    backgroundColor: Colors.solanaDark,
     borderRadius: 12,
     padding: 20,
   },
@@ -368,7 +367,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   featureCard: {
-    backgroundColor: 'rgba(30, 30, 40, 0.5)',
+    backgroundColor: 'rgba(20, 30, 40, 0.5)',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: 'rgba(128, 128, 128, 0.2)',
@@ -430,7 +429,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   userAvatar1: {
-    backgroundColor: Colors.primary || '#9945FF',
+    backgroundColor: Colors.solanaMain,
     zIndex: 4,
   },
   userAvatar2: {
@@ -473,6 +472,21 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' ? {
       filter: 'blur(30px)',
     } : {}),
+  },
+  ctaButtonsContainer: {
+    flexDirection: 'row',
+    gap: 16,
+    alignItems: 'center',
+  },
+  createWalletButton: {
+    backgroundColor: Colors.solanaMain,
+    minWidth: 180,
+  },
+  loginButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    minWidth: 180,
   },
 });
 

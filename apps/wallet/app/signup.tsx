@@ -11,7 +11,6 @@ import {
 } from 'react-native'
 import { Button, Input, Text } from '@repo/ui'
 import { useRouter, Link } from 'expo-router'
-import { genericStyles } from '@/constants/GenericStyles'
 import { Colors } from '@/constants/Colors'
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
@@ -79,17 +78,15 @@ const SignUpScreen = () => {
           ]}
         >
           <View style={styles.statusBadgeInner}>
-            <View style={[styles.badgeGradientOverlay, { backgroundColor: Colors.secondary }]} />
             <View style={styles.badgeContent}>
               <View style={styles.liveDotContainer}>
                 <Animated.View style={[styles.liveDotPulse, {
                   opacity: fadeAnim.interpolate({
                     inputRange: [0, 1],
                     outputRange: [0, 0.75]
-                  }),
-                  backgroundColor: Colors.secondary
+                  })
                 }]} />
-                <View style={[styles.liveDot, { backgroundColor: Colors.secondary }]} />
+                <View style={styles.liveDot} />
               </View>
               <Text style={styles.badgeText}>
                 Non-Custodial Wallet • Self-Sovereign Identity • Asset Management
@@ -126,212 +123,219 @@ const SignUpScreen = () => {
           style={{
             opacity: fadeAnim,
             transform: [{ 
-              translateY: Animated.multiply(translateAnim, 1.6) 
+              translateY: Animated.multiply(translateAnim, 1.5) 
             }]
           }}
         >
           <Text style={styles.subheading}>
-            Create your secure wallet to start managing your digital tokens and physical assets using advanced blockchain technology.
+            Create your account to experience the future of digital asset management. Take control of your wealth with cutting-edge security and blockchain technology.
           </Text>
         </Animated.View>
 
-        {/* Benefits */}
+        {/* Feature Cards */}
         <Animated.View 
-          style={[
-            styles.featuresGrid,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: Animated.multiply(translateAnim, 1.8) }]
-            }
-          ]}
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: Animated.multiply(translateAnim, 1.6) }]
+          }}
         >
-          <View style={styles.featureCard}>
-            <MaterialCommunityIcons name="shield-key" color={Colors.secondary} size={24} style={styles.featureIcon} />
-            <Text style={styles.featureTitle}>Self-Sovereign</Text>
-            <Text style={styles.featureDescription}>You own your private keys & control your identity</Text>
+          <View style={styles.featuresGrid}>
+            <View style={styles.featureCard}>
+              <View style={styles.featureIcon}>
+                <MaterialCommunityIcons name="shield-key" size={32} color={Colors.solanaMain} />
+              </View>
+              <Text style={styles.featureTitle}>Self-Sovereign</Text>
+              <Text style={styles.featureDescription}>
+                You own your private keys and maintain full control of your assets
+              </Text>
+            </View>
+
+            <View style={styles.featureCard}>
+              <View style={styles.featureIcon}>
+                <FontAwesome5 name="exchange-alt" size={32} color={Colors.solanaMain} />
+              </View>
+              <Text style={styles.featureTitle}>Seamless Swaps</Text>
+              <Text style={styles.featureDescription}>
+                Trade between cryptocurrencies with low fees and high security
+              </Text>
+            </View>
+
+            <View style={styles.featureCard}>
+              <View style={styles.featureIcon}>
+                <MaterialCommunityIcons name="database-lock" size={32} color={Colors.solanaMain} />
+              </View>
+              <Text style={styles.featureTitle}>Secure Storage</Text>
+              <Text style={styles.featureDescription}>
+                End-to-end encryption for all your digital asset information
+              </Text>
+            </View>
+
+            <View style={styles.featureCard}>
+              <View style={styles.featureIcon}>
+                <Ionicons name="analytics" size={32} color={Colors.solanaMain} />
+              </View>
+              <Text style={styles.featureTitle}>Portfolio Tracking</Text>
+              <Text style={styles.featureDescription}>
+                Real-time tracking of your digital asset portfolio
+              </Text>
+            </View>
           </View>
-          
-          <View style={styles.featureCard}>
-            <MaterialCommunityIcons name="database-lock" color={Colors.secondary} size={24} style={styles.featureIcon} />
-            <Text style={styles.featureTitle}>Data Sovereignty</Text>
-            <Text style={styles.featureDescription}>Your data stays private & encrypted on your device</Text>
-          </View>
-          
-          <View style={styles.featureCard}>
-            <FontAwesome5 name="wallet" color={Colors.secondary} size={24} style={styles.featureIcon} />
-            <Text style={styles.featureTitle}>Multi-Asset Wallet</Text>
-            <Text style={styles.featureDescription}>Manage crypto, NFTs & physical assets in one place</Text>
-          </View>
-          
-          <View style={styles.featureCard}>
-            <MaterialCommunityIcons name="account-check" color={Colors.secondary} size={24} style={styles.featureIcon} />
-            <Text style={styles.featureTitle}>Easy Onboarding</Text>
-            <Text style={styles.featureDescription}>Simple setup with powerful security & backup options</Text>
-          </View>
+        </Animated.View>
+
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: Animated.multiply(translateAnim, 1.7) }]
+          }}
+        >
+          <Text style={styles.footer}>
+            2025 Team556 • All Rights Reserved
+          </Text>
         </Animated.View>
       </View>
     </View>
-  );
+  )
 
   const renderFormSide = () => (
     <ScrollView 
       contentContainerStyle={styles.formScrollContainer}
-      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
     >
       <View style={styles.formContainer}>
         <View style={styles.formCard}>
-          <Text preset='h2' style={styles.formTitle}>Create Your Wallet</Text>
-          <Text style={styles.formSubtitle}>Sign up to start managing your assets securely</Text>
-
+          <Text preset="h3" style={styles.formTitle}>
+            Create Account
+          </Text>
+          
+          <Text style={styles.formSubtitle}>
+            Join our platform to manage your digital assets securely
+          </Text>
+          
           {authError && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{authError}</Text>
             </View>
           )}
-
-          <Text style={styles.label}>Email</Text>
+          
+          <Text style={styles.label}>Email Address</Text>
           <Input
-            placeholder='your@email.com'
+            style={styles.input}
+            placeholder="Enter your email"
+            placeholderTextColor={Colors.textSecondary}
             value={email}
             onChangeText={setEmail}
-            keyboardType='email-address'
-            autoCapitalize='none'
-            style={[genericStyles.input, styles.input]} 
-            placeholderTextColor={Colors.textSecondary}
-            leftIcon={<Ionicons name='mail-outline' size={20} color={Colors.icon} />}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            leftIcon={<Ionicons name="mail" size={18} color={Colors.textSecondary} />}
           />
-
+          
           <Text style={styles.label}>Password</Text>
           <Input
-            placeholder='••••••••'
+            style={styles.input}
+            placeholder="Create a strong password"
+            placeholderTextColor={Colors.textSecondary}
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
-            style={[genericStyles.input, styles.input]}
-            placeholderTextColor={Colors.textSecondary}
-            leftIcon={<Ionicons name='lock-closed-outline' size={20} color={Colors.icon} />}
+            secureTextEntry={true}
+            leftIcon={<Ionicons name="lock-closed" size={18} color={Colors.textSecondary} />}
           />
-
+          
           <Text style={styles.label}>Confirm Password</Text>
           <Input
-            placeholder='••••••••'
+            style={styles.input}
+            placeholder="Confirm your password"
+            placeholderTextColor={Colors.textSecondary}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
-            secureTextEntry
-            style={[genericStyles.input, styles.input]}
-            placeholderTextColor={Colors.textSecondary}
-            leftIcon={<Ionicons name='lock-closed-outline' size={20} color={Colors.icon} />}
+            secureTextEntry={true}
+            leftIcon={<Ionicons name="lock-closed" size={18} color={Colors.textSecondary} />}
           />
-
-          <TouchableOpacity onPress={handleSignUp} disabled={isLoading} style={styles.signUpButtonContainer}>
-            <View style={styles.signUpButton}>
-              <Ionicons name='person-add-outline' size={20} color={Colors.backgroundDarkest} style={{marginRight: 8}}/>
+          
+          <View style={styles.signUpButtonContainer}>
+            <TouchableOpacity 
+              style={styles.signUpButton}
+              onPress={handleSignUp}
+              disabled={isLoading}
+            >
               <Text style={styles.signUpButtonText}>
-                {isLoading ? 'Creating Account...' : 'Create Wallet'}
+                {isLoading ? 'Creating Account...' : 'Create Account'}
               </Text>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </View>
           
           <View style={styles.loginContainer}>
-            <Text style={styles.loginText}>Already have a wallet? </Text>
-            <Link href="/signin">
-               <Text style={styles.linkText}>Sign In</Text>
+            <Text style={styles.loginText}>Already have an account? </Text>
+            <Link href="/signin" asChild>
+              <TouchableOpacity>
+                <Text style={styles.linkText}>Sign In</Text>
+              </TouchableOpacity>
             </Link>
           </View>
         </View>
       </View>
     </ScrollView>
-  );
+  )
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      {/* Show back button ONLY on native platforms AND when NOT in two-column layout */}
-      {Platform.OS !== 'web' && !isTabletOrLarger && (
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButtonMobile}>
+    <SafeAreaView style={styles.container}>
+      {!isTabletOrLarger && (
+        <TouchableOpacity 
+          style={styles.backButtonMobile}
+          onPress={() => router.back()}
+        >
           <Ionicons name="arrow-back" size={24} color={Colors.text} />
         </TouchableOpacity>
       )}
-      <View style={styles.outerContainer}>
-        {/* Use two-column layout if the screen is large enough (tablet or desktop/web) */}
-        {isTabletOrLarger ? (
-          <View style={styles.desktopContainer}>
-            {renderInfoSide()} 
-            {renderFormSide()}
-          </View>
-        ) : (
-          /* Otherwise (smaller screen, likely mobile), show only the form */
-          renderFormSide()
-        )}
+      
+      <View style={styles.mainContainer}>
+        {isTabletOrLarger && renderInfoSide()}
+        {renderFormSide()}
       </View>
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
-    backgroundColor: Colors.backgroundDarkest,
+    backgroundColor: Colors.solanaNavy,
   },
-  outerContainer: {
-    flex: 1,
-  },
-  desktopContainer: {
+  mainContainer: {
     flex: 1,
     flexDirection: 'row',
   },
+  // Info side styles
   infoSide: {
     flex: 1,
-    backgroundColor: Colors.backgroundDarkest,
+    backgroundColor: Colors.solanaNavy,
     padding: 40,
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    display: 'flex',
   },
   infoContent: {
-    flex: 1,
-    justifyContent: 'center',
+    maxWidth: 600,
+    width: '100%',
+    alignSelf: 'center',
   },
-  // Logo styles
   logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 40,
   },
   logo: {
-    marginRight: 12,
+    width: 60,
+    height: 60,
   },
-  logoText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: Colors.text,
-    letterSpacing: 1,
-  },
-  // Status badge styles
+  // Status badge
   statusBadge: {
     marginBottom: 32,
-    alignSelf: 'flex-start',
-    overflow: 'hidden',
-    borderRadius: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 5,
   },
   statusBadgeInner: {
-    backgroundColor: Colors.backgroundDarker,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: Colors.solanaPurple,
     borderRadius: 30,
-    padding: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
     position: 'relative',
-  },
-  badgeGradientOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    opacity: 0.2,
-    borderRadius: 30,
+    alignSelf: 'flex-start',
+    overflow: 'hidden',
   },
   badgeContent: {
     flexDirection: 'row',
@@ -347,6 +351,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
+    backgroundColor: Colors.solanaMain,
   },
   liveDotPulse: {
     position: 'absolute',
@@ -355,6 +360,7 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
+    backgroundColor: Colors.solanaMain,
   },
   badgeText: {
     fontSize: 14,
@@ -371,7 +377,7 @@ const styles = StyleSheet.create({
     lineHeight: 44,
   },
   headingHighlight: {
-    color: Colors.secondary,
+    color: Colors.solanaMain,
   },
   subheading: {
     color: Colors.textSecondary,
@@ -390,19 +396,17 @@ const styles = StyleSheet.create({
   featureCard: {
     flex: 1, 
     minWidth: '45%',
-    backgroundColor: Colors.backgroundDarker,
+    backgroundColor: Colors.solanaDark,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
     padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 10,
-    elevation: 5,
+    elevation: 2,
   },
   featureIcon: {
     marginBottom: 12,
@@ -435,13 +439,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.backgroundDark,
+    backgroundColor: Colors.solanaNavy,
     padding: Platform.OS === 'web' ? 40 : 20,
   },
   formCard: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: Colors.backgroundDarker,
+    backgroundColor: Colors.solanaDark,
     borderRadius: 12,
     padding: 30,
     shadowColor: '#000',
@@ -468,9 +472,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   input: {
-    backgroundColor: Colors.backgroundDark,
+    backgroundColor: Colors.solanaNavy,
     borderWidth: 1,
-    borderColor: Colors.background,
+    borderColor: Colors.solanaPurple,
     borderRadius: 8,
     marginBottom: 15,
     color: Colors.text,
@@ -487,10 +491,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     flexDirection: 'row',
-    backgroundColor: Colors.secondary,
+    backgroundColor: Colors.solanaMain,
   },
   signUpButtonText: {
-    color: Colors.backgroundDarkest,
+    color: Colors.solanaDark,
     fontWeight: 'bold',
     fontSize: 16,
   },
@@ -504,7 +508,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   linkText: {
-    color: Colors.secondary,
+    color: Colors.solanaMain,
     fontSize: 13,
     fontWeight: '500',
   },
@@ -526,7 +530,7 @@ const styles = StyleSheet.create({
     left: 20,
     zIndex: 1,
     padding: 10,
-    backgroundColor: Colors.backgroundDarker,
+    backgroundColor: Colors.solanaDark,
     borderRadius: 20,
   },
 })

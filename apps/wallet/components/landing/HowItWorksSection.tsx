@@ -282,6 +282,7 @@ const styles = StyleSheet.create({
     paddingVertical: 80,
     position: 'relative',
     overflow: 'hidden',
+    backgroundColor: Colors.solanaNavy,
   },
   decorativeTop: {
     position: 'absolute',
@@ -322,29 +323,25 @@ const styles = StyleSheet.create({
   badgeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(20, 20, 30, 0.9)',
+    backgroundColor: Colors.solanaDark,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 50,
     borderWidth: 1,
     borderColor: 'rgba(128, 128, 128, 0.3)',
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    marginBottom: 24,
   },
   badgeDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#44b0ff', // Solana blue
-    marginRight: 10,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.solanaMain,
+    marginRight: 8,
   },
   badgeText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#44b0ff', // Solana blue
+    color: Colors.solanaMain,
   },
   heading: {
     fontSize: isTablet ? 40 : 32,
@@ -556,7 +553,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   mobileStepCard: {
-    backgroundColor: 'rgba(20, 20, 30, 0.6)',
+    backgroundColor: Colors.solanaDark,
     borderRadius: 16,
     borderWidth: 1, 
     borderColor: 'rgba(128, 128, 128, 0.3)',
@@ -624,7 +621,7 @@ const styles = StyleSheet.create({
     marginTop: 60,
   },
   securityCard: {
-    backgroundColor: 'rgba(20, 20, 30, 0.6)',
+    backgroundColor: Colors.solanaDark,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(128, 128, 128, 0.3)',
@@ -637,16 +634,16 @@ const styles = StyleSheet.create({
     elevation: 8,
     ...(Platform.OS === 'web' ? {
       backdropFilter: 'blur(12px)',
-      background: 'linear-gradient(135deg, rgba(30, 30, 40, 0.6), rgba(20, 20, 30, 0.6))',
+      background: 'linear-gradient(135deg, rgba(26, 32, 44, 0.8), rgba(19, 23, 32, 0.8))',
     } : {}),
   },
   securityIconContainer: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: `${Colors.primary}1A`, // 10% opacity
+    backgroundColor: 'rgba(20, 241, 149, 0.1)',
     borderWidth: 1,
-    borderColor: `${Colors.primary}33`, // 20% opacity
+    borderColor: 'rgba(20, 241, 149, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
@@ -675,7 +672,7 @@ const styles = StyleSheet.create({
   securityBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(30, 30, 40, 0.5)',
+    backgroundColor: 'rgba(30, 30, 40, 0.7)',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -694,7 +691,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#44b0ff', // Solana blue
   },
   secondaryDot: {
-    backgroundColor: Colors.secondary || '#14F195',
+    backgroundColor: Colors.solanaMain,
   },
 });
 

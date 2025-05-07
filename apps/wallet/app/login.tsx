@@ -20,8 +20,7 @@ import {
   HowItWorksSection,
   CtaSection,
   FooterSection,
-  BackgroundEffects,
-  ScrollToTop
+  BackgroundEffects
 } from '@/components/landing'
 
 const MobileLandingScreen = () => {
@@ -69,7 +68,12 @@ const WebLandingPage = () => {
   return (
     <View style={styles.webContainer}>
       <BackgroundEffects />
-      <ScrollView style={styles.webScrollView} contentContainerStyle={styles.webScrollViewContent}>
+      <ScrollView 
+        style={styles.webScrollView} 
+        contentContainerStyle={styles.webScrollViewContent}
+        bounces={false}
+        overScrollMode={'never'}
+      >
         <View style={sectionPadding}>
           <View style={contentWidth}>
             <LandingHeader />
@@ -112,7 +116,6 @@ const WebLandingPage = () => {
           </View>
         </View>
       </ScrollView>
-      <ScrollToTop />
     </View>
   )
 }
@@ -128,7 +131,7 @@ export default function LoginOrLandingScreen() {
 const styles = StyleSheet.create({
   safeAreaMobile: {
     flex: 1,
-    backgroundColor: Colors.backgroundDarkest
+    backgroundColor: Colors.solanaNavy
   },
   containerMobile: {
     flex: 1,
@@ -137,7 +140,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 40,
     paddingTop: 60,
-    width: '100%'
+    width: '100%',
+    backgroundColor: Colors.solanaNavy
   },
   containerMobileTablet: {
     paddingHorizontal: '20%',
@@ -158,26 +162,28 @@ const styles = StyleSheet.create({
   },
   signInButtonMobile: {
     width: '100%',
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.solanaMain,
     marginBottom: 16
   },
   signUpButtonMobile: {
     paddingVertical: 12
   },
   signUpTextMobile: {
-    color: Colors.primary,
+    color: Colors.solanaPurpleLight,
     fontWeight: '600',
     textAlign: 'center',
     fontSize: 16
   },
   webContainer: {
     flex: 1,
-    backgroundColor: Colors.background
+    backgroundColor: Colors.solanaNavy
   },
   webScrollView: {
-    flex: 1
+    flex: 1,
+    backgroundColor: Colors.solanaNavy
   },
   webScrollViewContent: {
+    backgroundColor: Colors.solanaNavy
   },
   // Responsive layout styles
   webSectionPaddingSmall: {

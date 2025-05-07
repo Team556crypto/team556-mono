@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
   container: {
     paddingTop: 80,
     paddingBottom: 40,
-    backgroundColor: Colors.backgroundDarkest,
+    backgroundColor: Colors.solanaNavy,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.06)',
     marginHorizontal: 'auto',
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: 'rgba(153, 69, 255, 0.06)',
     borderLeftWidth: 2,
-    borderLeftColor: Colors.primary,
+    borderLeftColor: Colors.solanaMain,
   },
   tokenHeader: {
     flexDirection: 'row',
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   copiedText: {
-    color: Colors.secondary,
+    color: Colors.solanaMain,
   },
   tokenAddress: {
     fontSize: 11,
@@ -374,6 +374,7 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     flexDirection: 'column',
     alignItems: 'center',
+    backgroundColor: Colors.solanaNavy,
   },
   bottomSectionLarge: {
     flexDirection: 'row',

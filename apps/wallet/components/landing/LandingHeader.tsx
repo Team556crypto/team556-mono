@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   headerScrolled: {
-    backgroundColor: 'rgba(10, 10, 10, 0.9)',
+    backgroundColor: 'rgba(26, 32, 44, 0.95)',
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   headerLarge: {
@@ -344,10 +344,11 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
   },
   activeNavLink: {
-    // Active state styling
+    borderBottomWidth: 2,
+    borderBottomColor: Colors.solanaMain,
   },
   activeNavLinkText: {
-    color: Colors.text,
+    color: Colors.solanaMain,
   },
   pressedNavLink: {
     opacity: 0.8,
@@ -359,15 +360,16 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 1,
   },
   getStartedButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.solanaMain,
   },
   mobileMenuButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(40, 40, 40, 0.6)',
+    backgroundColor: Colors.solanaDark,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
@@ -379,7 +381,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(10, 10, 10, 0.98)',
+    backgroundColor: Colors.solanaNavy,
     zIndex: 40,
   },
   mobileMenuContent: {
@@ -392,13 +394,13 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     marginBottom: 8,
-    backgroundColor: 'rgba(30, 30, 30, 0.5)',
+    backgroundColor: Colors.solanaDark,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   activeMobileNavItem: {
     backgroundColor: 'rgba(40, 40, 40, 0.8)',
-    borderColor: `${Colors.primary}4D`, // 30% opacity
+    borderColor: `${Colors.solanaMain}4D`, // 30% opacity
   },
   mobileNavItemContent: {
     flexDirection: 'row',
@@ -408,7 +410,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.solanaMain,
     marginRight: 8,
   },
   mobileNavItemText: {
@@ -428,7 +430,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   mobileGetStartedButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.solanaMain,
   },
 });
 

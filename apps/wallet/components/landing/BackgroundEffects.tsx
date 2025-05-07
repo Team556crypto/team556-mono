@@ -32,10 +32,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: Colors.backgroundDarkest,
+    backgroundColor: Colors.solanaNavy,
     ...(Platform.OS === 'web' 
       ? {
-          background: `linear-gradient(135deg, ${Colors.backgroundDarkest} 0%, ${Colors.backgroundDark} 50%, ${Colors.backgroundDarkest} 100%)`,
+          background: `linear-gradient(135deg, ${Colors.solanaDark} 0%, ${Colors.solanaNavy} 50%, ${Colors.solanaDark} 100%)`,
         } 
       : {}),
   },
@@ -48,8 +48,8 @@ const styles = StyleSheet.create({
     opacity: 0.4,
     ...(Platform.OS === 'web'
       ? {
-          background: `radial-gradient(circle at 25% 25%, ${Colors.primarySubtle} 0%, transparent 50%), 
-                       radial-gradient(circle at 75% 75%, ${Colors.secondarySubtle} 0%, transparent 50%)`,
+          background: `radial-gradient(circle at 25% 25%, ${Colors.solanaPurple}1A 0%, transparent 50%), 
+                       radial-gradient(circle at 75% 75%, ${Colors.solanaMain}1A 0%, transparent 50%)`,
         }
       : {}),
   }

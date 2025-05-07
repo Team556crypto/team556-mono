@@ -216,7 +216,7 @@ const isLargeScreen = width > 1024;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.backgroundDarkest,
+    backgroundColor: Colors.solanaNavy,
     minHeight: height,
     paddingTop: 80, // Space for the header
     overflow: 'hidden',
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start', // Align left on large screens
   },
   statusBadgeInner: {
-    backgroundColor: Colors.backgroundDarker,
+    backgroundColor: Colors.solanaPurple,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 30,
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     opacity: 0.2,
-    backgroundColor: Colors.primarySubtle,
+    backgroundColor: Colors.solanaPurpleLight,
     borderRadius: 30,
   },
   badgeContent: {
@@ -356,8 +356,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start', // Align left on large screens
   },
   createWalletButton: {
-    backgroundColor: Colors.primary,
-    shadowColor: Colors.primary + '4D', // Add opacity to primary color for shadow
+    backgroundColor: Colors.solanaMain,
+    shadowColor: Colors.solanaMain + '4D', // Add opacity to primary color for shadow
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 1,
     shadowRadius: 16,
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
   },
   featureCard: {
     flex: 1,
-    backgroundColor: Colors.backgroundCard,
+    backgroundColor: Colors.solanaDark,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.05)',

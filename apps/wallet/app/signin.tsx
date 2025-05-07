@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { Button, Input, Text } from '@repo/ui';
 import { useRouter, Link } from 'expo-router';
-import { genericStyles } from '@/constants/GenericStyles';
 import { Colors } from '@/constants/Colors';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
@@ -60,7 +59,7 @@ const SignInScreen = () => {
   const renderInfoSide = () => (
     <View style={styles.infoSide}>
       <View style={styles.infoContent}>
-        {/* Logo and brand - keep logo but enhance style */}
+        {/* Logo and brand */}
         <Animated.View 
           style={{
             opacity: fadeAnim,
@@ -72,7 +71,7 @@ const SignInScreen = () => {
           </View>
         </Animated.View>
 
-        {/* Status badge - similar to HeroSection */}
+        {/* Status badge */}
         <Animated.View 
           style={[
             styles.statusBadge,
@@ -83,7 +82,6 @@ const SignInScreen = () => {
           ]}
         >
           <View style={styles.statusBadgeInner}>
-            <View style={styles.badgeGradientOverlay} />
             <View style={styles.badgeContent}>
               <View style={styles.liveDotContainer}>
                 <Animated.View style={[styles.liveDotPulse, {
@@ -129,141 +127,167 @@ const SignInScreen = () => {
           style={{
             opacity: fadeAnim,
             transform: [{ 
-              translateY: Animated.multiply(translateAnim, 1.6) 
+              translateY: Animated.multiply(translateAnim, 1.5) 
             }]
           }}
         >
           <Text style={styles.subheading}>
-            Secure your firearms data and digital assets with blockchain technology and local encryption.
+            A fully-integrated platform that combines the power of blockchain with physical asset management for unparalleled security and convenience.
           </Text>
         </Animated.View>
 
-        {/* Features grid with cards */}
+        {/* Feature grid */}
         <Animated.View 
-          style={[
-            styles.featuresGrid,
-            {
-              opacity: fadeAnim,
-              transform: [{ 
-                translateY: Animated.multiply(translateAnim, 1.8) 
-              }]
-            }
-          ]}
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: Animated.multiply(translateAnim, 1.6) }]
+          }}
         >
-          <View style={styles.featureCard}>
-            <Feather name="shield" color={Colors.primary} size={24} style={styles.featureIcon} />
-            <Text style={styles.featureTitle}>Digital Armory</Text>
-            <Text style={styles.featureDescription}>Military-grade encryption for your data & assets</Text>
-          </View>
-          
-          <View style={styles.featureCard}>
-            <Feather name="lock" color={Colors.primary} size={24} style={styles.featureIcon} />
-            <Text style={styles.featureTitle}>Blockchain Security</Text>
-            <Text style={styles.featureDescription}>Decentralized protection for digital & physical assets</Text>
-          </View>
-          
-          <View style={styles.featureCard}>
-            <Feather name="layers" color={Colors.primary} size={24} style={styles.featureIcon} />
-            <Text style={styles.featureTitle}>Comprehensive Management</Text>
-            <Text style={styles.featureDescription}>Track firearms, ammo, documents & crypto in one place</Text>
-          </View>
-          
-          <View style={styles.featureCard}>
-            <Feather name="user-check" color={Colors.secondary} size={24} style={styles.featureIcon} />
-            <Text style={styles.featureTitle}>Private & Compliant</Text>
-            <Text style={styles.featureDescription}>Regulatory compliance with uncompromised privacy</Text>
+          <View style={styles.featuresGrid}>
+            {/* Secure Storage Feature */}
+            <View style={styles.featureCard}>
+              <View style={styles.featureIcon}>
+                <Ionicons name="shield-checkmark" size={32} color={Colors.primary} />
+              </View>
+              <Text style={styles.featureTitle}>Secure Storage</Text>
+              <Text style={styles.featureDescription}>
+                Military-grade encryption for all your digital and physical assets
+              </Text>
+            </View>
+
+            {/* Multi-Currency Feature */}
+            <View style={styles.featureCard}>
+              <View style={styles.featureIcon}>
+                <Ionicons name="wallet" size={32} color={Colors.primary} />
+              </View>
+              <Text style={styles.featureTitle}>Multi-Currency</Text>
+              <Text style={styles.featureDescription}>
+                Support for a wide range of digital currencies and tokens
+              </Text>
+            </View>
+
+            {/* Zero-Knowledge Feature */}
+            <View style={styles.featureCard}>
+              <View style={styles.featureIcon}>
+                <Ionicons name="eye-off" size={32} color={Colors.primary} />
+              </View>
+              <Text style={styles.featureTitle}>Zero-Knowledge</Text>
+              <Text style={styles.featureDescription}>
+                Your private keys and data never leave your device
+              </Text>
+            </View>
+
+            {/* Asset Tracking Feature */}
+            <View style={styles.featureCard}>
+              <View style={styles.featureIcon}>
+                <Ionicons name="locate" size={32} color={Colors.primary} />
+              </View>
+              <Text style={styles.featureTitle}>Asset Tracking</Text>
+              <Text style={styles.featureDescription}>
+                Real-time tracking and management for all your assets
+              </Text>
+            </View>
           </View>
         </Animated.View>
+
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: Animated.multiply(translateAnim, 1.7) }]
+          }}
+        >
+          <Text style={styles.footer}>
+            2025 Team556 • All Rights Reserved
+          </Text>
+        </Animated.View>
       </View>
-      
-      <Animated.View style={{ opacity: fadeAnim }}>
-        <Text style={styles.footer}>Team556 FMS • v1.0.0 • Secure Digital & Physical Assets</Text>
-      </Animated.View>
     </View>
   );
 
   const renderFormSide = () => (
     <ScrollView 
       contentContainerStyle={styles.formScrollContainer}
-      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
     >
       <View style={styles.formContainer}>
         <View style={styles.formCard}>
-          <Text preset='h2' style={styles.formTitle}>Welcome Back</Text>
-          <Text style={styles.formSubtitle}>Sign in to access your secure digital vault</Text>
-
+          <Text preset="h3" style={styles.formTitle}>
+            Sign In
+          </Text>
+          
+          <Text style={styles.formSubtitle}>
+            Welcome back! Please sign in to access your account.
+          </Text>
+          
           {authError && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{authError}</Text>
             </View>
           )}
-
-          <Text style={styles.label}>Email</Text>
+          
+          <Text style={styles.label}>Email Address</Text>
           <Input
-            placeholder='your@email.com'
+            style={styles.input}
+            placeholder="Enter your email"
+            placeholderTextColor={Colors.textTertiary}
             value={email}
             onChangeText={setEmail}
-            keyboardType='email-address'
-            autoCapitalize='none'
-            style={[genericStyles.input, styles.input]} 
-            placeholderTextColor={Colors.textSecondary}
-            leftIcon={<Ionicons name='mail-outline' size={20} color={Colors.icon} />}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            leftIcon={<Feather name="mail" size={18} color={Colors.textSecondary} />}
           />
-
+          
           <Text style={styles.label}>Password</Text>
           <Input
-            placeholder='••••••••'
+            style={styles.input}
+            placeholder="Enter your password"
+            placeholderTextColor={Colors.textTertiary}
             value={password}
             onChangeText={setPassword}
             secureTextEntry={!isPasswordVisible}
-            style={[genericStyles.input, styles.input]}
-            placeholderTextColor={Colors.textSecondary}
-            leftIcon={<Ionicons name='lock-closed-outline' size={20} color={Colors.icon} />}
+            leftIcon={<Feather name="lock" size={18} color={Colors.textSecondary} />}
             rightIcon={
               <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
-                <Ionicons 
-                  name={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'} 
-                  size={20} 
-                  color={Colors.icon} 
-                />
+                <Feather name={isPasswordVisible ? "eye-off" : "eye"} size={18} color={Colors.textSecondary} />
               </TouchableOpacity>
             }
           />
-
+          
           <View style={styles.rowContainer}>
             <View style={styles.rememberMeContainer}>
               <Switch
-                trackColor={{ false: Colors.background, true: Colors.primary }} 
-                thumbColor={rememberMe ? Colors.primary : Colors.textSecondary}
-                ios_backgroundColor={Colors.background}
-                onValueChange={setRememberMe}
                 value={rememberMe}
+                onValueChange={setRememberMe}
                 style={styles.switch}
+                trackColor={{ false: Colors.backgroundDark, true: Colors.primary }}
+                thumbColor={rememberMe ? Colors.text : Colors.textSecondary}
               />
               <Text style={styles.rememberMeText}>Remember me</Text>
             </View>
-            <Link href="/signin"> 
-              <Text style={styles.linkText}>Forgot password?</Text>
-            </Link>
+            
+            <TouchableOpacity>
+              <Text style={styles.linkText}>Forgot Password?</Text>
+            </TouchableOpacity>
           </View>
-
-          <TouchableOpacity 
-            onPress={handleSignIn} 
-            disabled={isLoading} 
-            style={styles.signInButtonContainer}
-          >
-            <View style={styles.signInButton}>
-              <Ionicons name='log-in-outline' size={20} color={Colors.backgroundDarkest} style={{marginRight: 8}}/>
+          
+          <View style={styles.signInButtonContainer}>
+            <TouchableOpacity 
+              style={styles.signInButton}
+              onPress={handleSignIn}
+              disabled={isLoading}
+            >
               <Text style={styles.signInButtonText}>
                 {isLoading ? 'Signing In...' : 'Sign In'}
               </Text>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </View>
           
           <View style={styles.createAccountContainer}>
             <Text style={styles.createAccountText}>Don't have an account? </Text>
-            <Link href="/signup">
-               <Text style={styles.linkText}>Create Wallet</Text>
+            <Link href="/signup" asChild>
+              <TouchableOpacity>
+                <Text style={styles.linkText}>Create an account</Text>
+              </TouchableOpacity>
             </Link>
           </View>
         </View>
@@ -272,85 +296,65 @@ const SignInScreen = () => {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      {/* Show back button ONLY on native platforms AND when NOT in two-column layout */}
-      {Platform.OS !== 'web' && !isTabletOrLarger && (
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButtonMobile}>
+    <SafeAreaView style={styles.container}>
+      {!isTabletOrLarger && (
+        <TouchableOpacity 
+          style={styles.backButtonMobile}
+          onPress={() => router.back()}
+        >
           <Ionicons name="arrow-back" size={24} color={Colors.text} />
         </TouchableOpacity>
       )}
-      <View style={styles.outerContainer}>
-        {/* Use two-column layout if the screen is large enough (tablet or desktop/web) */}
-        {isTabletOrLarger ? (
-          <View style={styles.desktopContainer}>
-            {renderInfoSide()} 
-            {renderFormSide()}
-          </View>
-        ) : (
-          /* Otherwise (smaller screen, likely mobile), show only the form */
-          renderFormSide()
-        )}
+      
+      <View style={styles.mainContainer}>
+        {isTabletOrLarger && renderInfoSide()}
+        {renderFormSide()}
       </View>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
-    backgroundColor: Colors.backgroundDarkest,
+    backgroundColor: Colors.solanaNavy,
   },
-  outerContainer: {
-    flex: 1,
-  },
-  desktopContainer: {
+  mainContainer: {
     flex: 1,
     flexDirection: 'row',
   },
+  // Info side styles
   infoSide: {
     flex: 1,
-    backgroundColor: Colors.backgroundDarkest,
+    backgroundColor: Colors.solanaNavy,
     padding: 40,
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    display: 'flex',
   },
   infoContent: {
-    flex: 1,
-    justifyContent: 'center',
+    maxWidth: 600,
+    width: '100%',
+    alignSelf: 'center',
   },
-  // Logo styles
   logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 40,
   },
   logo: {
-    marginRight: 12,
+    width: 60,
+    height: 60,
   },
-  logoText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: Colors.text,
-    letterSpacing: 1,
-  },
-  // Status badge styles
+  // Status badge
   statusBadge: {
     marginBottom: 32,
-    alignSelf: 'flex-start',
-    overflow: 'hidden',
-    borderRadius: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 5,
   },
   statusBadgeInner: {
-    backgroundColor: Colors.backgroundDarker,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: Colors.solanaPurple,
     borderRadius: 30,
-    padding: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
     position: 'relative',
+    alignSelf: 'flex-start',
+    overflow: 'hidden',
   },
   badgeGradientOverlay: {
     position: 'absolute',
@@ -359,7 +363,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     opacity: 0.2,
-    backgroundColor: Colors.primary,
     borderRadius: 30,
   },
   badgeContent: {
@@ -376,7 +379,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.success,
+    backgroundColor: Colors.solanaMain,
   },
   liveDotPulse: {
     position: 'absolute',
@@ -385,7 +388,7 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: Colors.success,
+    backgroundColor: Colors.solanaMain,
   },
   badgeText: {
     fontSize: 14,
@@ -402,7 +405,7 @@ const styles = StyleSheet.create({
     lineHeight: 44,
   },
   headingHighlight: {
-    color: Colors.primary,
+    color: Colors.solanaPurpleLight,
   },
   subheading: {
     color: Colors.textSecondary,
@@ -421,19 +424,17 @@ const styles = StyleSheet.create({
   featureCard: {
     flex: 1, 
     minWidth: '45%',
-    backgroundColor: Colors.backgroundDarker,
+    backgroundColor: Colors.solanaDark,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
     padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 10,
-    elevation: 5,
+    elevation: 2,
   },
   featureIcon: {
     marginBottom: 12,
@@ -457,7 +458,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     textAlign: 'center',
   },
-  // Form styles - keeping unchanged
+  // Form styles
   formScrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
@@ -466,13 +467,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.backgroundDark,
+    backgroundColor: Colors.solanaNavy,
     padding: Platform.OS === 'web' ? 40 : 20,
   },
   formCard: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: Colors.backgroundDarker,
+    backgroundColor: Colors.solanaDark,
     borderRadius: 12,
     padding: 30,
     shadowColor: '#000',
@@ -499,9 +500,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   input: {
-    backgroundColor: Colors.backgroundDark,
+    backgroundColor: Colors.solanaNavy,
     borderWidth: 1,
-    borderColor: Colors.background,
+    borderColor: Colors.solanaPurple,
     borderRadius: 8,
     marginBottom: 15,
     color: Colors.text,
@@ -526,7 +527,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   linkText: {
-    color: Colors.primary,
+    color: Colors.solanaMain,
     fontSize: 13,
     fontWeight: '500',
   },
@@ -541,10 +542,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     flexDirection: 'row',
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.solanaMain,
   },
   signInButtonText: {
-    color: Colors.backgroundDarkest,
+    color: Colors.solanaDark,
     fontWeight: 'bold',
     fontSize: 16,
   },
@@ -575,7 +576,7 @@ const styles = StyleSheet.create({
     left: 20,
     zIndex: 1,
     padding: 10,
-    backgroundColor: Colors.backgroundDarker,
+    backgroundColor: Colors.solanaDark,
     borderRadius: 20,
   },
 });

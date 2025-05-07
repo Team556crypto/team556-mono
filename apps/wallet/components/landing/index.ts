@@ -19,4 +19,4 @@ export { default as StatsSection } from './StatsSection';
 export { default as HowItWorksSection } from './HowItWorksSection';
 export { default as TestimonialsSection } from './TestimonialsSection';
 export { default as FooterSection } from './FooterSection';
-export { default as ScrollToTop } from './ScrollToTop';
+// export { default as ScrollToTop } from './ScrollToTop';

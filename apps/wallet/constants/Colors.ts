@@ -32,5 +32,16 @@ export const Colors = {
   tint: '#AE6CFE',
   icon: '#9BA1A6',
   tabIconDefault: '#9BA1A6',
-  tabIconSelected: '#fff'
+  tabIconSelected: '#fff',
+  // Solana inspired colors - updated to match real Solana network colors
+  solanaMain: '#14F195', // Solana's signature green
+  solanaPurple: '#9945FF', // Solana's signature purple
+  solanaBlue: '#2D2DB0', // Solana's deep blue
+  solanaNavy: '#1A202C', // Deep navy background used in Solana's ecosystem
+  solanaDark: '#131720', // Even darker background from Solana's site
+  solanaBackground: '#1E1E24', // Dark background with subtle purple tint
+  solanaPurpleLight: '#9B6AFE', // Lighter purple accent
+  solanaGradientStart: '#9945FF', // Purple gradient start
+  solanaGradientMiddle: '#5A25D8', // Middle purple in gradient
+  solanaGradientEnd: '#14F195' // Green gradient end
 }

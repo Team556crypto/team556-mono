@@ -119,8 +119,8 @@ const FeaturesSection: React.FC = () => {
     <View style={styles.container}>
       {/* Background decorative elements */}
       <View style={styles.backgroundElements}>
-        <View style={styles.blob1} />
-        <View style={styles.blob2} />
+        <View style={styles.orb1} />
+        <View style={styles.orb2} />
       </View>
 
       <View style={styles.contentContainer}>
@@ -172,6 +172,7 @@ const FeaturesSection: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: Colors.solanaNavy,
     paddingVertical: 80,
     position: 'relative',
     overflow: 'hidden',
@@ -181,26 +182,26 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  blob1: {
+  orb1: {
     position: 'absolute',
-    top: '33%',
-    right: '25%',
-    width: 380,
-    height: 380,
-    borderRadius: 190,
-    backgroundColor: `${Colors.primary}0D`, 
+    top: -150,
+    right: -150,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: 'rgba(153, 69, 255, 0.05)',
     ...(Platform.OS === 'web' ? {
-      filter: 'blur(140px)',
+      filter: 'blur(120px)',
     } : {}),
   },
-  blob2: {
+  orb2: {
     position: 'absolute',
-    bottom: '25%',
-    left: '33%',
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    backgroundColor: 'rgba(68, 176, 255, 0.05)', 
+    bottom: -150,
+    left: -150,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: 'rgba(20, 241, 149, 0.05)',
     ...(Platform.OS === 'web' ? {
       filter: 'blur(120px)',
     } : {}),
@@ -220,14 +221,14 @@ const styles = StyleSheet.create({
   badgeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(30, 30, 40, 0.9)',
+    backgroundColor: Colors.solanaDark,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 50,
     borderWidth: 1,
     borderColor: 'rgba(128, 128, 128, 0.3)',
     marginBottom: 24,
-    shadowColor: `${Colors.primary}0D`,
+    shadowColor: `${Colors.solanaPurple}0D`,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.5,
     shadowRadius: 8,
@@ -237,7 +238,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: `${Colors.primary}CC`, 
+    backgroundColor: Colors.solanaPurple, 
     marginRight: 10,
   },
   badgeText: {
@@ -284,7 +285,7 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   featureCardContent: {
-    backgroundColor: 'rgba(30, 30, 40, 0.9)',
+    backgroundColor: Colors.solanaDark,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(128, 128, 128, 0.2)',
@@ -323,8 +324,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   solanaIconContainer: {
-    backgroundColor: 'rgba(68, 176, 255, 0.1)',
-    borderColor: 'rgba(68, 176, 255, 0.2)',
+    backgroundColor: 'rgba(20, 241, 149, 0.1)',
+    borderColor: 'rgba(20, 241, 149, 0.2)',
   },
   firearmsIconContainer: {
     backgroundColor: `${Colors.primary}1A`, 

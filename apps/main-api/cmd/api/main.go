@@ -29,8 +29,10 @@ func main() {
 		log.Fatalf("Failed to initialize email client: %v", err)
 	}
 
-	// Create Fiber app
-	app := fiber.New()
+	// Create Fiber app with a custom configuration for BodyLimit
+	app := fiber.New(fiber.Config{
+		BodyLimit: 10 * 1024 * 1024, // 10 MB limit
+	})
 
 	// Setup routes
 	router.SetupRoutes(app, db, cfg, emailClient)

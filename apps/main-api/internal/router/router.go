@@ -61,7 +61,7 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	firearms.Post("/", handlers.CreateFirearmHandler(db, cfg))
 	firearms.Get("/", handlers.GetFirearmsHandler(db, cfg))
 	firearms.Get("/:id", handlers.GetFirearmByIDHandler(db, cfg))
-	firearms.Put("/:id", handlers.UpdateFirearmHandler(db, cfg))
+	firearms.Patch("/:id", handlers.UpdateFirearmHandler(db, cfg))
 	firearms.Delete("/:id", handlers.DeleteFirearmHandler(db, cfg)) 
 
 	// --- Add other route groups here ---

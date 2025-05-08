@@ -106,25 +106,6 @@ export interface GetRecoveryPhraseResponse {
   error?: string // Include error field for potential API errors
 }
 
-// --- Create Firearm Payload ---
-export interface CreateFirearmPayload {
-  name: string;
-  type: string;
-  serial_number: string;
-  manufacturer?: string;
-  model_name?: string;
-  caliber?: string;
-  acquisition_date?: Date | string; 
-  purchase_price?: string; 
-  ballistic_performance?: string;
-  image?: string;
-  round_count?: number | string; 
-  value?: number | string; 
-  status?: string; 
-  last_fired?: Date | string; 
-  last_cleaned?: Date | string; 
-}
-
 // --- SWAP TYPES ---
 
 // Copied basic type from SwapDrawerContent - consider a shared location
@@ -190,29 +171,4 @@ export interface ExecuteSwapResponseWithStatus {
   message?: string
 }
 
-// --- Firearm Types ---
-export interface Firearm {
-  id: number;
-  owner_user_id: number;
-  name: string;
-  type: string;
-  serial_number: string;
-  manufacturer?: string | null;
-  model_name?: string | null;
-  caliber?: string | null;
-  acquisition_date?: string | null; // ISO string or null
-  purchase_price?: string | null; // String representation of decimal or null
-  ballistic_performance?: string | null;
-  last_fired?: string | null; // ISO string or null
-  image?: string | null;
-  round_count?: number | null;
-  last_cleaned?: string | null; // ISO string or null
-  value?: number | null;
-  status?: string | null;
-  created_at: string; // ISO string
-  updated_at: string; // ISO string
-  // UserUserID?: number; // This seems redundant if owner_user_id is present
-}
-
-// Payload for updating a firearm. All fields are optional.
-export type UpdateFirearmPayload = Partial<CreateFirearmPayload> & { id: number };
+// Add other shared types here as needed

@@ -9,11 +9,13 @@ import {
   Modal,
   Dimensions,
   Animated,
-  Easing
+  Easing,
+  Image
 } from 'react-native'
 import { Text, useTheme, Button, Select } from '@team556/ui'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker'
+import * as ImagePicker from 'expo-image-picker';
 import { Firearm, CreateFirearmPayload } from '@/services/api'
 import { useFirearmStore } from '@/store/firearmStore'
 import { useAuthStore } from '@/store/authStore'
@@ -22,7 +24,16 @@ import { useDrawerStore } from '@/store/drawerStore'
 // Initial state for a new firearm
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 
-const initialFirearmState: CreateFirearmPayload = {
+// Define a type for the form state that allows Date objects for date fields
+// before they are converted to ISO strings for the API payload.
+type FirearmFormState = Omit<CreateFirearmPayload, 'acquisition_date' | 'last_fired' | 'last_cleaned'> & {
+  acquisition_date?: Date | string | undefined;
+  last_fired?: Date | string | undefined;
+  last_cleaned?: Date | string | undefined;
+  image_base64?: string | null;
+};
+
+const initialFirearmState: FirearmFormState = {
   name: '',
   type: '',
   serial_number: '',
@@ -32,7 +43,7 @@ const initialFirearmState: CreateFirearmPayload = {
   acquisition_date: undefined,
   purchase_price: '',
   ballistic_performance: '',
-  image: '',
+  image_base64: undefined,
   round_count: 0,
   value: 0.0,
   status: '',
@@ -46,447 +57,20 @@ export const AddFirearmDrawerContent = () => {
   const { token } = useAuthStore()
   const { closeDrawer } = useDrawerStore()
 
-  const [newFirearm, setNewFirearm] = useState<CreateFirearmPayload>(initialFirearmState)
+  const [newFirearm, setNewFirearm] = useState<FirearmFormState>(initialFirearmState)
   const [currentStep, setCurrentStep] = useState(1)
   const progressAnim = useRef(new Animated.Value(0)).current
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof CreateFirearmPayload, string>>>({})
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof FirearmFormState, string>>>({})
+
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
+  const [selectedImageBase64, setSelectedImageBase64] = useState<string | null>(null);
 
   const steps = ['Primary Details', 'Acquisition & Value', 'Usage & Maintenance', 'Additional Info']
 
   // State for DateTimePicker
   const [showDatePicker, setShowDatePicker] = useState(false)
-  const [datePickerField, setDatePickerField] = useState<keyof CreateFirearmPayload | null>(null)
+  const [datePickerField, setDatePickerField] = useState<keyof FirearmFormState | null>(null)
   const [currentDateValue, setCurrentDateValue] = useState(new Date())
-
-  const handleInputChange = (field: keyof CreateFirearmPayload, value: any) => {
-    setNewFirearm((prev: CreateFirearmPayload) => ({ ...prev, [field]: value }))
-  }
-
-  // Specific handler for date changes from the picker
-  const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    console.log('AddFirearmDrawerContent: onDateChange event:', event.type, 'selectedDate:', selectedDate)
-    setShowDatePicker(false) // Hide picker on any action
-    if (event.type === 'set' && selectedDate && datePickerField) {
-      handleInputChange(datePickerField, selectedDate.toISOString())
-    }
-    setDatePickerField(null) // Reset the field being edited
-  }
-
-  const showMode = (fieldKey: keyof CreateFirearmPayload) => {
-    console.log('AddFirearmDrawerContent: showMode called for field:', fieldKey)
-    const fieldValue = newFirearm[fieldKey]
-    // Ensure currentDateValue is a valid Date, defaulting to now if current value is not valid
-    const initialPickerDate =
-      fieldValue instanceof Date
-        ? fieldValue
-        : typeof fieldValue === 'string' && !isNaN(new Date(fieldValue).getTime())
-          ? new Date(fieldValue)
-          : new Date()
-
-    console.log('AddFirearmDrawerContent: Initial picker date:', initialPickerDate)
-    setCurrentDateValue(initialPickerDate)
-    setDatePickerField(fieldKey)
-    setShowDatePicker(true)
-    console.log('AddFirearmDrawerContent: showDatePicker set to true')
-  }
-
-  const validateStep1 = () => {
-    const { name, type, serial_number, manufacturer, model_name, caliber } = newFirearm
-    const errors: Partial<Record<keyof CreateFirearmPayload, string>> = {}
-
-    if (!name) errors.name = 'Required'
-    if (!type) errors.type = 'Required'
-    if (!serial_number) errors.serial_number = 'Required'
-    if (!manufacturer) errors.manufacturer = 'Required'
-    if (!model_name) errors.model_name = 'Required'
-    if (!caliber) errors.caliber = 'Required'
-
-    setFieldErrors(prev => ({ ...prev, ...errors }))
-    return Object.keys(errors).length === 0
-  }
-
-  const validateStep2 = () => {
-    const { value, purchase_price } = newFirearm
-    const errors: Partial<Record<keyof CreateFirearmPayload, string>> = {}
-    if (value !== undefined && value !== null && String(value).trim() !== "") {
-      const val = parseFloat(String(value));
-      if (isNaN(val)) {
-        errors.value = 'Must be a valid number.'
-      }
-    }
-    if (purchase_price !== undefined && purchase_price !== null && String(purchase_price).trim() !== "") {
-      // Allows for decimal numbers. Regex checks for optional leading digits, an optional decimal point, and optional trailing digits.
-      // Ensures it's not just whitespace or an empty string if provided.
-      if (!/^\d*\.?\d+$/.test(String(purchase_price).trim()) && !/^\d+\.?\d*$/.test(String(purchase_price).trim())) {
-         if (String(purchase_price).trim() !== "") { // only error if not empty and invalid
-            errors.purchase_price = 'Must be a valid price.';
-         }
-      } else {
-        // Additional check for parseFloat if regex passes but could still be problematic (e.g. multiple decimal points if regex was less strict)
-        const priceVal = parseFloat(String(purchase_price).trim());
-        if (isNaN(priceVal)) {
-             errors.purchase_price = 'Must be a valid price.';
-        }
-      }
-    }
-    setFieldErrors(prev => ({ ...prev, ...errors }))
-    return Object.keys(errors).length === 0
-  }
-
-  const validateStep3 = () => {
-    const { round_count } = newFirearm
-    const errors: Partial<Record<keyof CreateFirearmPayload, string>> = {}
-    if (round_count !== undefined && round_count !== null && String(round_count).trim() !== "") {
-      const count = parseInt(String(round_count), 10);
-      if (isNaN(count)) {
-        errors.round_count = 'Must be a valid number.'
-      }
-    }
-    setFieldErrors(prev => ({ ...prev, ...errors }))
-    return Object.keys(errors).length === 0
-  }
-
-  const handleNextStep = () => {
-    // Clear previous errors for the current step's fields before re-validating
-    if (currentStep === 1) {
-      setFieldErrors(prev => ({
-        ...prev,
-        name: undefined,
-        type: undefined,
-        serial_number: undefined,
-        manufacturer: undefined,
-        model_name: undefined,
-        caliber: undefined
-      }))
-      if (!validateStep1()) {
-        return
-      }
-    } else if (currentStep === 2) {
-      setFieldErrors(prev => ({ ...prev, value: undefined, purchase_price: undefined, acquisition_date: undefined })) // Clear step 2 fields
-      if (!validateStep2()) {
-        return
-      }
-    } else if (currentStep === 3) {
-      setFieldErrors(prev => ({ ...prev, round_count: undefined, last_fired: undefined, last_cleaned: undefined })) // Clear step 3 fields
-      if (!validateStep3()) {
-        return
-      }
-    }
-    // For step 4, validation is primarily in handleSaveFirearm (e.g., image)
-
-    if (currentStep < steps.length) {
-      setCurrentStep(currentStep + 1)
-    }
-  }
-
-  const handleSaveFirearm = async () => {
-    // Ensure all step 1 fields are validated again before final save, in case user navigated back and forth
-    const isStep1Valid = validateStep1()
-    if (currentStep === 1 && !isStep1Valid) {
-      // If on step 1 and validation fails, stop here. Errors are already set by validateStep1.
-      return
-    }
-    if (currentStep !== 1 && !isStep1Valid) {
-      // If not on step 1, but step 1 is invalid, navigate to step 1 and show errors.
-      setCurrentStep(1)
-      return
-    }
-
-    // Step 4 validation
-    let imageError = false
-    if (!newFirearm.image) {
-      setFieldErrors(prev => ({ ...prev, image: 'Required' }))
-      imageError = true
-    } else {
-      setFieldErrors(prev => ({ ...prev, image: undefined }))
-    }
-
-    if (imageError) {
-      setCurrentStep(4) // Navigate back to step 4 if image is missing
-      return
-    }
-
-    // Fallback for critical fields - though step 1 validation should cover this
-    if (!newFirearm.name || !newFirearm.type || !newFirearm.serial_number) {
-      // This condition should ideally not be met if step 1 validation is comprehensive
-      // and navigation to further steps is blocked correctly.
-      // We can set general errors if specific field errors aren't already set by validateStep1.
-      if (!fieldErrors.name && !fieldErrors.type && !fieldErrors.serial_number) {
-        setFieldErrors(prev => ({
-          ...prev,
-          name: !newFirearm.name ? 'Required' : undefined,
-          type: !newFirearm.type ? 'Required' : undefined,
-          serial_number: !newFirearm.serial_number ? 'Required' : undefined
-        }))
-      }
-      // Determine if we need to navigate back to step 1
-      if (!newFirearm.name || !newFirearm.type || !newFirearm.serial_number) {
-        setCurrentStep(1)
-        return
-      }
-    }
-
-    // Final validation for numeric fields as a safeguard, though step-specific validation should catch these.
-    let isNumericValid = true;
-    const tempErrors: Partial<Record<keyof CreateFirearmPayload, string>> = {};
-
-    const roundCountInput = String(newFirearm.round_count).trim();
-    const valueInput = String(newFirearm.value).trim();
-
-    let roundCount: number | undefined = undefined;
-    if (roundCountInput !== "" && newFirearm.round_count !== null && newFirearm.round_count !== undefined) {
-        roundCount = parseInt(roundCountInput, 10);
-        if (isNaN(roundCount)) {
-            tempErrors.round_count = 'Round Count must be a valid number.';
-            isNumericValid = false;
-        }
-    } else if (newFirearm.round_count === null || roundCountInput === "") {
-        roundCount = undefined; // Treat empty or null as undefined for the payload
-    }
-
-    let value: number | undefined = undefined;
-    if (valueInput !== "" && newFirearm.value !== null && newFirearm.value !== undefined) {
-        value = parseFloat(valueInput);
-        if (isNaN(value)) {
-            tempErrors.value = 'Value must be a valid number.';
-            isNumericValid = false;
-        }
-    } else if (newFirearm.value === null || valueInput === "") {
-        value = undefined; // Treat empty or null as undefined for the payload
-    }
-
-    if (!isNumericValid) {
-        setFieldErrors(prev => ({ ...prev, ...tempErrors }));
-        // Navigate to the step with the first error if not already there
-        if (tempErrors.value && currentStep !== 2) setCurrentStep(2);
-        else if (tempErrors.round_count && currentStep !== 3) setCurrentStep(3);
-        return;
-    }
-
-    // Prepare the payload for the API - this should match CreateFirearmPayload
-    const firearmToSave: CreateFirearmPayload = {
-      // Required string fields
-      name: newFirearm.name,
-      type: newFirearm.type,
-      serial_number: newFirearm.serial_number,
-
-      // Optional string fields - send as plain string or undefined
-      manufacturer: (newFirearm.manufacturer?.trim().toLowerCase() === 'sdf' || !newFirearm.manufacturer?.trim()) 
-        ? undefined 
-        : newFirearm.manufacturer.trim(),
-
-      model_name: (newFirearm.model_name?.trim().toLowerCase() === 'sdf' || !newFirearm.model_name?.trim()) 
-        ? undefined 
-        : newFirearm.model_name.trim(),
-
-      caliber: (newFirearm.caliber?.trim().toLowerCase() === 'sdf' || !newFirearm.caliber?.trim()) 
-        ? undefined 
-        : newFirearm.caliber.trim(),
-
-      // For dates, send as ISO string or undefined
-      acquisition_date: newFirearm.acquisition_date 
-        ? (newFirearm.acquisition_date instanceof Date 
-            ? newFirearm.acquisition_date.toISOString() 
-            : typeof newFirearm.acquisition_date === 'string' && !isNaN(new Date(newFirearm.acquisition_date).getTime())
-              ? new Date(newFirearm.acquisition_date).toISOString()
-              : undefined)
-        : undefined,
-
-      // Purchase price as string or undefined
-      purchase_price: (newFirearm.purchase_price?.trim().toLowerCase() === 'sdf' || !newFirearm.purchase_price?.trim()) 
-        ? undefined 
-        : String(newFirearm.purchase_price).trim(),
-
-      ballistic_performance: (newFirearm.ballistic_performance?.trim().toLowerCase() === 'sdf' || !newFirearm.ballistic_performance?.trim()) 
-        ? undefined 
-        : newFirearm.ballistic_performance.trim(),
-
-      image: (newFirearm.image?.trim().toLowerCase() === 'sdf' || !newFirearm.image?.trim()) 
-        ? undefined 
-        : newFirearm.image.trim(),
-
-      // Numeric values - send as number or undefined
-      round_count: roundCount !== undefined && !isNaN(roundCount) 
-        ? roundCount 
-        : undefined,
-
-      value: value !== undefined && !isNaN(value) 
-        ? value 
-        : undefined,
-
-      // Status as string or undefined
-      status: (newFirearm.status?.trim().toLowerCase() === 'sdf' || !newFirearm.status?.trim()) 
-        ? undefined 
-        : newFirearm.status?.trim(),
-
-      // Dates as ISO string or undefined
-      last_fired: newFirearm.last_fired 
-        ? (newFirearm.last_fired instanceof Date 
-            ? newFirearm.last_fired.toISOString() 
-            : typeof newFirearm.last_fired === 'string' && !isNaN(new Date(newFirearm.last_fired).getTime())
-              ? new Date(newFirearm.last_fired).toISOString()
-              : undefined)
-        : undefined,
-
-      last_cleaned: newFirearm.last_cleaned 
-        ? (newFirearm.last_cleaned instanceof Date 
-            ? newFirearm.last_cleaned.toISOString() 
-            : typeof newFirearm.last_cleaned === 'string' && !isNaN(new Date(newFirearm.last_cleaned).getTime())
-              ? new Date(newFirearm.last_cleaned).toISOString()
-              : undefined)
-        : undefined
-    };
-
-    console.log('AddFirearmDrawerContent: Saving firearm with payload:', JSON.stringify(firearmToSave, null, 2));
-
-    // console.log('AddFirearmDrawerContent: Attempting to save firearm:', firearmToSave);
-    // console.log('AddFirearmDrawerContent: Auth token:', token);
-
-    // Call the store action to add the firearm
-    // The store action should handle the API call
-    const success = await addFirearm(firearmToSave, token); // Pass token and await
-
-    if (success) {
-      // console.log('AddFirearmDrawerContent: Firearm saved successfully');
-      setNewFirearm(initialFirearmState); // Reset form
-      setCurrentStep(1); // Reset to first step
-      closeDrawer(); // Close the drawer
-      // Optionally: Show a success message to the user (e.g., using a toast notification)
-    } else {
-      // console.error('AddFirearmDrawerContent: Failed to save firearm. Store error:', storeError);
-      // Error is already set in the store by addFirearm action if API call failed.
-      // You might want to show a generic error message here or rely on a global error display.
-      // Alert.alert('Save Failed', storeError || 'Could not save firearm. Please try again.');
-      // If storeError is specific and user-friendly, you can display it.
-      // For now, we assume the store handles setting a displayable error message if needed.
-      setFieldErrors(prev => ({ ...prev, formError: storeError || 'Failed to save firearm. Please check your connection or try again.' }))
-
-    }
-  }
-
-  // Helper function to determine if a field is the last in its section for styling
-  const isLastRowInSection = (field: keyof CreateFirearmPayload): boolean => {
-    const primaryDetailsLastFields = ['caliber']
-    const acquisitionLastFields = ['value']
-    const usageLastFields = ['last_cleaned']
-    const additionalLastFields = ['image']
-
-    return (
-      primaryDetailsLastFields.includes(field) ||
-      acquisitionLastFields.includes(field) ||
-      usageLastFields.includes(field) ||
-      additionalLastFields.includes(field)
-    )
-  }
-
-  const renderDetailRow = (
-    label: string,
-    field: keyof CreateFirearmPayload,
-    placeholder: string,
-    inputType: 'text' | 'date' | 'select' = 'text',
-    // For select type
-    items?: Array<{ label: string; value: string | number }>,
-    // For text type
-    keyboardType: 'default' | 'numeric' | 'email-address' = 'default'
-  ) => {
-    const fieldValue = newFirearm[field]
-    const error = fieldErrors[field]
-
-    let inputComponent: React.ReactNode = null
-
-    if (inputType === 'date') {
-      const displayValue = fieldValue
-        ? fieldValue instanceof Date
-          ? (fieldValue as Date).toLocaleDateString()
-          : new Date(fieldValue as string).toLocaleDateString()
-        : placeholder
-      inputComponent = (
-        <TouchableOpacity onPress={() => showMode(field)} style={styles.dateContainer}>
-          <Text style={[styles.dateText, fieldValue ? {} : styles.placeholderText]}>{displayValue}</Text>
-        </TouchableOpacity>
-      )
-    } else if (inputType === 'select') {
-      inputComponent = (
-        <View style={styles.inputContainer}>
-          <Select
-            items={items || []}
-            selectedValue={fieldValue as string | number | undefined}
-            onValueChange={value => handleInputChange(field, value)}
-            placeholder={placeholder}
-            style={{
-              selectButton: {
-                backgroundColor: colors.backgroundSubtle,
-                borderColor: colors.primarySubtle,
-                minHeight: 40,
-                height: 40,
-                paddingVertical: 8,
-                paddingHorizontal: 12
-              },
-              selectButtonText: {
-                fontSize: 15,
-                color: fieldValue ? colors.text : colors.textTertiary
-              },
-              arrow: {
-                color: colors.primary,
-                fontSize: 14
-              },
-              modalContent: {
-                backgroundColor: colors.backgroundCard,
-                borderColor: colors.primary,
-                borderWidth: 1,
-                borderRadius: 12,
-                paddingVertical: 8
-              },
-              modalItem: {
-                paddingVertical: 12,
-                paddingHorizontal: 16,
-                borderBottomColor: colors.primarySubtle
-              },
-              modalItemText: {
-                fontSize: 15,
-                color: colors.text
-              },
-              modalOverlay: {
-                backgroundColor: 'rgba(0,0,0,0.8)'
-              }
-            }}
-          />
-        </View>
-      )
-    } else {
-      // inputType === 'text'
-      inputComponent = (
-        <TextInput
-          style={styles.inputStyle}
-          value={fieldValue ? String(fieldValue) : ''}
-          onChangeText={text => handleInputChange(field, text)}
-          placeholder={placeholder}
-          placeholderTextColor={colors.textTertiary}
-          keyboardType={keyboardType}
-        />
-      )
-    }
-
-    return (
-      <View style={styles.detailRowContainer}>
-        <View style={[styles.detailRow, isLastRowInSection(field) && styles.detailRowLast]}>
-          <Text style={styles.detailLabel}>{label}</Text>
-          {inputComponent}
-        </View>
-        {error && <Text style={styles.errorTextBelow}>{error}</Text>}
-      </View>
-    )
-  }
-
-  // Constants for Select components
-  const FIREARM_TYPES = [
-    { label: 'Pistol', value: 'Pistol' },
-    { label: 'Revolver', value: 'Revolver' },
-    { label: 'Rifle', value: 'Rifle' },
-    { label: 'Shotgun', value: 'Shotgun' },
-    { label: 'Derringer', value: 'Derringer' },
-    { label: 'Other', value: 'Other' }
-  ]
 
   const styles = StyleSheet.create({
     container: {
@@ -683,6 +267,15 @@ export const AddFirearmDrawerContent = () => {
     inputContainer: {
       flex: 2
     },
+    inputRow: {
+      marginBottom: 15
+    },
+    label: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginBottom: 8,
+      fontWeight: '500'
+    },
     inputStyle: {
       borderWidth: 1,
       borderColor: colors.primarySubtle,
@@ -791,22 +384,427 @@ export const AddFirearmDrawerContent = () => {
       justifyContent: 'flex-end',
       marginTop: 16,
       width: '100%'
+    },
+    imagePreview: { 
+      width: '100%',
+      height: 200,
+      borderRadius: 8,
+      marginBottom: 10,
+      backgroundColor: colors.backgroundSubtle, // Changed from colors.backgroundOffset
+      resizeMode: 'contain'
     }
   })
 
-  const getFirearmIconByType = (type: string) => {
-    const typeLower = type.toLowerCase() || ''
-    if (typeLower.includes('pistol') || typeLower.includes('handgun')) {
-      return 'target'
-    } else if (typeLower.includes('rifle')) {
-      return 'crosshairs'
-    } else if (typeLower.includes('shotgun')) {
-      return 'crosshairs'
-    } else if (typeLower.includes('nfa')) {
-      return 'shield'
-    }
-    return 'crosshairs-gps'
+  const handleInputChange = (field: keyof FirearmFormState, value: any) => {
+    setNewFirearm((prev: FirearmFormState) => ({ ...prev, [field]: value }))
   }
+
+  // Specific handler for date changes from the picker
+  const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    console.log('AddFirearmDrawerContent: onDateChange event:', event.type, 'selectedDate:', selectedDate)
+    setShowDatePicker(false) // Hide picker on any action
+    if (event.type === 'set' && selectedDate && datePickerField) {
+      handleInputChange(datePickerField, selectedDate.toISOString())
+    }
+    setDatePickerField(null) // Reset the field being edited
+  }
+
+  const showMode = (fieldKey: keyof FirearmFormState) => {
+    console.log('AddFirearmDrawerContent: showMode called for field:', fieldKey)
+    const fieldValue = newFirearm[fieldKey]
+    // Ensure currentDateValue is a valid Date, defaulting to now if current value is not valid
+    const initialPickerDate =
+      fieldValue instanceof Date
+        ? fieldValue
+        : typeof fieldValue === 'string' && !isNaN(new Date(fieldValue).getTime())
+          ? new Date(fieldValue)
+          : new Date()
+
+    console.log('AddFirearmDrawerContent: Initial picker date:', initialPickerDate)
+    setCurrentDateValue(initialPickerDate)
+    setDatePickerField(fieldKey)
+    setShowDatePicker(true)
+    console.log('AddFirearmDrawerContent: showDatePicker set to true')
+  }
+
+  const validateStep1 = () => {
+    const { name, type, serial_number, manufacturer, model_name, caliber } = newFirearm
+    const errors: Partial<Record<keyof FirearmFormState, string>> = {}
+
+    if (!name) errors.name = 'Required'
+    if (!type) errors.type = 'Required'
+    if (!serial_number) errors.serial_number = 'Required'
+    if (!manufacturer) errors.manufacturer = 'Required'
+    if (!model_name) errors.model_name = 'Required'
+    if (!caliber) errors.caliber = 'Required'
+
+    setFieldErrors(prev => ({ ...prev, ...errors }))
+    return Object.keys(errors).length === 0
+  }
+
+  const validateStep2 = () => {
+    const { value, purchase_price } = newFirearm
+    const errors: Partial<Record<keyof FirearmFormState, string>> = {}
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      const val = parseFloat(String(value));
+      if (isNaN(val)) {
+        errors.value = 'Must be a valid number.'
+      }
+    }
+    if (purchase_price !== undefined && purchase_price !== null && String(purchase_price).trim() !== "") {
+      // Allows for decimal numbers. Regex checks for optional leading digits, an optional decimal point, and optional trailing digits.
+      // Ensures it's not just whitespace or an empty string if provided.
+      if (!/^\d*\.?\d+$/.test(String(purchase_price).trim()) && !/^\d+\.?\d*$/.test(String(purchase_price).trim())) {
+         if (String(purchase_price).trim() !== "") { // only error if not empty and invalid
+            errors.purchase_price = 'Must be a valid price.';
+         }
+      } else {
+        // Additional check for parseFloat if regex passes but could still be problematic (e.g. multiple decimal points if regex was less strict)
+        const priceVal = parseFloat(String(purchase_price).trim());
+        if (isNaN(priceVal)) {
+             errors.purchase_price = 'Must be a valid price.';
+        }
+      }
+    }
+    setFieldErrors(prev => ({ ...prev, ...errors }))
+    return Object.keys(errors).length === 0
+  }
+
+  const validateStep3 = () => {
+    const { round_count } = newFirearm
+    const errors: Partial<Record<keyof FirearmFormState, string>> = {}
+    if (round_count !== undefined && round_count !== null && String(round_count).trim() !== "") {
+      const count = parseInt(String(round_count), 10);
+      if (isNaN(count)) {
+        errors.round_count = 'Must be a valid number.'
+      }
+    }
+    setFieldErrors(prev => ({ ...prev, ...errors }))
+    return Object.keys(errors).length === 0
+  }
+
+  const handleNextStep = () => {
+    // Clear previous errors for the current step's fields before re-validating
+    if (currentStep === 1) {
+      setFieldErrors(prev => ({
+        ...prev,
+        name: undefined,
+        type: undefined,
+        serial_number: undefined,
+        manufacturer: undefined,
+        model_name: undefined,
+        caliber: undefined
+      }))
+      if (!validateStep1()) {
+        return
+      }
+    } else if (currentStep === 2) {
+      setFieldErrors(prev => ({ ...prev, value: undefined, purchase_price: undefined, acquisition_date: undefined })) // Clear step 2 fields
+      if (!validateStep2()) {
+        return
+      }
+    } else if (currentStep === 3) {
+      setFieldErrors(prev => ({ ...prev, round_count: undefined, last_fired: undefined, last_cleaned: undefined })) // Clear step 3 fields
+      if (!validateStep3()) {
+        return
+      }
+    }
+    // For step 4, validation is primarily in handleSaveFirearm (e.g., image)
+
+    if (currentStep < steps.length) {
+      setCurrentStep(currentStep + 1)
+    }
+  }
+
+  const handleSaveFirearm = async () => {
+    // Ensure all step 1 fields are validated again before final save, in case user navigated back and forth
+    const isStep1Valid = validateStep1()
+    if (currentStep === 1 && !isStep1Valid) {
+      // If on step 1 and validation fails, stop here. Errors are already set by validateStep1.
+      return
+    }
+    if (currentStep !== 1 && !isStep1Valid) {
+      // If not on step 1, but step 1 is invalid, navigate to step 1 and show errors.
+      setCurrentStep(1)
+      return
+    }
+
+    // Step 4 validation
+    let imageError = false
+    if (!selectedImageBase64) { // Check if a base64 image is selected
+      setFieldErrors(prev => ({ ...prev, image_base64: 'Image is required' }))
+      imageError = true;
+    } else {
+      setFieldErrors(prev => ({ ...prev, image_base64: undefined }))
+    }
+
+    if (imageError) {
+      // If image error exists and we are not on step 4, navigate to step 4
+      if (currentStep !== 4) setCurrentStep(4);
+      return;
+    }
+
+    // Prepare the payload for the API - this should match CreateFirearmPayload
+    const firearmToSave: CreateFirearmPayload = {
+      // Required string fields
+      name: newFirearm.name,
+      type: newFirearm.type,
+      serial_number: newFirearm.serial_number,
+
+      // Optional string fields - send as plain string or undefined
+      manufacturer: (newFirearm.manufacturer?.trim().toLowerCase() === 'sdf' || !newFirearm.manufacturer?.trim()) 
+        ? undefined 
+        : newFirearm.manufacturer.trim(),
+
+      model_name: (newFirearm.model_name?.trim().toLowerCase() === 'sdf' || !newFirearm.model_name?.trim()) 
+        ? undefined 
+        : newFirearm.model_name.trim(),
+
+      caliber: (newFirearm.caliber?.trim().toLowerCase() === 'sdf' || !newFirearm.caliber?.trim()) 
+        ? undefined 
+        : newFirearm.caliber.trim(),
+
+      // For dates, send as ISO string or undefined
+      acquisition_date: newFirearm.acquisition_date 
+        ? (newFirearm.acquisition_date instanceof Date 
+            ? newFirearm.acquisition_date.toISOString() 
+            : typeof newFirearm.acquisition_date === 'string' && !isNaN(new Date(newFirearm.acquisition_date).getTime())
+              ? new Date(newFirearm.acquisition_date).toISOString()
+              : undefined)
+        : undefined,
+
+      // Purchase price as string or undefined
+      purchase_price: (newFirearm.purchase_price?.trim().toLowerCase() === 'sdf' || !newFirearm.purchase_price?.trim()) 
+        ? undefined 
+        : String(newFirearm.purchase_price).trim(),
+
+      ballistic_performance: (newFirearm.ballistic_performance?.trim().toLowerCase() === 'sdf' || !newFirearm.ballistic_performance?.trim()) 
+        ? undefined 
+        : newFirearm.ballistic_performance.trim(),
+
+      image_base64: selectedImageBase64 || undefined, // Add base64 image
+      image: undefined, // Explicitly set image URL to undefined as server will handle it
+
+      // Numeric values - send as number or undefined
+      round_count: newFirearm.round_count !== undefined && newFirearm.round_count !== null 
+        ? parseInt(String(newFirearm.round_count), 10) 
+        : undefined,
+
+      value: newFirearm.value !== undefined && newFirearm.value !== null 
+        ? parseFloat(String(newFirearm.value)) 
+        : undefined,
+
+      // Status as string or undefined
+      status: (newFirearm.status?.trim().toLowerCase() === 'sdf' || !newFirearm.status?.trim()) 
+        ? undefined 
+        : newFirearm.status?.trim(),
+
+      // Dates as ISO string or undefined
+      last_fired: newFirearm.last_fired 
+        ? (newFirearm.last_fired instanceof Date 
+            ? newFirearm.last_fired.toISOString() 
+            : typeof newFirearm.last_fired === 'string' && !isNaN(new Date(newFirearm.last_fired).getTime())
+              ? new Date(newFirearm.last_fired).toISOString()
+              : undefined)
+        : undefined,
+
+      last_cleaned: newFirearm.last_cleaned 
+        ? (newFirearm.last_cleaned instanceof Date 
+            ? newFirearm.last_cleaned.toISOString() 
+            : typeof newFirearm.last_cleaned === 'string' && !isNaN(new Date(newFirearm.last_cleaned).getTime())
+              ? new Date(newFirearm.last_cleaned).toISOString()
+              : undefined)
+        : undefined
+    };
+
+    console.log('AddFirearmDrawerContent: Saving firearm with payload:', JSON.stringify(firearmToSave, null, 2));
+
+    // console.log('AddFirearmDrawerContent: Attempting to save firearm:', firearmToSave);
+    // console.log('AddFirearmDrawerContent: Auth token:', token);
+
+    // Call the store action to add the firearm
+    // The store action should handle the API call
+    const success = await addFirearm(firearmToSave, token); // Pass token and await
+
+    if (success) {
+      // console.log('AddFirearmDrawerContent: Firearm saved successfully');
+      setNewFirearm(initialFirearmState); // Reset form
+      setCurrentStep(1); // Reset to first step
+      closeDrawer(); // Close the drawer
+      // Optionally: Show a success message to the user (e.g., using a toast notification)
+    } else {
+      // console.error('AddFirearmDrawerContent: Failed to save firearm. Store error:', storeError);
+      // Error is already set in the store by addFirearm action if API call failed.
+      // You might want to show a generic error message here or rely on a global error display.
+      // Alert.alert('Save Failed', storeError || 'Could not save firearm. Please try again.');
+      // If storeError is specific and user-friendly, you can display it.
+      // For now, we assume the store handles setting a displayable error message if needed.
+      setFieldErrors(prev => ({ ...prev, formError: storeError || 'Failed to save firearm. Please check your connection or try again.' }))
+
+    }
+  }
+
+  // Helper function to determine if a field is the last in its section for styling
+  const isLastRowInSection = (field: keyof FirearmFormState): boolean => {
+    const primaryDetailsLastFields = ['caliber']
+    const acquisitionLastFields = ['value']
+    const usageLastFields = ['last_cleaned']
+    const additionalLastFields = ['image']
+
+    return (
+      primaryDetailsLastFields.includes(field) ||
+      acquisitionLastFields.includes(field) ||
+      usageLastFields.includes(field) ||
+      additionalLastFields.includes(field)
+    )
+  }
+
+  const renderDetailRow = (
+    label: string,
+    field: keyof FirearmFormState,
+    placeholder: string,
+    inputType: 'text' | 'date' | 'select' = 'text',
+    // For select type
+    items?: Array<{ label: string; value: string | number }>,
+    // For text type
+    keyboardType: 'default' | 'numeric' | 'email-address' = 'default'
+  ) => {
+    const fieldValue = newFirearm[field]
+    const error = fieldErrors[field]
+
+    let inputComponent: React.ReactNode = null
+
+    if (inputType === 'date') {
+      const displayValue = fieldValue
+        ? fieldValue instanceof Date
+          ? (fieldValue as Date).toLocaleDateString()
+          : new Date(fieldValue as string).toLocaleDateString()
+        : placeholder
+      inputComponent = (
+        <TouchableOpacity onPress={() => showMode(field)} style={styles.dateContainer}>
+          <Text style={[styles.dateText, fieldValue ? {} : styles.placeholderText]}>{displayValue}</Text>
+        </TouchableOpacity>
+      )
+    } else if (inputType === 'select') {
+      inputComponent = (
+        <View style={styles.inputContainer}>
+          <Select
+            items={items || []}
+            selectedValue={fieldValue as string | number | undefined}
+            onValueChange={value => handleInputChange(field, value)}
+            placeholder={placeholder}
+            style={{
+              selectButton: {
+                backgroundColor: colors.backgroundSubtle,
+                borderColor: colors.primarySubtle,
+                minHeight: 40,
+                height: 40,
+                paddingVertical: 8,
+                paddingHorizontal: 12
+              },
+              selectButtonText: {
+                fontSize: 15,
+                color: fieldValue ? colors.text : colors.textTertiary
+              },
+              arrow: {
+                color: colors.primary,
+                fontSize: 14
+              },
+              modalContent: {
+                backgroundColor: colors.backgroundCard,
+                borderColor: colors.primary,
+                borderWidth: 1,
+                borderRadius: 12,
+                paddingVertical: 8
+              },
+              modalItem: {
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+                borderBottomColor: colors.primarySubtle
+              },
+              modalItemText: {
+                fontSize: 15,
+                color: colors.text
+              },
+              modalOverlay: {
+                backgroundColor: 'rgba(0,0,0,0.8)'
+              }
+            }}
+          />
+        </View>
+      )
+    } else {
+      // inputType === 'text'
+      inputComponent = (
+        <TextInput
+          style={styles.inputStyle}
+          value={fieldValue ? String(fieldValue) : ''}
+          onChangeText={text => handleInputChange(field, text)}
+          placeholder={placeholder}
+          placeholderTextColor={colors.textTertiary}
+          keyboardType={keyboardType}
+        />
+      )
+    }
+
+    return (
+      <View style={styles.detailRowContainer}>
+        <View style={[styles.detailRow, isLastRowInSection(field) && styles.detailRowLast]}>
+          <Text style={styles.detailLabel}>{label}</Text>
+          {inputComponent}
+        </View>
+        {error && <Text style={styles.errorTextBelow}>{error}</Text>}
+      </View>
+    )
+  }
+
+  // Image Picker Logic
+  const requestMediaLibraryPermissions = async () => {
+    if (Platform.OS !== 'web') {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Sorry, we need camera roll permissions to make this work!');
+        return false;
+      }
+      return true;
+    }
+    return true; // Permissions not typically needed on web for file input
+  };
+
+  const pickImageAsync = async () => {
+    const hasPermission = await requestMediaLibraryPermissions();
+    if (!hasPermission) return;
+
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.5, // Lower quality for faster uploads & less storage
+      base64: true, // Request base64 data
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0];
+      setSelectedImageUri(asset.uri);
+      setSelectedImageBase64(asset.base64 || null); 
+      // Clear previous image URL error if any
+      setFieldErrors(prev => ({ ...prev, image_base64: undefined }))
+    } else {
+      // Handle cancellation or no assets selected (optional)
+      // setSelectedImageUri(null);
+      // setSelectedImageBase64(null);
+    }
+  };
+
+  // Constants for Select components
+  const FIREARM_TYPES = [
+    { label: 'Pistol', value: 'Pistol' },
+    { label: 'Revolver', value: 'Revolver' },
+    { label: 'Rifle', value: 'Rifle' },
+    { label: 'Shotgun', value: 'Shotgun' },
+    { label: 'Derringer', value: 'Derringer' },
+    { label: 'Other', value: 'Other' }
+  ]
 
   // Animate progress bar when step changes
   useEffect(() => {
@@ -904,6 +902,16 @@ export const AddFirearmDrawerContent = () => {
               <Text style={styles.sectionTitle}>Additional Information</Text>
             </View>
             <View style={styles.sectionContent}>
+              <View style={styles.inputRow}>
+                <Text style={styles.label}>Firearm Image</Text>
+                <Button title="Select Image" onPress={pickImageAsync} variant="outline" style={{ marginBottom: 10 }} />
+                {selectedImageUri && (
+                  <Image source={{ uri: selectedImageUri }} style={styles.imagePreview} />
+                )}
+                {fieldErrors.image_base64 && (
+                  <Text style={styles.errorText}>{fieldErrors.image_base64}</Text>
+                )}
+              </View>
               {renderDetailRow('Status', 'status', 'e.g., In Service, In Storage', 'text', undefined, 'default')}
               {renderDetailRow(
                 'Ballistic Performance',
@@ -913,7 +921,6 @@ export const AddFirearmDrawerContent = () => {
                 undefined,
                 'default'
               )}
-              {renderDetailRow('Image URL', 'image', 'Optional: http://image.url', 'text', undefined, 'default')}
             </View>
           </View>
         )}
@@ -1011,4 +1018,18 @@ export const AddFirearmDrawerContent = () => {
       )}
     </React.Fragment>
   )
+}
+
+const getFirearmIconByType = (type: string) => {
+  const typeLower = type.toLowerCase() || ''
+  if (typeLower.includes('pistol') || typeLower.includes('handgun')) {
+    return 'target'
+  } else if (typeLower.includes('rifle')) {
+    return 'crosshairs'
+  } else if (typeLower.includes('shotgun')) {
+    return 'crosshairs'
+  } else if (typeLower.includes('nfa')) {
+    return 'shield'
+  }
+  return 'crosshairs-gps'
 }

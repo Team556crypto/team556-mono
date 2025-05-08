@@ -1,10 +1,11 @@
 import React from 'react'
-import { View, Image, StyleSheet, Dimensions, Pressable } from 'react-native'
+import { View, StyleSheet, Dimensions, Pressable } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useTheme } from './ThemeContext'
 import Text from './Text'
 import { Firearm } from './types'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { Image } from 'expo-image'
 
 interface FirearmCardProps {
   firearm: Firearm
@@ -17,6 +18,7 @@ export const CARD_HEIGHT = CARD_WIDTH * 1.4
 
 export default function FirearmCard({ firearm, onPress }: FirearmCardProps) {
   const { colors } = useTheme()
+  console.log('[FirearmCard] Received firearm prop. Image URL:', firearm.image, 'Full firearm:', firearm);
 
   const handlePress = () => {
     if (onPress) {
@@ -124,7 +126,7 @@ export default function FirearmCard({ firearm, onPress }: FirearmCardProps) {
     if (firearm.image) {
       return (
         <>
-          <Image source={{ uri: firearm.image }} style={styles.image} />
+          <Image source={{ uri: firearm.image }} style={styles.image} contentFit="cover" />
           <View style={styles.categoryTag}>
             <Text style={styles.categoryText}>{firearm.type || 'Firearm'}</Text>
           </View>

@@ -21,14 +21,15 @@
     "typescript": "5.8.2"
   },
   "dependencies": {
+    "expo-image": "^2.1.7",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
   "main": "index.ts",
   "types": "index.ts",
   "peerDependencies": {
+    "expo": "*",
     "react": "*",
-    "react-native": "*",
-    "expo": "*"
+    "react-native": "*"
   }
 }

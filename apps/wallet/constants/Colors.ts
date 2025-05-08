@@ -12,6 +12,7 @@ export const Colors = {
   secondary: '#42D397',
   error: '#ff5252',
   success: '#4caf50',
+  warning: '#FFC107', // Added warning color (amber)
   text: '#ECEDEE',
   textSecondary: '#9BA1A6',
   textTertiary: '#657786',
@@ -28,6 +29,7 @@ export const Colors = {
   secondarySubtle: 'rgba(20, 241, 149, 0.1)',
   cardBackground: 'rgba(22, 25, 30, 0.8)',
   cardBackgroundSubtle: 'rgba(22, 25, 30, 0.5)',
+  border: '#4A4A4A', // Added border color (medium grey)
   black: '#000',
   tint: '#C293FB',
   icon: '#9BA1A6',

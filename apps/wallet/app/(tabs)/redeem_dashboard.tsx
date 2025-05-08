@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { StyleSheet, View, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Button, Text } from '@repo/ui'

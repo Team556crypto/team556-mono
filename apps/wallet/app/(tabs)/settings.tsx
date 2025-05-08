@@ -1,351 +1,26 @@
-import React, { useState, useContext, useCallback } from 'react'
-import { StyleSheet, View, TouchableOpacity, Pressable, ActivityIndicator, ScrollView } from 'react-native'
+import React from 'react'
+import { StyleSheet, View, TouchableOpacity, Pressable } from 'react-native'
 import { useRouter } from 'expo-router'
-import { Button, Text, Input } from '@repo/ui'
+import { Button, Text } from '@repo/ui'
 import { Ionicons } from '@expo/vector-icons'
-import * as Clipboard from 'expo-clipboard'
 import { formatWalletAddress } from '@/utils/formatters'
 import { useWalletClipboard } from '@/hooks/useWalletClipboard'
 import { useAuthStore } from '@/store/authStore'
-import {
-  logoutUser,
-  checkPresaleCode,
-  redeemPresaleCode,
-  getRecoveryPhrase,
-  GetRecoveryPhraseRequest
-} from '@/services/api'
+import { logoutUser } from '@/services/api'
 import { ScreenLayout } from '@/components/layout/ScreenLayout'
 import { Colors } from '@/constants/Colors'
 import { useDrawerStore } from '@/store/drawerStore'
-import { genericStyles } from '@/constants/GenericStyles'
 
-interface RedeemPresaleDrawerContentProps {
-  onClose: () => void
-}
-
-const ComingSoonDrawerContent: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  return (
-    <View style={{ padding: 20, alignItems: 'center', gap: 15 }}>
-      <Text preset='h4'>Feature Coming Soon!</Text>
-      <Text preset='paragraph' style={{ textAlign: 'center' }}>
-        The ability to change your password directly within the app is under development.
-      </Text>
-      <Button title='Close' onPress={onClose} variant='secondary' />
-    </View>
-  )
-}
-
-const RedeemPresaleDrawerContent: React.FC<RedeemPresaleDrawerContentProps> = ({ onClose }) => {
-  const { token, fetchAndUpdateUser } = useAuthStore()
-  const [presaleCode, setPresaleCode] = useState('')
-  const [walletAddress, setWalletAddress] = useState('')
-  const [codeType, setCodeType] = useState<number | null>(null)
-  const [isWalletInputVisible, setIsWalletInputVisible] = useState(false)
-  const [canRedeem, setCanRedeem] = useState(false)
-  const [isChecking, setIsChecking] = useState(false)
-  const [isRedeeming, setIsRedeeming] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-  const [messageType, setMessageType] = useState<'success' | 'error' | null>(null)
-
-  const handleCheckCode = useCallback(async () => {
-    if (!presaleCode) {
-      setMessage('Please enter a presale code.')
-      setMessageType('error')
-      return
-    }
-
-    setIsChecking(true)
-    setMessage(null)
-    setMessageType(null)
-    setCanRedeem(false)
-    setIsWalletInputVisible(false)
-    setCodeType(null)
-
-    const response = await checkPresaleCode(presaleCode.toUpperCase(), token)
-
-    if (response.isValid && !response.redeemed) {
-      setMessage(response.message)
-      setMessageType('success')
-      setCanRedeem(true)
-      setCodeType(response.type ?? null)
-      if (response.type === 2) {
-        setIsWalletInputVisible(true)
-      }
-    } else {
-      setMessage(response.message)
-      setMessageType('error')
-      setCanRedeem(false)
-    }
-
-    setIsChecking(false)
-  }, [presaleCode, token])
-
-  const handleRedeemCode = useCallback(async () => {
-    if (!presaleCode || !canRedeem) return
-
-    if (codeType === 2 && !walletAddress) {
-      setMessage('Please enter the wallet address for this code type.')
-      setMessageType('error')
-      return
-    }
-
-    setIsRedeeming(true)
-    setMessage(null)
-    setMessageType(null)
-
-    const response = await redeemPresaleCode(
-      {
-        code: presaleCode.toUpperCase(),
-        walletAddress: codeType === 2 ? walletAddress : undefined
-      },
-      token
-    )
-
-    if (response.success) {
-      setMessage(response.message)
-      await fetchAndUpdateUser()
-      setMessageType('success')
-      setCanRedeem(false) // Disable further attempts in the drawer
-      // Fetch the updated user profile to reflect the change immediately
-      setTimeout(() => {
-        onClose()
-        // Optionally reset all state fields here if needed upon re-opening
-        setPresaleCode('')
-        setWalletAddress('')
-        setCodeType(null)
-        setIsWalletInputVisible(false)
-        setCanRedeem(false)
-        setMessage(null)
-        setMessageType(null)
-      }, 1500)
-    } else {
-      setMessage(response.message)
-      setMessageType('error')
-    }
-
-    setIsRedeeming(false)
-  }, [presaleCode, walletAddress, canRedeem, codeType, token, fetchAndUpdateUser, onClose])
-
-  return (
-    <View style={styles.sheetContentContainer}>
-      <Text preset='h4' style={styles.sheetTitle}>
-        Redeem Presale Code
-      </Text>
-      <View style={styles.inputContainer}>
-        <Input
-          placeholder='Enter your presale code'
-          value={presaleCode}
-          onChangeText={setPresaleCode}
-          autoCapitalize='characters'
-          style={[genericStyles.input, styles.input]}
-          leftIcon={<Ionicons name='ticket-outline' size={20} color={Colors.icon} />}
-        />
-      </View>
-      {isWalletInputVisible && (
-        <View style={styles.inputContainer}>
-          <Text preset='label'>Redeem to wallet</Text>
-          <Input
-            placeholder='Redeem Wallet'
-            value={walletAddress}
-            onChangeText={setWalletAddress}
-            style={[genericStyles.input, styles.input]}
-            leftIcon={<Ionicons name='wallet-outline' size={20} color={Colors.icon} />}
-            editable={!isRedeeming} // Disable if redeeming
-          />
-        </View>
-      )}
-      {message && (
-        <Text style={[styles.messageText, messageType === 'success' ? styles.successText : styles.errorText]}>
-          {message}
-        </Text>
-      )}
-      <View style={styles.buttonContainer}>
-        {canRedeem ? (
-          <Button
-            title='Redeem Code'
-            onPress={handleRedeemCode}
-            fullWidth
-            disabled={isRedeeming || isChecking}
-            loading={isRedeeming}
-          />
-        ) : (
-          <Button
-            title='Check Code'
-            onPress={handleCheckCode}
-            fullWidth
-            disabled={isChecking || isRedeeming}
-            loading={isChecking}
-          />
-        )}
-      </View>
-    </View>
-  )
-}
-
-// --- View Recovery Phrase Drawer ---
-interface ViewRecoveryPhraseDrawerContentProps {
-  onClose: () => void
-}
-
-const ViewRecoveryPhraseDrawerContent: React.FC<ViewRecoveryPhraseDrawerContentProps> = ({ onClose }) => {
-  const { token } = useAuthStore()
-  const [password, setPassword] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [revealedPhrase, setRevealedPhrase] = useState<string | null>(null)
-  const [isPhraseVisible, setIsPhraseVisible] = useState(false)
-  const [copySuccess, setCopySuccess] = useState(false)
-
-  const resetState = useCallback(() => {
-    setPassword('')
-    setIsLoading(false)
-    setError(null)
-    setRevealedPhrase(null)
-    setIsPhraseVisible(false)
-    setCopySuccess(false)
-  }, [])
-
-  const handleClose = useCallback(() => {
-    resetState()
-    onClose()
-  }, [onClose, resetState])
-
-  const handleViewPhrase = useCallback(async () => {
-    if (!password) {
-      setError('Password is required.')
-      return
-    }
-
-    setIsLoading(true)
-    setError(null)
-    setRevealedPhrase(null)
-    setIsPhraseVisible(false)
-    setCopySuccess(false)
-
-    const response = await getRecoveryPhrase({ password }, token)
-
-    if (response.error) {
-      setError(response.error) // Use error message from API response
-      setPassword('') // Clear password on error
-    } else if (response.recoveryPhrase) {
-      setRevealedPhrase(response.recoveryPhrase)
-      setIsPhraseVisible(true)
-      setPassword('') // Clear password on success
-    } else {
-      // Handle unexpected case where there's no error but no phrase either
-      setError('Failed to retrieve recovery phrase. Please try again.')
-      setPassword('')
-    }
-
-    setIsLoading(false)
-  }, [password, token])
-
-  const handleCopyPhrase = useCallback(async () => {
-    if (revealedPhrase) {
-      await Clipboard.setStringAsync(revealedPhrase)
-      setCopySuccess(true)
-      setTimeout(() => setCopySuccess(false), 2000) // Reset message after 2 seconds
-    }
-  }, [revealedPhrase])
-
-  const handleHidePhrase = useCallback(() => {
-    setIsPhraseVisible(false)
-    // Optionally clear revealedPhrase here if you want password re-entry to see it again
-    // setRevealedPhrase(null);
-  }, [])
-
-  // Split phrase into words for grid display
-  const phraseWords = revealedPhrase?.split(' ') || []
-
-  return (
-    <View style={styles.sheetContentContainer}>
-      <Text preset='h4' style={styles.sheetTitle}>
-        View Recovery Phrase
-      </Text>
-
-      {revealedPhrase && isPhraseVisible ? (
-        // Display Phrase Section
-        <View style={styles.phraseContainer}>
-          <Text preset='paragraph' style={styles.warningText}>
-            Do not share this phrase with anyone! Store it securely.
-          </Text>
-          <View style={styles.phraseGrid}>
-            {phraseWords.map((word, index) => (
-              <View key={index} style={styles.wordBox}>
-                <Text style={styles.wordNumber}>{`${index + 1}.`}</Text>
-                <Text style={styles.wordText}>{word}</Text>
-              </View>
-            ))}
-          </View>
-          <View style={styles.buttonContainerHorizontal}>
-            <Button
-              title={copySuccess ? 'Copied!' : 'Copy Phrase'}
-              onPress={handleCopyPhrase}
-              variant='secondary'
-              leftIcon={
-                <Ionicons
-                  name={copySuccess ? 'checkmark-circle' : 'copy-outline'}
-                  size={18}
-                  color={Colors.textSecondary}
-                />
-              }
-              style={styles.flexButton}
-            />
-            <Button
-              title='Hide'
-              onPress={handleHidePhrase}
-              variant='secondary'
-              leftIcon={<Ionicons name='eye-off-outline' size={18} color={Colors.textSecondary} />}
-              style={styles.flexButton}
-            />
-          </View>
-        </View>
-      ) : (
-        // Password Input Section
-        <View style={styles.inputContainer}>
-          <Text preset='paragraph' style={styles.infoText}>
-            Enter your password to view your recovery phrase.
-          </Text>
-          <View style={[styles.inputContainer]}>
-            <Input
-              placeholder='Enter your password'
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              style={[genericStyles.input, styles.input]}
-              leftIcon={<Ionicons name='lock-closed-outline' size={20} color={Colors.icon} />}
-              editable={!isLoading}
-            />
-          </View>
-          {error && <Text style={[styles.messageText, styles.errorText]}>{error}</Text>}
-          <View style={styles.buttonContainer}>
-            <Button
-              title='View Phrase'
-              onPress={handleViewPhrase}
-              fullWidth
-              disabled={isLoading || !password}
-              loading={isLoading}
-            />
-          </View>
-        </View>
-      )}
-
-      <View style={[styles.buttonContainer, { marginTop: 40 }]}>
-        <Button title='Close' onPress={handleClose} fullWidth variant='secondary' />
-      </View>
-    </View>
-  )
-}
+// Import moved drawer components
+import ComingSoonDrawerContent from '@/components/drawers/ComingSoonDrawerContent'
+import RedeemPresaleDrawerContent from '@/components/drawers/RedeemPresaleDrawerContent'
+import ViewRecoveryPhraseDrawerContent from '@/components/drawers/ViewRecoveryPhraseDrawerContent'
 
 export default function SettingsScreen() {
   const router = useRouter()
   const { copyAddressToClipboard } = useWalletClipboard()
-  const { logout: clearAuthStore, token, user, fetchAndUpdateUser } = useAuthStore()
+  const { logout: clearAuthStore, token, user } = useAuthStore()
   const { openDrawer, closeDrawer } = useDrawerStore()
-
-  const handleOpenRedeemDashboard = () => {
-    router.push('/redeem_dashboard')
-  }
 
   const handleLogout = async () => {
     try {
@@ -362,10 +37,6 @@ export default function SettingsScreen() {
     }
   }
 
-  const handleOpenSheet = () => {
-    openDrawer(<RedeemPresaleDrawerContent onClose={closeDrawer} />)
-  }
-
   const handleCopyAddress = () => {
     if (user?.wallets && user.wallets.length > 0) {
       copyAddressToClipboard(user.wallets[0].address)
@@ -376,12 +47,20 @@ export default function SettingsScreen() {
     openDrawer(<ComingSoonDrawerContent onClose={closeDrawer} />)
   }
 
-  const handleHelpPress = () => {
-    openDrawer(<ComingSoonDrawerContent onClose={closeDrawer} />)
-  }
-
   const handleViewRecoveryPhrasePress = () => {
     openDrawer(<ViewRecoveryPhraseDrawerContent onClose={closeDrawer} />)
+  }
+
+  const handleOpenSheet = () => {
+    openDrawer(<RedeemPresaleDrawerContent onClose={closeDrawer} />)
+  }
+
+  const handleOpenRedeemDashboard = () => {
+    router.push('/redeem_dashboard')
+  }
+
+  const handleHelpPress = () => {
+    openDrawer(<ComingSoonDrawerContent onClose={closeDrawer} />)
   }
 
   return (
@@ -432,10 +111,7 @@ export default function SettingsScreen() {
           </View>
 
           <View style={styles.cardContent}>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={handleChangePasswordPress} // <--- ADD THIS onPress PROP
-            >
+            <TouchableOpacity style={styles.menuItem} onPress={handleChangePasswordPress}>
               <View style={styles.menuItemIcon}>
                 <Ionicons name='lock-closed-outline' size={22} color={Colors.primary} />
               </View>
@@ -550,11 +226,6 @@ export default function SettingsScreen() {
           />
         </View>
       </View>
-      {/* ) : (
-        <View style={styles.loadingContainer}>
-          <Text preset='paragraph'>Loading profile...</Text>
-        </View>
-      )} */}
     </ScreenLayout>
   )
 }
@@ -563,11 +234,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingBottom: 50
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center'
   },
   card: {
     backgroundColor: Colors.backgroundDark,

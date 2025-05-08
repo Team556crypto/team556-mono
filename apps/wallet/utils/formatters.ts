@@ -12,14 +12,15 @@ export const formatBalance = (balance: number | null | undefined): string => {
 }
 
 // Helper to format currency value (USD), showing '--' if null/undefined or not a number
-export const formatPrice = (value: number | null | undefined): string => {
+export const formatPrice = (value: number | null | undefined, decimalPlaces?: number): string => {
   if (typeof value !== 'number') {
     return '--'
   }
-  return `$${value.toLocaleString(undefined, {
-    minimumFractionDigits: 4,
-    maximumFractionDigits: 6 // Ensure exactly 2 decimal places
-  })}`
+  const options: Intl.NumberFormatOptions = {
+    minimumFractionDigits: decimalPlaces !== undefined ? decimalPlaces : 2,
+    maximumFractionDigits: decimalPlaces !== undefined ? decimalPlaces : 2,
+  };
+  return `$${value.toLocaleString(undefined, options)}`
 }
 
 // Helper to format wallet address, showing '--' if null/undefined or not a string

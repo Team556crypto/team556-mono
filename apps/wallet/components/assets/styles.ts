@@ -113,11 +113,12 @@ export const assetDetailsStyles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 12,
-    marginTop: 8
+    marginTop: 8,
+    alignSelf: 'center'
   },
   priceLabel: {
     fontSize: 14,
-    color: Colors.text,
-    textAlign: 'center'
+    color: Colors.textSecondary,
+    fontWeight: '500'
   }
 })

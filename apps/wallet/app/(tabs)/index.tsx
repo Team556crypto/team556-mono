@@ -135,6 +135,7 @@ export default function HomeScreen() {
     balance: number | null,
     ticker: string,
     value: number | null,
+    price: number | null,
     IconComponent: React.FC<any>
   ) => {
     const receivePressHandler = () => {
@@ -165,6 +166,7 @@ export default function HomeScreen() {
         balance={balance}
         ticker={ticker}
         value={value}
+        price={price}
         IconComponent={IconComponent}
         walletAddress={walletAddress}
         onReceivePress={receivePressHandler}
@@ -214,7 +216,7 @@ export default function HomeScreen() {
             value={solValue}
             Icon={SolanaIcon}
             accent={Colors.primary}
-            onPress={() => handleAssetPress('Solana', solBalance, 'SOL', solValue, SolanaIcon)}
+            onPress={() => handleAssetPress('Solana', solBalance, 'SOL', solValue, solPrice, SolanaIcon)}
           />
 
           {/* TEAM Token */}
@@ -226,7 +228,7 @@ export default function HomeScreen() {
             value={teamValue}
             Icon={TeamIcon}
             accent={Colors.secondary}
-            onPress={() => handleAssetPress('Team', teamBalance, 'TEAM', teamValue, TeamIcon)}
+            onPress={() => handleAssetPress('Team', teamBalance, 'TEAM', teamValue, teamPrice, TeamIcon)}
           />
         </View>
 

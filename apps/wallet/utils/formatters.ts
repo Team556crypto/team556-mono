@@ -6,7 +6,7 @@ export const formatBalance = (balance: number | null | undefined): string => {
   // Adjust formatting as needed (e.g., locale, max digits)
   // Consider significant digits for smaller amounts if needed
   return balance.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
+    minimumFractionDigits: 4,
     maximumFractionDigits: 6 // Show more precision for crypto
   })
 }
@@ -17,7 +17,7 @@ export const formatPrice = (value: number | null | undefined): string => {
     return '--'
   }
   return `$${value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
+    minimumFractionDigits: 4,
     maximumFractionDigits: 6 // Ensure exactly 2 decimal places
   })}`
 }

@@ -12,6 +12,7 @@ interface AssetDetailsDrawerContentProps {
   balance: number | null
   ticker: string
   value: number | null
+  price?: number | null // Optional price data for the token
   IconComponent: React.FC<any>
   walletAddress: string | undefined // Retained prop, though not used in this component directly after refactor
   onReceivePress: () => void
@@ -25,6 +26,7 @@ const AssetDetailsDrawerContent: React.FC<AssetDetailsDrawerContentProps> = ({
   balance,
   ticker,
   value,
+  price,
   IconComponent,
   // walletAddress, // Not directly used by this component anymore
   onReceivePress,
@@ -41,7 +43,7 @@ const AssetDetailsDrawerContent: React.FC<AssetDetailsDrawerContentProps> = ({
       <AssetDetailsHeader assetName={assetName} IconComponent={IconComponent} />
 
       {/* Simplified Balance and Value Display */}
-      <AssetInfoDisplay balance={balance} ticker={ticker} value={value} />
+      <AssetInfoDisplay balance={balance} ticker={ticker} value={value} price={price} />
 
       {/* Action Buttons */}
       <View style={assetDetailsStyles.drawerActionsContainer}>

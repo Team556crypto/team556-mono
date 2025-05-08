@@ -14,7 +14,7 @@ import {
   getRecoveryPhrase,
   GetRecoveryPhraseRequest
 } from '@/services/api'
-import { ScreenLayout } from '@/components/ScreenLayout'
+import { ScreenLayout } from '@/components/layout/ScreenLayout'
 import { Colors } from '@/constants/Colors'
 import { useDrawerStore } from '@/store/drawerStore'
 import { genericStyles } from '@/constants/GenericStyles'

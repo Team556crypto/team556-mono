@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback, useState, useMemo } from 'react'
-import { StyleSheet, View, TouchableOpacity, Platform, ScrollView } from 'react-native'
+import { StyleSheet, View, TouchableOpacity, Platform, ScrollView, Animated } from 'react-native'
 import { Text, Button } from '@team556/ui'
 import { Colors } from '@/constants/Colors'
 import { useAuthStore } from '@/store/authStore'
@@ -9,90 +9,21 @@ import { Ionicons } from '@expo/vector-icons'
 import { useWalletClipboard } from '@/hooks/useWalletClipboard'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useDrawerStore } from '@/store/drawerStore'
-import SendDrawerContent from '@/components/SendDrawerContent'
-import ReceiveDrawerContent from '@/components/ReceiveDrawerContent'
-import SwapDrawerContent from '@/components/SwapDrawerContent'
+import SendDrawerContent from '@/components/drawers/SendDrawerContent'
+import ReceiveDrawerContent from '@/components/drawers/ReceiveDrawerContent'
+import SwapDrawerContent from '@/components/drawers/SwapDrawerContent'
 import SolanaIcon from '@/assets/images/solana.svg'
 import TeamIcon from '@/assets/images/team.svg'
 import { formatWalletAddress, formatBalance, formatPrice } from '@/utils/formatters'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { ScreenLayout } from '@/components/ScreenLayout'
+import { ScreenLayout } from '@/components/layout/ScreenLayout'
+import AssetDetailsHeader from '@/components/assets/AssetDetailsHeader'
+import AssetInfoDisplay from '@/components/assets/AssetInfoDisplay'
+import AssetDetailsDrawerContent from '@/components/assets/AssetDetailsDrawerContent'
+import AssetCard from '@/components/assets/AssetCard'
 
 // Define TokenOption type locally
 type TokenOption = 'SOL' | 'TEAM'
-
-const AssetDetailsDrawerContent: React.FC<{
-  assetName: string
-  balance: number | null
-  ticker: string
-  value: number | null
-  IconComponent: React.FC<any>
-  walletAddress: string | undefined
-  onReceivePress: () => void
-  onSendPress: () => void
-  onSwapPress: () => void
-  onClose: () => void
-}> = ({
-  assetName,
-  balance,
-  ticker,
-  value,
-  IconComponent,
-  walletAddress,
-  onReceivePress,
-  onSendPress,
-  onSwapPress,
-  onClose
-}) => {
-  return (
-    <View style={styles.drawerContentContainer}>
-      <View style={styles.drawerHeader}>
-        <View style={styles.drawerIconContainer}>
-          <IconComponent width={32} height={32} />
-        </View>
-        <Text preset='h4'>{assetName} Details</Text>
-      </View>
-
-      <View style={styles.drawerDetailRow}>
-        <Text style={styles.drawerLabel}>Balance:</Text>
-        <Text style={styles.drawerValue}>
-          {formatBalance(balance)} {ticker}
-        </Text>
-      </View>
-
-      <View style={styles.drawerDetailRow}>
-        <Text style={styles.drawerLabel}>Value:</Text>
-        <Text style={styles.drawerValue}>{formatPrice(value)}</Text>
-      </View>
-
-      {/* Drawer Actions */}
-      <View style={styles.drawerActionsRow}>
-        <View style={styles.actionButtonColumn}>
-          <TouchableOpacity style={styles.circleButton} onPress={onReceivePress}>
-            <Ionicons name='arrow-down' size={24} color='white' />
-          </TouchableOpacity>
-          <Text style={styles.buttonLabel}>Receive</Text>
-        </View>
-
-        <View style={styles.actionButtonColumn}>
-          <TouchableOpacity style={styles.circleButton} onPress={onSendPress}>
-            <Ionicons name='arrow-up' size={24} color='white' />
-          </TouchableOpacity>
-          <Text style={styles.buttonLabel}>Send</Text>
-        </View>
-
-        <View style={styles.actionButtonColumn}>
-          <TouchableOpacity style={styles.circleButton} onPress={onSwapPress}>
-            <Ionicons name='swap-horizontal' size={24} color='white' />
-          </TouchableOpacity>
-          <Text style={styles.buttonLabel}>Swap</Text>
-        </View>
-      </View>
-
-      <Button title='Close' onPress={onClose} variant='secondary' style={styles.drawerCloseButton} />
-    </View>
-  )
-}
 
 export default function HomeScreen() {
   const { user, token } = useAuthStore()
@@ -272,55 +203,32 @@ export default function HomeScreen() {
           <Text style={styles.sectionTitle}>Assets</Text>
         </View>
 
-        {/* SOL Token */}
-        <TouchableOpacity
-          style={styles.assetItem}
-          onPress={() => handleAssetPress('Solana', solBalance, 'SOL', solValue, SolanaIcon)}
-        >
-          {/* Left side: Icon and Token Info */}
-          <View style={styles.assetLeft}>
-            <View style={styles.assetIconContainer}>
-              <SolanaIcon width={24} height={24} />
-            </View>
-            <View>
-              <Text style={styles.assetName}>Solana</Text>
-              <View style={styles.tickerAndChange}>
-                <Text style={styles.assetTicker}>SOL</Text>
-              </View>
-            </View>
-          </View>
+        {/* Asset Cards */}
+        <View style={styles.assetCardsContainer}>
+          {/* SOL Token */}
+          <AssetCard
+            name='Solana'
+            ticker='SOL'
+            balance={solBalance}
+            price={solPrice}
+            value={solValue}
+            Icon={SolanaIcon}
+            accent={Colors.primary}
+            onPress={() => handleAssetPress('Solana', solBalance, 'SOL', solValue, SolanaIcon)}
+          />
 
-          {/* Right side: Balance Amount and Value */}
-          <View style={styles.assetRight}>
-            <Text style={styles.assetAmount}>{formatBalance(solBalance)} SOL</Text>
-            <Text style={styles.assetValue}>{formatPrice(solValue)}</Text>
-          </View>
-        </TouchableOpacity>
-
-        {/* TEAM Token */}
-        <TouchableOpacity
-          style={styles.assetItem}
-          onPress={() => handleAssetPress('Team', teamBalance, 'TEAM', teamValue, TeamIcon)}
-        >
-          {/* Left side: Icon and Token Info */}
-          <View style={styles.assetLeft}>
-            <View style={styles.assetIconContainer}>
-              <TeamIcon width={34} height={34} />
-            </View>
-            <View>
-              <Text style={styles.assetName}>Team556</Text>
-              <View style={styles.tickerAndChange}>
-                <Text style={styles.assetTicker}>TEAM</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Right side: Balance Amount and Value */}
-          <View style={styles.assetRight}>
-            <Text style={styles.assetAmount}>{formatBalance(teamBalance)} TEAM</Text>
-            <Text style={styles.assetValue}>{formatPrice(teamValue)}</Text>
-          </View>
-        </TouchableOpacity>
+          {/* TEAM Token */}
+          <AssetCard
+            name='Team556'
+            ticker='TEAM'
+            balance={teamBalance}
+            price={teamPrice}
+            value={teamValue}
+            Icon={TeamIcon}
+            accent={Colors.primarySubtle}
+            onPress={() => handleAssetPress('Team', teamBalance, 'TEAM', teamValue, TeamIcon)}
+          />
+        </View>
 
         {/* Recent Activity Section */}
         <View style={[styles.sectionHeader, { marginTop: 20 }]}>
@@ -360,50 +268,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace'
   },
-  mainBalanceCard: {
-    padding: 24,
-    borderRadius: 16,
-    backgroundColor: Colors.backgroundDark, // Use defined card background
-    marginBottom: 24
-  },
-  balanceLabel: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 8
-  },
-  balanceAmount: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: Colors.text,
-    textAlign: 'center',
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    marginBottom: 20
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12
-  },
-  actionButton: {
-    flex: 1,
-    alignItems: 'center',
-    backgroundColor: Colors.backgroundSubtle,
-    padding: 14,
-    borderRadius: 12
-  },
-  actionIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.primarySubtleDark, // Use darker subtle primary for icon bg
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8
-  },
-  actionText: {
-    color: Colors.text,
-    fontSize: 14
+  assetCardsContainer: {
+    marginBottom: 16,
+    gap: 16
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -413,69 +280,14 @@ const styles = StyleSheet.create({
     marginTop: 8
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: 'bold',
     color: Colors.text,
-    opacity: 0.7
+    opacity: 0.9
   },
   seeAllText: {
     fontSize: 14,
     color: Colors.primary // Use primary color for links
-  },
-  assetItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: Colors.backgroundDark, // Use defined subtle card background
-    borderWidth: 1,
-    borderColor: Colors.backgroundSubtle,
-    borderRadius: 12,
-    marginBottom: 12
-  },
-  assetLeft: {
-    flexDirection: 'row',
-    alignItems: 'center'
-  },
-  assetIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12
-  },
-  assetName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text
-  },
-  assetTicker: {
-    fontSize: 12,
-    color: Colors.textSecondary
-  },
-  tickerAndChange: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8
-  },
-  assetPriceChange: {
-    color: Colors.success, // Using the success color from Colors constants
-    fontWeight: '600',
-    fontSize: 14
-  },
-  assetRight: {
-    alignItems: 'flex-end'
-  },
-  assetAmount: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: Colors.text,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace'
-  },
-  assetValue: {
-    fontSize: 12,
-    color: Colors.textSecondary
   },
   emptyActivity: {
     height: 120,
@@ -489,79 +301,5 @@ const styles = StyleSheet.create({
   emptyActivityText: {
     color: Colors.textTertiary, // Use tertiary text color
     marginTop: 8
-  },
-  drawerContentContainer: {
-    padding: 20,
-    alignItems: 'stretch', // Stretch items for better row layout
-    gap: 20 // Increased gap
-  },
-  drawerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 15,
-    marginBottom: 10 // Add space below header
-  },
-  drawerIconContainer: {
-    width: 40, // Consistent sizing
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.backgroundSubtle, // Use subtle background
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  drawerDetailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center'
-  },
-  drawerLabel: {
-    fontSize: 16,
-    color: Colors.textSecondary
-  },
-  drawerValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text
-  },
-  drawerActionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between', // Evenly distribute with space-between
-    marginTop: 15,
-    gap: 12 // Exactly 8px gap between buttons
-  },
-  drawerActionButton: {
-    flex: 1 // Make buttons take equal space
-  },
-  drawerCloseButton: {
-    marginTop: 16
-  },
-  actionButtonColumn: {
-    alignItems: 'center',
-    gap: 10,
-    borderRadius: 10,
-    backgroundColor: Colors.background,
-    padding: 16,
-    flex: 1, // Take 1/3 of available space (minus the gaps)
-    maxWidth: '32%' // Ensure buttons don't get too wide
-  },
-  squareBackground: {
-    width: 70,
-    height: 70,
-    backgroundColor: Colors.backgroundDarker,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  circleButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: Colors.tint,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  buttonLabel: {
-    color: Colors.text,
-    fontSize: 14
   }
 })

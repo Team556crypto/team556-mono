@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { StyleSheet, View, Dimensions } from 'react-native'
-import { ScreenLayout } from '@/components/ScreenLayout'
+import { ScreenLayout } from '@/components/layout/ScreenLayout'
 import { Colors } from '@/constants/Colors'
 import { Ionicons } from '@expo/vector-icons'
 import { HorizontalBadgeScroll } from '@team556/ui'

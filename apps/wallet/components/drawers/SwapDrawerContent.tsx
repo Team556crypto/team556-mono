@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { genericStyles } from '@/constants/GenericStyles'
 import { LAMPORTS_PER_SOL } from '@solana/web3.js'
 import { debounce } from 'lodash'
-import { getSwapQuote, executeSwap, submitTokenAccountTransaction, signTransaction } from '../services/api'
+import { getSwapQuote, executeSwap, submitTokenAccountTransaction, signTransaction } from '../../services/api'
 
 // Basic type for Jupiter V6 Quote Response (expand as needed)
 // Consider moving to a shared types package

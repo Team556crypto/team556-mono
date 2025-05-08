@@ -25,7 +25,7 @@ import { DefaultColors, ThemeColors } from '../constants/Colors'
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window')
 
 // Maximum height the drawer can take (95% of screen height)
-const MAX_DRAWER_HEIGHT = SCREEN_HEIGHT * 0.95
+const MAX_DRAWER_HEIGHT = SCREEN_HEIGHT * 0.9
 // Minimum height for the drawer
 const MIN_DRAWER_HEIGHT = SCREEN_HEIGHT * 0.2
 
@@ -73,25 +73,26 @@ export default function Drawer({
 
   // Function to parse height values that can be numbers or percentage strings
   const parseHeightValue = (value: number | string | undefined, defaultValue: number): number => {
-    if (value === undefined) return defaultValue;
-    
-    if (typeof value === 'number') return value;
-    
+    if (value === undefined) return defaultValue
+
+    if (typeof value === 'number') return value
+
     // Handle percentage string
     if (typeof value === 'string' && value.endsWith('%')) {
-      const percentage = parseFloat(value) / 100;
-      return SCREEN_HEIGHT * percentage;
+      const percentage = parseFloat(value) / 100
+      return SCREEN_HEIGHT * percentage
     }
-    
+
     // Try to parse as a number
-    const parsed = parseFloat(String(value));
-    return isNaN(parsed) ? defaultValue : parsed;
-  };
-  
+    const parsed = parseFloat(String(value))
+    return isNaN(parsed) ? defaultValue : parsed
+  }
+
   // Calculate drawer height based on content with min/max constraints
   // Add padding, handle height, and a bit extra for shadow/spacing
   const totalPadding = HANDLE_HEIGHT + CONTENT_PADDING + SHADOW_OFFSET
-  const calculatedHeight = contentHeight > 0 ? contentHeight + totalPadding : parseHeightValue(minHeight, MIN_DRAWER_HEIGHT)
+  const calculatedHeight =
+    contentHeight > 0 ? contentHeight + totalPadding : parseHeightValue(minHeight, MIN_DRAWER_HEIGHT)
   const maxHeightValue = parseHeightValue(maxHeight, MAX_DRAWER_HEIGHT)
   const minHeightValue = parseHeightValue(minHeight, MIN_DRAWER_HEIGHT)
   const drawerHeight = Math.min(maxHeightValue, Math.max(minHeightValue, calculatedHeight))
@@ -334,7 +335,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.3)'
   },
   contentContainer: {
-    padding: 20
+    padding: 20,
+    marginBottom: 40
   },
   titleContainer: {
     padding: 20,

@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router'
 import React from 'react'
 
-import { ResponsiveNavigation } from '@/components/ResponsiveNavigation'
+import { ResponsiveNavigation } from '@/components/layout/ResponsiveNavigation'
 import { Colors } from '@/constants/Colors'
 import { Entypo, Ionicons } from '@expo/vector-icons'
 

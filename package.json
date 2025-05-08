@@ -52,6 +52,7 @@
     "scripts/*"
   ],
   "dependencies": {
-    "@solana/spl-token": "^0.3.8"
+    "@solana/spl-token": "^0.3.8",
+    "expo-linear-gradient": "^14.1.4"
   }
 }

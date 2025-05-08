@@ -18,7 +18,7 @@ export const formatPrice = (value: number | null | undefined): string => {
   }
   return `$${value.toLocaleString(undefined, {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2 // Ensure exactly 2 decimal places
+    maximumFractionDigits: 6 // Ensure exactly 2 decimal places
   })}`
 }
 

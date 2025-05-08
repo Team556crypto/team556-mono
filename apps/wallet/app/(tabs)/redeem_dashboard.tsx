@@ -3,7 +3,7 @@ import { StyleSheet, View, TouchableOpacity, ActivityIndicator, ScrollView } fro
 import { useRouter } from 'expo-router'
 import { Button, Text } from '@repo/ui'
 import { Ionicons } from '@expo/vector-icons'
-import { ScreenLayout } from '@/components/ScreenLayout'
+import { ScreenLayout } from '@/components/layout/ScreenLayout'
 import { Colors } from '@/constants/Colors'
 import { useAuthStore } from '@/store/authStore'
 import { format, addWeeks } from 'date-fns'

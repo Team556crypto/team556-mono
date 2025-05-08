@@ -74,7 +74,7 @@ export default function HomeScreen() {
   const teamValue = typeof teamBalance === 'number' && typeof teamPrice === 'number' ? teamBalance * teamPrice : null
 
   // Calculate total portfolio value
-  const totalValue = (solValue || 0) + (teamValue || 0)
+  const totalPortfolioValue = (solValue || 0) + (teamValue || 0)
 
   useEffect(() => {
     if (solError) {
@@ -200,6 +200,13 @@ export default function HomeScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        {/* Portfolio Value Section */}
+        <View style={styles.portfolioContainer}>
+          <Text style={styles.portfolioLabelText}>Portfolio Value</Text>
+          <Text style={styles.portfolioValueAmount}>{formatPrice(totalPortfolioValue)}</Text>
+          <Text style={styles.portfolioChangeText}>↑ 0.0% today</Text>
+        </View>
+
         {/* Assets Section */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Assets</Text>
@@ -233,7 +240,7 @@ export default function HomeScreen() {
         </View>
 
         {/* Recent Activity Section */}
-        <View style={[styles.sectionHeader, { marginTop: 20 }]}>
+        {/* <View style={[styles.sectionHeader, { marginTop: 20 }]}>
           <Text style={styles.sectionTitle}>Recent Activity</Text>
           <TouchableOpacity>
             <Text style={styles.seeAllText}>See all</Text>
@@ -241,12 +248,10 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.emptyActivity}>
-          {/* <Ionicons name='time-outline' size={24} color={Colors.textTertiary} />
-          <Text style={styles.emptyActivityText}>No recent transactions</Text> */}
           <Text style={styles.emptyActivityText} preset='h4'>
             Coming Soon
           </Text>
-        </View>
+        </View> */}
       </ScrollView>
     </ScreenLayout>
   )
@@ -303,5 +308,27 @@ const styles = StyleSheet.create({
   emptyActivityText: {
     color: Colors.textTertiary, // Use tertiary text color
     marginTop: 8
+  },
+  portfolioContainer: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    marginBottom: 16,
+    backgroundColor: Colors.backgroundDark,
+    borderRadius: 12
+  },
+  portfolioLabelText: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    marginBottom: 8
+  },
+  portfolioValueAmount: {
+    fontSize: 40,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: 8
+  },
+  portfolioChangeText: {
+    fontSize: 16,
+    color: Colors.success // Assuming you have a 'success' color, otherwise use a green like '#28a745'
   }
 })

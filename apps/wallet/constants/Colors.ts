@@ -9,7 +9,7 @@
 
 export const Colors = {
   primary: '#C293FB',
-  secondary: '#14F195',
+  secondary: '#42D397',
   error: '#ff5252',
   success: '#4caf50',
   text: '#ECEDEE',

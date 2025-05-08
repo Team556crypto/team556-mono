@@ -1,10 +1,11 @@
 import React from 'react'
-import { View, TouchableOpacity, StyleSheet, Platform } from 'react-native'
+import { View, TouchableOpacity, StyleSheet, Platform, Animated } from 'react-native'
 import { Text } from '@team556/ui'
 import { Colors } from '@/constants/Colors'
 import AssetDetailsHeader from './AssetDetailsHeader'
 import AssetInfoDisplay from './AssetInfoDisplay'
 import ActionButton from './ActionButton'
+import { assetDetailsStyles } from './styles'
 
 interface AssetDetailsDrawerContentProps {
   assetName: string
@@ -31,60 +32,32 @@ const AssetDetailsDrawerContent: React.FC<AssetDetailsDrawerContentProps> = ({
   onSwapPress,
   onClose
 }) => {
-  const accentColor = ticker === 'SOL' ? Colors.primary : Colors.primarySubtle
+  // Use color constants based on asset ticker - use existing color constants from the Colors object
+  const accentColor = ticker === 'SOL' ? Colors.primary : ticker === 'TEAM' ? Colors.secondary : Colors.primarySubtle
 
   return (
-    <View style={styles.drawerContentContainer}>
+    <View style={assetDetailsStyles.drawerContentContainer}>
+      {/* Asset Header */}
       <AssetDetailsHeader assetName={assetName} IconComponent={IconComponent} />
+
+      {/* Simplified Balance and Value Display */}
       <AssetInfoDisplay balance={balance} ticker={ticker} value={value} />
 
-      <View style={styles.drawerActionsContainer}>
+      {/* Action Buttons */}
+      <View style={assetDetailsStyles.drawerActionsContainer}>
         <ActionButton icon='arrow-down-outline' label='Receive' onPress={onReceivePress} color={accentColor} />
         <ActionButton icon='arrow-up-outline' label='Send' onPress={onSendPress} color={accentColor} />
         <ActionButton icon='swap-horizontal-outline' label='Swap' onPress={onSwapPress} color={accentColor} />
       </View>
 
-      <TouchableOpacity onPress={onClose} style={styles.drawerCloseButton} activeOpacity={0.7}>
-        <Text style={styles.closeButtonText}>Close</Text>
-      </TouchableOpacity>
+      {/* Close Button */}
+      {/* <TouchableOpacity onPress={onClose} style={assetDetailsStyles.drawerCloseButton} activeOpacity={0.7}>
+        <Text style={assetDetailsStyles.closeButtonText}>Close</Text>
+      </TouchableOpacity> */}
     </View>
   )
 }
 
-const styles = StyleSheet.create({
-  drawerContentContainer: {
-    padding: 20,
-    backgroundColor: Colors.backgroundDark,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: Platform.OS === 'android' ? 10 : 0
-  },
-  drawerActionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 20,
-    marginBottom: 20,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: Colors.backgroundSubtle
-  },
-  drawerCloseButton: {
-    marginTop: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: Colors.backgroundSubtle,
-    borderRadius: 8,
-    alignItems: 'center'
-  },
-  closeButtonText: {
-    color: Colors.text,
-    fontSize: 16,
-    fontWeight: '500'
-  }
-})
+// Using shared styles from styles.ts file now
 
 export default AssetDetailsDrawerContent

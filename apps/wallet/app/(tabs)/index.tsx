@@ -225,7 +225,7 @@ export default function HomeScreen() {
             price={teamPrice}
             value={teamValue}
             Icon={TeamIcon}
-            accent={Colors.primarySubtle}
+            accent={Colors.secondary}
             onPress={() => handleAssetPress('Team', teamBalance, 'TEAM', teamValue, TeamIcon)}
           />
         </View>

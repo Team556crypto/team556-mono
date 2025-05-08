@@ -53,7 +53,7 @@ const AssetInfoDisplay: React.FC<AssetInfoDisplayProps> = ({ balance, ticker, va
       {/* Always show price for consistency between tokens */}
       <View style={styles.priceContainer}>
         <Text style={styles.priceLabel}>
-          {ticker} Price: {formatPrice(currentPrice)}
+          {ticker} Price: {formatPrice(currentPrice, ticker === 'TEAM' ? 7 : ticker === 'SOL' ? 2 : 2)}
         </Text>
       </View>
     </View>

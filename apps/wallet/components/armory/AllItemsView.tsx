@@ -6,8 +6,8 @@ import { FirearmCard, Text, Badge, Button } from '@team556/ui'
 import { useTheme } from '@team556/ui'
 import { Firearm } from '@/services/api'
 import { useDrawerStore } from '@/store/drawerStore'
-import { FirearmDetailsDrawerContent } from './FirearmDetailsDrawerContent'
-import { AddFirearmDrawerContent } from './AddFirearmDrawerContent'
+import { FirearmDetailsDrawerContent } from '@/components/drawers/FirearmDetailsDrawerContent'
+import { AddFirearmDrawerContent } from '@/components/drawers/AddFirearmDrawerContent'
 import { Ionicons } from '@expo/vector-icons'
 import { CARD_HEIGHT, CARD_WIDTH } from '@team556/ui'
 
@@ -111,8 +111,8 @@ const AllItemsView = () => {
               <FirearmCard key={firearm.id} firearm={firearm} onPress={() => handleFirearmPress(firearm)} />
             ))}
           {!isLoading && firearms.length >= 0 && (
-            <TouchableOpacity 
-              style={styles.addFirearmCard} 
+            <TouchableOpacity
+              style={styles.addFirearmCard}
               onPress={() => {
                 openDrawer(<AddFirearmDrawerContent />)
               }}

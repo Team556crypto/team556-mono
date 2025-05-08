@@ -386,176 +386,175 @@ export default function SettingsScreen() {
 
   return (
     <ScreenLayout title='Settings' headerIcon={<Ionicons name='settings' size={24} color={Colors.primary} />}>
-      {user ? (
-        <View style={styles.container}>
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text preset='h4'>Account</Text>
+      <View style={styles.container}>
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text preset='h4'>Account</Text>
+          </View>
+
+          <View style={styles.cardContent}>
+            <View style={styles.infoRow}>
+              <Text preset='label'>Email</Text>
+              <Text preset='paragraph' color={Colors.icon}>
+                {user?.email}
+              </Text>
             </View>
 
-            <View style={styles.cardContent}>
-              <View style={styles.infoRow}>
-                <Text preset='label'>Email</Text>
-                <Text preset='paragraph' color={Colors.icon}>
-                  {user.email}
-                </Text>
-              </View>
-
-              {user?.wallets && user.wallets.length > 0 ? (
-                <>
-                  <View style={styles.divider} />
-                  <Pressable style={styles.infoRow} onPress={handleCopyAddress}>
-                    <Text preset='label'>Wallet</Text>
-                    <View style={styles.walletContainer}>
-                      <Text preset='paragraph' color={Colors.icon} selectable={true}>
-                        {formatWalletAddress(user.wallets[0].address)}
-                      </Text>
-                      <TouchableOpacity style={styles.copyButton} onPress={handleCopyAddress}>
-                        <Ionicons name='copy-outline' size={16} color={Colors.tint} />
-                      </TouchableOpacity>
-                    </View>
-                  </Pressable>
-                </>
-              ) : (
-                <View style={styles.infoRow}>
+            {user?.wallets && user.wallets.length > 0 ? (
+              <>
+                <View style={styles.divider} />
+                <Pressable style={styles.infoRow} onPress={handleCopyAddress}>
                   <Text preset='label'>Wallet</Text>
-                  <Text preset='paragraph' color={Colors.icon}>
-                    No wallet linked
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
-
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text preset='h4'>Security</Text>
-            </View>
-
-            <View style={styles.cardContent}>
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={handleChangePasswordPress} // <--- ADD THIS onPress PROP
-              >
-                <View style={styles.menuItemIcon}>
-                  <Ionicons name='lock-closed-outline' size={22} color={Colors.primary} />
-                </View>
-                <View style={styles.menuItemContent}>
-                  <Text preset='label'>Change Password</Text>
-                  <Text preset='caption'>Update your account password</Text>
-                </View>
-                <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.menuItem} onPress={handleViewRecoveryPhrasePress}>
-                <View style={styles.menuItemIcon}>
-                  <Ionicons name='shield-checkmark-outline' size={22} color={Colors.primary} />
-                </View>
-                <View style={styles.menuItemContent}>
-                  <Text preset='label'>View Recovery Phrase</Text>
-                </View>
-                <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text preset='h4'>About</Text>
-            </View>
-
-            <View style={styles.cardContent}>
-              <TouchableOpacity style={styles.menuItem} onPress={handleHelpPress}>
-                <View style={styles.menuItemIcon}>
-                  <Ionicons name='help-circle-outline' size={22} color={Colors.primary} />
-                </View>
-                <View style={styles.menuItemContent}>
-                  <Text preset='label'>Help & Support</Text>
-                </View>
-                <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
-              </TouchableOpacity>
-
-              <View style={styles.divider} />
-
-              <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/terms')}>
-                <View style={styles.menuItemIcon}>
-                  <Ionicons name='document-text-outline' size={22} color={Colors.primary} />
-                </View>
-                <View style={styles.menuItemContent}>
-                  <Text preset='label'>Terms of Service</Text>
-                </View>
-                <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
-              </TouchableOpacity>
-
-              <View style={styles.divider} />
-
-              <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/privacy')}>
-                <View style={styles.menuItemIcon}>
-                  <Ionicons name='document-text-outline' size={22} color={Colors.primary} />
-                </View>
-                <View style={styles.menuItemContent}>
-                  <Text preset='label'>Privacy Policy</Text>
-                </View>
-                <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
-              </TouchableOpacity>
-
-              <View style={styles.divider} />
-
-              <View style={styles.versionContainer}>
-                <Text preset='caption' color={Colors.icon}>
-                  Version 1.0.0
+                  <View style={styles.walletContainer}>
+                    <Text preset='paragraph' color={Colors.icon} selectable={true}>
+                      {formatWalletAddress(user.wallets[0].address)}
+                    </Text>
+                    <TouchableOpacity style={styles.copyButton} onPress={handleCopyAddress}>
+                      <Ionicons name='copy-outline' size={16} color={Colors.tint} />
+                    </TouchableOpacity>
+                  </View>
+                </Pressable>
+              </>
+            ) : (
+              <View style={styles.infoRow}>
+                <Text preset='label'>Wallet</Text>
+                <Text preset='paragraph' color={Colors.icon}>
+                  No wallet linked
                 </Text>
               </View>
-            </View>
-          </View>
-
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text preset='h4'>Redeem</Text>
-            </View>
-
-            <View style={styles.cardContent}>
-              {user?.has_redeemed_presale ? (
-                <TouchableOpacity style={styles.menuItem} onPress={handleOpenRedeemDashboard}>
-                  <View style={styles.menuItemIcon}>
-                    <Ionicons name='speedometer-outline' size={22} color={Colors.primary} />
-                  </View>
-                  <View style={styles.menuItemContent}>
-                    <Text preset='label'>Presale Dashboard</Text>
-                    <Text preset='caption'>Your presale redeem dashboard</Text>
-                  </View>
-                  <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity style={styles.menuItem} onPress={handleOpenSheet}>
-                  <View style={styles.menuItemIcon}>
-                    <Ionicons name='ticket-outline' size={22} color={Colors.primary} />
-                  </View>
-                  <View style={styles.menuItemContent}>
-                    <Text preset='label'>Redeem Presale</Text>
-                    <Text preset='caption'>Redeem presale with code</Text>
-                  </View>
-                  <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
-          <View style={styles.logoutButtonContainer}>
-            <Button
-              title='Logout'
-              onPress={handleLogout}
-              variant='danger'
-              fullWidth
-              leftIcon={<Ionicons name='log-out-outline' size={20} color='#fff' />}
-            />
+            )}
           </View>
         </View>
-      ) : (
+
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text preset='h4'>Security</Text>
+          </View>
+
+          <View style={styles.cardContent}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={handleChangePasswordPress} // <--- ADD THIS onPress PROP
+            >
+              <View style={styles.menuItemIcon}>
+                <Ionicons name='lock-closed-outline' size={22} color={Colors.primary} />
+              </View>
+              <View style={styles.menuItemContent}>
+                <Text preset='label'>Change Password</Text>
+                <Text preset='caption'>Update your account password</Text>
+              </View>
+              <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} onPress={handleViewRecoveryPhrasePress}>
+              <View style={styles.menuItemIcon}>
+                <Ionicons name='shield-checkmark-outline' size={22} color={Colors.primary} />
+              </View>
+              <View style={styles.menuItemContent}>
+                <Text preset='label'>View Recovery Phrase</Text>
+              </View>
+              <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text preset='h4'>About</Text>
+          </View>
+
+          <View style={styles.cardContent}>
+            <TouchableOpacity style={styles.menuItem} onPress={handleHelpPress}>
+              <View style={styles.menuItemIcon}>
+                <Ionicons name='help-circle-outline' size={22} color={Colors.primary} />
+              </View>
+              <View style={styles.menuItemContent}>
+                <Text preset='label'>Help & Support</Text>
+              </View>
+              <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
+            </TouchableOpacity>
+
+            <View style={styles.divider} />
+
+            <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/terms')}>
+              <View style={styles.menuItemIcon}>
+                <Ionicons name='document-text-outline' size={22} color={Colors.primary} />
+              </View>
+              <View style={styles.menuItemContent}>
+                <Text preset='label'>Terms of Service</Text>
+              </View>
+              <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
+            </TouchableOpacity>
+
+            <View style={styles.divider} />
+
+            <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/privacy')}>
+              <View style={styles.menuItemIcon}>
+                <Ionicons name='document-text-outline' size={22} color={Colors.primary} />
+              </View>
+              <View style={styles.menuItemContent}>
+                <Text preset='label'>Privacy Policy</Text>
+              </View>
+              <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
+            </TouchableOpacity>
+
+            <View style={styles.divider} />
+
+            <View style={styles.versionContainer}>
+              <Text preset='caption' color={Colors.icon}>
+                Version 1.0.0
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text preset='h4'>Redeem</Text>
+          </View>
+
+          <View style={styles.cardContent}>
+            {user?.has_redeemed_presale ? (
+              <TouchableOpacity style={styles.menuItem} onPress={handleOpenRedeemDashboard}>
+                <View style={styles.menuItemIcon}>
+                  <Ionicons name='speedometer-outline' size={22} color={Colors.primary} />
+                </View>
+                <View style={styles.menuItemContent}>
+                  <Text preset='label'>Presale Dashboard</Text>
+                  <Text preset='caption'>Your presale redeem dashboard</Text>
+                </View>
+                <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.menuItem} onPress={handleOpenSheet}>
+                <View style={styles.menuItemIcon}>
+                  <Ionicons name='ticket-outline' size={22} color={Colors.primary} />
+                </View>
+                <View style={styles.menuItemContent}>
+                  <Text preset='label'>Redeem Presale</Text>
+                  <Text preset='caption'>Redeem presale with code</Text>
+                </View>
+                <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.logoutButtonContainer}>
+          <Button
+            title='Logout'
+            onPress={handleLogout}
+            variant='danger'
+            fullWidth
+            leftIcon={<Ionicons name='log-out-outline' size={20} color='#fff' />}
+          />
+        </View>
+      </View>
+      {/* ) : (
         <View style={styles.loadingContainer}>
           <Text preset='paragraph'>Loading profile...</Text>
         </View>
-      )}
+      )} */}
     </ScreenLayout>
   )
 }

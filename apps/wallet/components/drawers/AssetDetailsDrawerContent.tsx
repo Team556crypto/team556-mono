@@ -2,10 +2,10 @@ import React from 'react'
 import { View, TouchableOpacity, StyleSheet, Platform, Animated } from 'react-native'
 import { Text } from '@team556/ui'
 import { Colors } from '@/constants/Colors'
-import AssetDetailsHeader from './AssetDetailsHeader'
-import AssetInfoDisplay from './AssetInfoDisplay'
-import ActionButton from './ActionButton'
-import { assetDetailsStyles } from './styles'
+import AssetDetailsHeader from '../assets/AssetDetailsHeader'
+import AssetInfoDisplay from '../assets/AssetInfoDisplay'
+import ActionButton from '../assets/ActionButton'
+import { assetDetailsStyles } from '../assets/styles'
 
 interface AssetDetailsDrawerContentProps {
   assetName: string

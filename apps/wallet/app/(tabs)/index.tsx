@@ -19,7 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ScreenLayout } from '@/components/layout/ScreenLayout'
 import AssetDetailsHeader from '@/components/assets/AssetDetailsHeader'
 import AssetInfoDisplay from '@/components/assets/AssetInfoDisplay'
-import AssetDetailsDrawerContent from '@/components/assets/AssetDetailsDrawerContent'
+import AssetDetailsDrawerContent from '@/components/drawers/AssetDetailsDrawerContent'
 import AssetCard from '@/components/assets/AssetCard'
 
 // Define TokenOption type locally

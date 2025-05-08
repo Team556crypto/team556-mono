@@ -1,8 +1,5 @@
-import { apiClient } from './client';
-import type {
-  Firearm,
-  UpdateFirearmPayload,
-} from './types';
+import { apiClient } from './client'
+import type { Firearm, UpdateFirearmPayload, CreateFirearmPayload } from './types'
 
 /**
  * Fetches the list of firearms for the authenticated user.
@@ -16,15 +13,15 @@ export const getFirearms = async (
   params?: { limit?: number; page?: number }
 ): Promise<Firearm[]> => {
   if (!token) {
-    return Promise.reject(new Error('Authentication token not provided.'));
+    return Promise.reject(new Error('Authentication token not provided.'))
   }
   return apiClient<Firearm[]>({
     method: 'GET',
     endpoint: '/firearms',
     token,
-    params,
-  });
-};
+    params
+  })
+}
 
 /**
  * Updates an existing firearm.
@@ -40,12 +37,31 @@ export const updateFirearm = async (
   token: string | null
 ): Promise<Firearm> => {
   if (!token) {
-    return Promise.reject(new Error('Authentication token not provided.'));
+    return Promise.reject(new Error('Authentication token not provided.'))
   }
   return apiClient<Firearm>({
     method: 'PATCH', // Or 'PUT' depending on your API design
     endpoint: `/firearms/${firearmId}`,
     token,
-    body: payload,
-  });
-};
+    body: payload
+  })
+}
+
+/**
+ * Creates a new firearm.
+ * @param payload - The data for the new firearm.
+ * @param token - The authentication token.
+ * @returns A promise that resolves with the created firearm data.
+ * @throws An ApiClientError if the request fails.
+ */
+export const createFirearm = async (payload: CreateFirearmPayload, token: string | null): Promise<Firearm> => {
+  if (!token) {
+    return Promise.reject(new Error('Authentication token not provided.'))
+  }
+  return apiClient<Firearm>({
+    method: 'POST',
+    endpoint: '/firearms', // Corrected endpoint
+    token,
+    body: payload
+  })
+}

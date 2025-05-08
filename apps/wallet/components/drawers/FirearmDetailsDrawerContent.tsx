@@ -15,8 +15,8 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window')
 
 export const FirearmDetailsDrawerContent = ({ firearm }: FirearmDetailsDrawerContentProps) => {
   const { colors } = useTheme()
-  const { updateFirearm: updateFirearmAction, isLoading: isStoreLoading, error: storeError } = useFirearmStore();
-  const { token } = useAuthStore();
+  const { updateFirearm: updateFirearmAction, isLoading: isStoreLoading, error: storeError } = useFirearmStore()
+  const { token } = useAuthStore()
 
   const [isEditing, setIsEditing] = useState(false)
   const [editableFirearm, setEditableFirearm] = useState<Partial<Firearm>>(firearm)
@@ -41,6 +41,15 @@ export const FirearmDetailsDrawerContent = ({ firearm }: FirearmDetailsDrawerCon
     return 'crosshairs-gps'
   }
 
+  const formatDateForDisplay = (dateString?: string | null) => {
+    if (!dateString) return 'N/A'
+    try {
+      return new Date(dateString).toLocaleDateString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric' })
+    } catch (e) {
+      return dateString // Return original if parsing fails
+    }
+  }
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -61,7 +70,7 @@ export const FirearmDetailsDrawerContent = ({ firearm }: FirearmDetailsDrawerCon
       height: 200,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: colors.backgroundDarker,
+      backgroundColor: colors.backgroundDarker, // Changed for better contrast if image fails
       borderTopLeftRadius: 16,
       borderTopRightRadius: 16,
       overflow: 'hidden'
@@ -76,7 +85,7 @@ export const FirearmDetailsDrawerContent = ({ firearm }: FirearmDetailsDrawerCon
       height: '100%',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: colors.backgroundDark
+      backgroundColor: colors.backgroundDark // Keep dark for placeholder consistency
     },
     placeholderText: {
       fontSize: 14,
@@ -207,12 +216,12 @@ export const FirearmDetailsDrawerContent = ({ firearm }: FirearmDetailsDrawerCon
   })
 
   const renderImage = () => {
-    if (firearm.image_raw) {
+    if (firearm.image) {
       return (
         <>
-          <Image source={{ uri: firearm.image_raw }} style={styles.image} />
+          <Image source={{ uri: firearm.image }} style={styles.image} />
           <View style={styles.categoryTag}>
-            <Text style={styles.categoryText}>{firearm.type || 'Firearm'}</Text>
+            <Text style={styles.categoryText}>{firearm.type || 'N/A'}</Text>
           </View>
         </>
       )
@@ -220,308 +229,108 @@ export const FirearmDetailsDrawerContent = ({ firearm }: FirearmDetailsDrawerCon
       return (
         <>
           <View style={styles.placeholder}>
-            <MaterialCommunityIcons name={getFirearmIcon()} size={48} color={colors.textTertiary} />
+            <MaterialCommunityIcons name={getFirearmIcon()} size={64} color={colors.textTertiary} />
             <Text style={styles.placeholderText}>No Image</Text>
           </View>
           <View style={styles.categoryTag}>
-            <Text style={styles.categoryText}>{firearm.type || 'Firearm'}</Text>
+            <Text style={styles.categoryText}>{firearm.type || 'N/A'}</Text>
           </View>
         </>
       )
     }
   }
 
+  const renderDetailRow = (
+    label: string,
+    value?: string | number | null,
+    isLast = false,
+    customValueStyle?: object
+  ) => {
+    const displayValue = value === undefined || value === null || value === '' ? 'N/A' : String(value)
+    return (
+      <View style={[styles.detailRow, isLast && styles.detailRowLast]}>
+        <Text style={styles.detailLabel}>{label}</Text>
+        <Text style={[styles.detailValue, customValueStyle]}>{displayValue}</Text>
+      </View>
+    )
+  }
+
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 80 }}>
+      {/* Header with Image */}
       <View style={styles.headerContainer}>
-        <View style={styles.imageContainer}>{renderImage()}</View>
-        <LinearGradient colors={[colors.backgroundCard, colors.backgroundDark]} style={styles.headerGradient}>
+        <LinearGradient colors={[colors.backgroundDark, colors.background]} style={styles.headerGradient}>
+          <View style={styles.imageContainer}>
+            {firearm.image ? (
+              <Image source={{ uri: firearm.image }} style={styles.image} />
+            ) : (
+              <View style={styles.placeholder}>
+                <MaterialCommunityIcons name={getFirearmIcon()} size={64} color={colors.textTertiary} />
+                <Text style={styles.placeholderText}>No Image</Text>
+              </View>
+            )}
+            <View style={styles.categoryTag}>
+              <Text style={styles.categoryText}>{firearm.type || 'N/A'}</Text>
+            </View>
+          </View>
+
           <View style={styles.infoContainer}>
             <View style={styles.titleContainer}>
               <View style={styles.titleTextContainer}>
-                <Text style={styles.title}>{isEditing ? editableFirearm.name : firearm.name}</Text>
-                <Text style={styles.subtitle}>{isEditing ? editableFirearm.caliber : firearm.caliber}</Text>
+                <Text style={styles.title} numberOfLines={2} ellipsizeMode='tail'>
+                  {firearm.name || 'N/A'}
+                </Text>
+                <Text style={styles.subtitle}>
+                  {firearm.manufacturer || 'Unknown Manufacturer'} - {firearm.model_name || 'Unknown Model'}
+                </Text>
               </View>
-              <TouchableOpacity
-                style={styles.editButton}
-                onPress={async () => {
-                  if (isEditing) {
-                    if (!firearm || typeof firearm.id === 'undefined') {
-                      Alert.alert("Error", "Firearm ID is missing. Cannot save.");
-                      return;
-                    }
-                    // Prepare payload: only send changed fields and ensure types are correct
-                    const payload: UpdateFirearmPayload = {};
-                    (Object.keys(editableFirearm) as Array<keyof Firearm>).forEach(key => {
-                      let originalValue = firearm[key];
-                      let currentValue = editableFirearm[key];
-                      let isChanged = false;
-
-                      // Type-specific comparison and coercion for payload
-                      switch (key) {
-                        case 'name':
-                        case 'type':
-                        case 'serial_number':
-                        case 'manufacturer':
-                        case 'model_name':
-                        case 'caliber':
-                        case 'acquisition_date_raw': // Keep as string or null
-                        case 'last_fired': // Keep as string or null
-                        case 'last_cleaned': // Keep as string or null
-                        case 'image_raw': // string | null
-                        case 'status_raw': // string | null
-                          const currentStr = currentValue === null || currentValue === undefined ? null : String(currentValue).trim();
-                          const originalStr = originalValue === null || originalValue === undefined ? null : String(originalValue).trim();
-                          if (currentStr !== originalStr) {
-                            (payload as any)[key] = currentStr === "" ? null : currentStr; // Ensure empty strings become null if appropriate for API
-                            isChanged = true;
-                          }
-                          break;
-                        case 'purchase_price': // String representation of decimal, can be null
-                          const currentPriceStr = currentValue === null || currentValue === undefined ? null : String(currentValue).trim();
-                          const originalPriceStr = originalValue === null || originalValue === undefined ? null : String(originalValue).trim();
-                          if (currentPriceStr !== originalPriceStr) {
-                            (payload as any)[key] = currentPriceStr === "" ? null : currentPriceStr;
-                            isChanged = true;
-                          }
-                          break;
-                        case 'round_count_raw':
-                        case 'value_raw': // number | null
-                          const currentNum = currentValue === null || currentValue === '' || currentValue === undefined ? null : Number(currentValue);
-                          const originalNum = originalValue === null || originalValue === '' || originalValue === undefined ? null : Number(originalValue);
-                          if (currentNum !== originalNum) {
-                            (payload as any)[key] = currentNum;
-                            isChanged = true;
-                          }
-                          break;
-                        // default: // for any other keys, though we've covered Firearm fields
-                        //   if (currentValue !== originalValue) {
-                        //     (payload as any)[key] = currentValue;
-                        //     isChanged = true;
-                        //   }
-                        //   break;
-                      }
-                    });
-
-                    if (Object.keys(payload).length === 0) {
-                      setIsEditing(false); // No changes, just exit edit mode
-                      return;
-                    }
-
-                    try {
-                      await updateFirearmAction(firearm.id, payload, token);
-                      setIsEditing(false); // Exit edit mode on success
-                      Alert.alert("Success", "Firearm details updated.");
-                    } catch (err: any) {
-                      console.error('Failed to update firearm:', err);
-                      Alert.alert("Error", err.message || "Could not update firearm details.");
-                      // Optionally, keep isEditing true so user can retry or see errors
-                    }
-                  } else {
-                    setEditableFirearm(firearm); // Ensure editable is fresh when starting edit
-                    setIsEditing(true)
-                  }
-                }}
-              >
-                <MaterialCommunityIcons name={isEditing ? "content-save" : "pencil"} size={18} color={colors.primary} />
-                <Text style={{ color: colors.primary }}>{isEditing ? (isStoreLoading ? 'Saving...' : 'Save') : 'Edit'}</Text>
+              {/* Edit button can be re-enabled later */}
+              <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(!isEditing)}>
+                <MaterialCommunityIcons name='pencil-outline' size={24} color={colors.primary} />
+                <Text preset='label'>Edit</Text>
               </TouchableOpacity>
             </View>
           </View>
         </LinearGradient>
       </View>
 
+      {/* General Details Section */}
       <View style={styles.detailsSection}>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Type</Text>
-          {isEditing ? (
-            <TextInput
-              style={styles.inputStyle}
-              value={editableFirearm.type || ''}
-              onChangeText={text => setEditableFirearm({ ...editableFirearm, type: text })}
-              placeholder='Type'
-              placeholderTextColor={colors.textTertiary}
-            />
-          ) : (
-            <Text style={styles.detailValue}>{firearm.type || 'N/A'}</Text>
-          )}
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Manufacturer</Text>
-          {isEditing ? (
-            <TextInput
-              style={styles.inputStyle}
-              value={editableFirearm.manufacturer || ''}
-              onChangeText={text => setEditableFirearm({ ...editableFirearm, manufacturer: text })}
-              placeholder='Manufacturer'
-              placeholderTextColor={colors.textTertiary}
-            />
-          ) : (
-            <Text style={styles.detailValue}>{firearm.manufacturer || 'N/A'}</Text>
-          )}
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Model</Text>
-          {isEditing ? (
-            <TextInput
-              style={styles.inputStyle}
-              value={editableFirearm.model_name || ''}
-              onChangeText={text => setEditableFirearm({ ...editableFirearm, model_name: text })}
-              placeholder='Model'
-              placeholderTextColor={colors.textTertiary}
-            />
-          ) : (
-            <Text style={styles.detailValue}>{firearm.model_name || 'N/A'}</Text>
-          )}
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Caliber</Text>
-          {isEditing ? (
-            <TextInput
-              style={styles.inputStyle}
-              value={editableFirearm.caliber || ''}
-              onChangeText={text => setEditableFirearm({ ...editableFirearm, caliber: text })}
-              placeholder='Caliber'
-              placeholderTextColor={colors.textTertiary}
-            />
-          ) : (
-            <Text style={styles.detailValue}>{firearm.caliber || 'N/A'}</Text>
-          )}
-        </View>
-        <View style={[styles.detailRow, styles.detailRowLast]}>
-          <Text style={styles.detailLabel}>Serial Number</Text>
-          {isEditing ? (
-            <TextInput
-              style={styles.inputStyle}
-              value={editableFirearm.serial_number || ''}
-              onChangeText={text => setEditableFirearm({ ...editableFirearm, serial_number: text })}
-              placeholder='Serial Number'
-              placeholderTextColor={colors.textTertiary}
-            />
-          ) : (
-            <Text style={styles.detailValue}>{firearm.serial_number || 'N/A'}</Text>
-          )}
-        </View>
+        <Text style={styles.sectionTitle}>Details</Text>
+        {renderDetailRow('Type', firearm.type)}
+        {renderDetailRow('Manufacturer', firearm.manufacturer)}
+        {renderDetailRow('Model', firearm.model_name)}
+        {renderDetailRow('Caliber', firearm.caliber)}
+        {renderDetailRow('Serial Number', firearm.serial_number)}
+        {renderDetailRow('Status', firearm.status, true)}
       </View>
 
-      {(firearm.purchase_price || firearm.value_raw || firearm.acquisition_date_raw || isEditing) && (
+      {/* Acquisition Details Section */}
+      <View style={styles.detailsSection}>
+        <Text style={styles.sectionTitle}>Acquisition Details</Text>
+        {renderDetailRow('Acquisition Date', formatDateForDisplay(firearm.acquisition_date))}
+        {renderDetailRow('Purchase Price', firearm.purchase_price ? `$${firearm.purchase_price}` : 'N/A')}
+        {renderDetailRow('Current Value', firearm.value ? `$${firearm.value}` : 'N/A', true)}
+      </View>
+
+      {/* Maintenance Info Section */}
+      <View style={styles.detailsSection}>
+        <Text style={styles.sectionTitle}>Maintenance Info</Text>
+        {renderDetailRow('Last Fired', formatDateForDisplay(firearm.last_fired))}
+        {renderDetailRow('Last Cleaned', formatDateForDisplay(firearm.last_cleaned))}
+        {renderDetailRow('Round Count', firearm.round_count, true)}
+      </View>
+
+      {/* Ballistic Performance (Optional Section) */}
+      {firearm.ballistic_performance && (
         <View style={styles.detailsSection}>
-          <Text style={styles.sectionTitle}>Acquisition Details</Text>
-          {(firearm.acquisition_date_raw || isEditing) && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Date Acquired</Text>
-              {isEditing ? (
-                <TextInput
-                  style={styles.inputStyle}
-                  value={editableFirearm.acquisition_date_raw || ''}
-                  onChangeText={text => setEditableFirearm({ ...editableFirearm, acquisition_date_raw: text })}
-                  placeholder='YYYY-MM-DD'
-                  placeholderTextColor={colors.textTertiary}
-                />
-              ) : (
-                <Text style={styles.detailValue}>
-                  {firearm.acquisition_date_raw ? new Date(firearm.acquisition_date_raw).toLocaleDateString() : 'N/A'}
-                </Text>
-              )}
-            </View>
-          )}
-          {(firearm.purchase_price || isEditing) && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Purchase Price</Text>
-              {isEditing ? (
-                <TextInput
-                  style={styles.inputStyle}
-                  value={editableFirearm.purchase_price?.toString() || ''}
-                  onChangeText={text => setEditableFirearm({ ...editableFirearm, purchase_price: text })}
-                  placeholder='0.00'
-                  keyboardType='decimal-pad'
-                  placeholderTextColor={colors.textTertiary}
-                />
-              ) : (
-                <Text style={styles.detailValue}>${firearm.purchase_price || 'N/A'}</Text>
-              )}
-            </View>
-          )}
-          {(firearm.value_raw || isEditing) && (
-            <View style={[styles.detailRow, styles.detailRowLast]}>
-              <Text style={styles.detailLabel}>Current Value</Text>
-              {isEditing ? (
-                <TextInput
-                  style={styles.inputStyle}
-                  value={editableFirearm.value_raw?.toString() || ''}
-                  onChangeText={text => setEditableFirearm({ ...editableFirearm, value_raw: Number(text) || null })}
-                  placeholder='0.00'
-                  keyboardType='numeric'
-                  placeholderTextColor={colors.textTertiary}
-                />
-              ) : (
-                <Text style={styles.detailValue}>${firearm.value_raw?.toString() || 'N/A'}</Text>
-              )}
-            </View>
-          )}
+          <Text style={styles.sectionTitle}>Ballistic Performance</Text>
+          {renderDetailRow('Notes', firearm.ballistic_performance, true)}
         </View>
       )}
 
-      {(firearm.last_fired || firearm.round_count_raw || firearm.last_cleaned || isEditing) && (
-        <View style={styles.detailsSection}>
-          <Text style={styles.sectionTitle}>Maintenance Info</Text>
-          {(firearm.round_count_raw || isEditing) && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Round Count</Text>
-              {isEditing ? (
-                <TextInput
-                  style={styles.inputStyle}
-                  value={editableFirearm.round_count_raw?.toString() || ''}
-                  onChangeText={text =>
-                    setEditableFirearm({ ...editableFirearm, round_count_raw: parseInt(text, 10) || null })
-                  }
-                  placeholder='0'
-                  keyboardType='number-pad'
-                  placeholderTextColor={colors.textTertiary}
-                />
-              ) : (
-                <Text style={styles.detailValue}>{firearm.round_count_raw?.toString() || 'N/A'}</Text>
-              )}
-            </View>
-          )}
-          {(firearm.last_fired || isEditing) && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Last Fired</Text>
-              {isEditing ? (
-                <TextInput
-                  style={styles.inputStyle}
-                  value={editableFirearm.last_fired || ''}
-                  onChangeText={text => setEditableFirearm({ ...editableFirearm, last_fired: text })}
-                  placeholder='YYYY-MM-DD'
-                  placeholderTextColor={colors.textTertiary}
-                />
-              ) : (
-                <Text style={styles.detailValue}>
-                  {firearm.last_fired ? new Date(firearm.last_fired).toLocaleDateString() : 'N/A'}
-                </Text>
-              )}
-            </View>
-          )}
-          {(firearm.last_cleaned || isEditing) && (
-            <View style={[styles.detailRow, styles.detailRowLast]}>
-              <Text style={styles.detailLabel}>Last Cleaned</Text>
-              {isEditing ? (
-                <TextInput
-                  style={styles.inputStyle}
-                  value={editableFirearm.last_cleaned || ''}
-                  onChangeText={text => setEditableFirearm({ ...editableFirearm, last_cleaned: text })}
-                  placeholder='YYYY-MM-DD'
-                  placeholderTextColor={colors.textTertiary}
-                />
-              ) : (
-                <Text style={styles.detailValue}>
-                  {firearm.last_cleaned ? new Date(firearm.last_cleaned).toLocaleDateString() : 'N/A'}
-                </Text>
-              )}
-            </View>
-          )}
-        </View>
-      )}
+      {/* Spacer for bottom button if any in the future */}
+      <View style={{ height: 40 }} />
     </ScrollView>
   )
 }

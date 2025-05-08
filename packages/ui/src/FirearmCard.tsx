@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Image, StyleSheet, Dimensions, Pressable, Platform } from 'react-native'
+import { View, Image, StyleSheet, Dimensions, Pressable } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useTheme } from './ThemeContext'
 import Text from './Text'
@@ -121,10 +121,10 @@ export default function FirearmCard({ firearm, onPress }: FirearmCardProps) {
   }
 
   const renderImage = () => {
-    if (firearm.image_raw) {
+    if (firearm.image) {
       return (
         <>
-          <Image source={{ uri: firearm.image_raw }} style={styles.image} />
+          <Image source={{ uri: firearm.image }} style={styles.image} />
           <View style={styles.categoryTag}>
             <Text style={styles.categoryText}>{firearm.type || 'Firearm'}</Text>
           </View>
@@ -157,7 +157,11 @@ export default function FirearmCard({ firearm, onPress }: FirearmCardProps) {
             {firearm.name}
           </Text>
           <Text style={styles.details} numberOfLines={1} ellipsizeMode='tail'>
-            {firearm.caliber}
+            {firearm.manufacturer ? `${firearm.manufacturer} ` : ''}
+            {firearm.model_name || ''}
+          </Text>
+          <Text style={styles.details} numberOfLines={1} ellipsizeMode='tail'>
+            {firearm.caliber || ''}
           </Text>
         </View>
       </LinearGradient>

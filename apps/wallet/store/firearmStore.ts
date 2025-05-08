@@ -1,5 +1,12 @@
 import { create } from 'zustand';
-import { Firearm, getFirearms, updateFirearm, UpdateFirearmPayload } from '@/services/api';
+import {
+  Firearm,
+  getFirearms,
+  updateFirearm,
+  UpdateFirearmPayload,
+  createFirearm,
+} from '@/services/api';
+import type { CreateFirearmPayload } from '@/services/api';
 
 // Define the state structure for the firearm store
 interface FirearmState {
@@ -7,7 +14,7 @@ interface FirearmState {
   isLoading: boolean;
   error: string | null;
   hasAttemptedInitialFetch: boolean;
-  addFirearm: (firearm: Firearm) => void;
+  addFirearm: (payload: CreateFirearmPayload, token: string | null) => Promise<boolean>;
   updateFirearm: (firearmId: number, payload: UpdateFirearmPayload, token: string | null) => Promise<void>;
   _updateLocalFirearm: (updatedFirearm: Firearm) => void;
   removeFirearm: (firearmId: number) => void;
@@ -29,10 +36,25 @@ export const useFirearmStore = create<FirearmState>((set, get) => ({
   setError: (error) => set({ error }),
 
   // Action to add a new firearm
-  addFirearm: (firearm) =>
-    set((state) => ({
-      firearms: [...state.firearms, firearm],
-    })),
+  addFirearm: async (payload, token) => {
+    set({ isLoading: true, error: null });
+    console.debug('[FirearmStore] Attempting to add new firearm via API...');
+    try {
+      const newFirearmFromApi = await createFirearm(payload, token);
+      set((state) => ({
+        firearms: [...state.firearms, newFirearmFromApi],
+        isLoading: false,
+      }));
+      console.debug('[FirearmStore] New firearm added successfully:', newFirearmFromApi);
+      return true;
+    } catch (error: any) {
+      console.error('[FirearmStore] Failed to add new firearm:', error);
+      const errorMessage =
+        error?.response?.data?.error || error?.message || 'Failed to add firearm';
+      set({ error: errorMessage, isLoading: false });
+      return false;
+    }
+  },
 
   // Internal action to update an existing firearm in local state
   _updateLocalFirearm: (updatedFirearm) =>

@@ -14,30 +14,10 @@ import {
 import { Text, useTheme, Button, Select } from '@team556/ui'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker'
-import { Firearm } from '@/services/api'
+import { Firearm, CreateFirearmPayload } from '@/services/api'
 import { useFirearmStore } from '@/store/firearmStore'
 import { useAuthStore } from '@/store/authStore'
 import { useDrawerStore } from '@/store/drawerStore'
-
-// Define a local payload type for creating firearms, as it's not in api.ts
-// This should ideally come from @/services/api if a create endpoint exists
-export interface CreateFirearmPayload {
-  name: string
-  type: string
-  serial_number: string
-  manufacturer?: string
-  model_name?: string
-  caliber?: string
-  acquisition_date_raw?: Date | string
-  purchase_price?: string
-  ballistic_performance?: string
-  image_raw?: string
-  round_count_raw?: number
-  value_raw?: number
-  status_raw?: string
-  last_fired?: Date | string
-  last_cleaned?: Date | string
-}
 
 // Initial state for a new firearm
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
@@ -49,13 +29,13 @@ const initialFirearmState: CreateFirearmPayload = {
   manufacturer: '',
   model_name: '',
   caliber: '',
-  acquisition_date_raw: undefined,
+  acquisition_date: undefined,
   purchase_price: '',
   ballistic_performance: '',
-  image_raw: '',
-  round_count_raw: 0,
-  value_raw: 0.0,
-  status_raw: '',
+  image: '',
+  round_count: 0,
+  value: 0.0,
+  status: '',
   last_fired: undefined,
   last_cleaned: undefined
 }
@@ -125,9 +105,50 @@ export const AddFirearmDrawerContent = () => {
     return Object.keys(errors).length === 0
   }
 
+  const validateStep2 = () => {
+    const { value, purchase_price } = newFirearm
+    const errors: Partial<Record<keyof CreateFirearmPayload, string>> = {}
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      const val = parseFloat(String(value));
+      if (isNaN(val)) {
+        errors.value = 'Must be a valid number.'
+      }
+    }
+    if (purchase_price !== undefined && purchase_price !== null && String(purchase_price).trim() !== "") {
+      // Allows for decimal numbers. Regex checks for optional leading digits, an optional decimal point, and optional trailing digits.
+      // Ensures it's not just whitespace or an empty string if provided.
+      if (!/^\d*\.?\d+$/.test(String(purchase_price).trim()) && !/^\d+\.?\d*$/.test(String(purchase_price).trim())) {
+         if (String(purchase_price).trim() !== "") { // only error if not empty and invalid
+            errors.purchase_price = 'Must be a valid price.';
+         }
+      } else {
+        // Additional check for parseFloat if regex passes but could still be problematic (e.g. multiple decimal points if regex was less strict)
+        const priceVal = parseFloat(String(purchase_price).trim());
+        if (isNaN(priceVal)) {
+             errors.purchase_price = 'Must be a valid price.';
+        }
+      }
+    }
+    setFieldErrors(prev => ({ ...prev, ...errors }))
+    return Object.keys(errors).length === 0
+  }
+
+  const validateStep3 = () => {
+    const { round_count } = newFirearm
+    const errors: Partial<Record<keyof CreateFirearmPayload, string>> = {}
+    if (round_count !== undefined && round_count !== null && String(round_count).trim() !== "") {
+      const count = parseInt(String(round_count), 10);
+      if (isNaN(count)) {
+        errors.round_count = 'Must be a valid number.'
+      }
+    }
+    setFieldErrors(prev => ({ ...prev, ...errors }))
+    return Object.keys(errors).length === 0
+  }
+
   const handleNextStep = () => {
+    // Clear previous errors for the current step's fields before re-validating
     if (currentStep === 1) {
-      // Clear previous Step 1 errors before re-validating
       setFieldErrors(prev => ({
         ...prev,
         name: undefined,
@@ -140,8 +161,22 @@ export const AddFirearmDrawerContent = () => {
       if (!validateStep1()) {
         return
       }
+    } else if (currentStep === 2) {
+      setFieldErrors(prev => ({ ...prev, value: undefined, purchase_price: undefined, acquisition_date: undefined })) // Clear step 2 fields
+      if (!validateStep2()) {
+        return
+      }
+    } else if (currentStep === 3) {
+      setFieldErrors(prev => ({ ...prev, round_count: undefined, last_fired: undefined, last_cleaned: undefined })) // Clear step 3 fields
+      if (!validateStep3()) {
+        return
+      }
     }
-    setCurrentStep(currentStep + 1)
+    // For step 4, validation is primarily in handleSaveFirearm (e.g., image)
+
+    if (currentStep < steps.length) {
+      setCurrentStep(currentStep + 1)
+    }
   }
 
   const handleSaveFirearm = async () => {
@@ -159,11 +194,11 @@ export const AddFirearmDrawerContent = () => {
 
     // Step 4 validation
     let imageError = false
-    if (!newFirearm.image_raw) {
-      setFieldErrors(prev => ({ ...prev, image_raw: 'Required' }))
+    if (!newFirearm.image) {
+      setFieldErrors(prev => ({ ...prev, image: 'Required' }))
       imageError = true
     } else {
-      setFieldErrors(prev => ({ ...prev, image_raw: undefined }))
+      setFieldErrors(prev => ({ ...prev, image: undefined }))
     }
 
     if (imageError) {
@@ -191,65 +226,150 @@ export const AddFirearmDrawerContent = () => {
       }
     }
 
-    const roundCount = newFirearm.round_count_raw ? parseInt(String(newFirearm.round_count_raw), 10) : 0
-    const value = newFirearm.value_raw ? parseFloat(String(newFirearm.value_raw)) : 0.0
+    // Final validation for numeric fields as a safeguard, though step-specific validation should catch these.
+    let isNumericValid = true;
+    const tempErrors: Partial<Record<keyof CreateFirearmPayload, string>> = {};
 
-    if (isNaN(roundCount) || isNaN(value)) {
-      // Alert.alert('Error', 'Round Count and Value must be valid numbers.')
-      setFieldErrors(prev => ({
-        ...prev,
-        round_count_raw: isNaN(roundCount) ? 'Round Count must be a valid number.' : undefined,
-        value_raw: isNaN(value) ? 'Value must be a valid number.' : undefined
-      }))
-      return
+    const roundCountInput = String(newFirearm.round_count).trim();
+    const valueInput = String(newFirearm.value).trim();
+
+    let roundCount: number | undefined = undefined;
+    if (roundCountInput !== "" && newFirearm.round_count !== null && newFirearm.round_count !== undefined) {
+        roundCount = parseInt(roundCountInput, 10);
+        if (isNaN(roundCount)) {
+            tempErrors.round_count = 'Round Count must be a valid number.';
+            isNumericValid = false;
+        }
+    } else if (newFirearm.round_count === null || roundCountInput === "") {
+        roundCount = undefined; // Treat empty or null as undefined for the payload
     }
 
-    const firearmToAdd: Firearm = {
-      id: Date.now(),
-      owner_user_id: 0,
-      name: newFirearm.name!,
-      type: newFirearm.type!,
-      serial_number: newFirearm.serial_number!,
-      manufacturer: newFirearm.manufacturer || null,
-      model_name: newFirearm.model_name || null,
-      caliber: newFirearm.caliber || '',
-      acquisition_date_raw:
-        newFirearm.acquisition_date_raw instanceof Date
-          ? newFirearm.acquisition_date_raw.toISOString()
-          : newFirearm.acquisition_date_raw || null,
-      purchase_price: newFirearm.purchase_price || null,
-      ballistic_performance: newFirearm.ballistic_performance || null,
-      image_raw: newFirearm.image_raw || null,
-      round_count_raw: roundCount,
-      value_raw: value,
-      status_raw: newFirearm.status_raw || null,
-      last_fired:
-        newFirearm.last_fired instanceof Date ? newFirearm.last_fired.toISOString() : newFirearm.last_fired || null,
-      last_cleaned:
-        newFirearm.last_cleaned instanceof Date
-          ? newFirearm.last_cleaned.toISOString()
-          : newFirearm.last_cleaned || null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+    let value: number | undefined = undefined;
+    if (valueInput !== "" && newFirearm.value !== null && newFirearm.value !== undefined) {
+        value = parseFloat(valueInput);
+        if (isNaN(value)) {
+            tempErrors.value = 'Value must be a valid number.';
+            isNumericValid = false;
+        }
+    } else if (newFirearm.value === null || valueInput === "") {
+        value = undefined; // Treat empty or null as undefined for the payload
     }
 
-    try {
-      addFirearm(firearmToAdd)
-      // Alert.alert('Success', 'Firearm added locally! (Backend integration needed)')
-      setNewFirearm(initialFirearmState)
-      closeDrawer()
-    } catch (e: any) {
-      // Alert.alert('Error', e.message || storeError || 'Failed to add firearm locally.')
-      setFieldErrors(prev => ({ ...prev, error: e.message || storeError || 'Failed to add firearm locally.' })) // General form error, not field specific
+    if (!isNumericValid) {
+        setFieldErrors(prev => ({ ...prev, ...tempErrors }));
+        // Navigate to the step with the first error if not already there
+        if (tempErrors.value && currentStep !== 2) setCurrentStep(2);
+        else if (tempErrors.round_count && currentStep !== 3) setCurrentStep(3);
+        return;
+    }
+
+    // Prepare the payload for the API - this should match CreateFirearmPayload
+    const firearmToSave: CreateFirearmPayload = {
+      // Required string fields
+      name: newFirearm.name,
+      type: newFirearm.type,
+      serial_number: newFirearm.serial_number,
+
+      // Optional string fields - send as plain string or undefined
+      manufacturer: (newFirearm.manufacturer?.trim().toLowerCase() === 'sdf' || !newFirearm.manufacturer?.trim()) 
+        ? undefined 
+        : newFirearm.manufacturer.trim(),
+
+      model_name: (newFirearm.model_name?.trim().toLowerCase() === 'sdf' || !newFirearm.model_name?.trim()) 
+        ? undefined 
+        : newFirearm.model_name.trim(),
+
+      caliber: (newFirearm.caliber?.trim().toLowerCase() === 'sdf' || !newFirearm.caliber?.trim()) 
+        ? undefined 
+        : newFirearm.caliber.trim(),
+
+      // For dates, send as ISO string or undefined
+      acquisition_date: newFirearm.acquisition_date 
+        ? (newFirearm.acquisition_date instanceof Date 
+            ? newFirearm.acquisition_date.toISOString() 
+            : typeof newFirearm.acquisition_date === 'string' && !isNaN(new Date(newFirearm.acquisition_date).getTime())
+              ? new Date(newFirearm.acquisition_date).toISOString()
+              : undefined)
+        : undefined,
+
+      // Purchase price as string or undefined
+      purchase_price: (newFirearm.purchase_price?.trim().toLowerCase() === 'sdf' || !newFirearm.purchase_price?.trim()) 
+        ? undefined 
+        : String(newFirearm.purchase_price).trim(),
+
+      ballistic_performance: (newFirearm.ballistic_performance?.trim().toLowerCase() === 'sdf' || !newFirearm.ballistic_performance?.trim()) 
+        ? undefined 
+        : newFirearm.ballistic_performance.trim(),
+
+      image: (newFirearm.image?.trim().toLowerCase() === 'sdf' || !newFirearm.image?.trim()) 
+        ? undefined 
+        : newFirearm.image.trim(),
+
+      // Numeric values - send as number or undefined
+      round_count: roundCount !== undefined && !isNaN(roundCount) 
+        ? roundCount 
+        : undefined,
+
+      value: value !== undefined && !isNaN(value) 
+        ? value 
+        : undefined,
+
+      // Status as string or undefined
+      status: (newFirearm.status?.trim().toLowerCase() === 'sdf' || !newFirearm.status?.trim()) 
+        ? undefined 
+        : newFirearm.status?.trim(),
+
+      // Dates as ISO string or undefined
+      last_fired: newFirearm.last_fired 
+        ? (newFirearm.last_fired instanceof Date 
+            ? newFirearm.last_fired.toISOString() 
+            : typeof newFirearm.last_fired === 'string' && !isNaN(new Date(newFirearm.last_fired).getTime())
+              ? new Date(newFirearm.last_fired).toISOString()
+              : undefined)
+        : undefined,
+
+      last_cleaned: newFirearm.last_cleaned 
+        ? (newFirearm.last_cleaned instanceof Date 
+            ? newFirearm.last_cleaned.toISOString() 
+            : typeof newFirearm.last_cleaned === 'string' && !isNaN(new Date(newFirearm.last_cleaned).getTime())
+              ? new Date(newFirearm.last_cleaned).toISOString()
+              : undefined)
+        : undefined
+    };
+
+    console.log('AddFirearmDrawerContent: Saving firearm with payload:', JSON.stringify(firearmToSave, null, 2));
+
+    // console.log('AddFirearmDrawerContent: Attempting to save firearm:', firearmToSave);
+    // console.log('AddFirearmDrawerContent: Auth token:', token);
+
+    // Call the store action to add the firearm
+    // The store action should handle the API call
+    const success = await addFirearm(firearmToSave, token); // Pass token and await
+
+    if (success) {
+      // console.log('AddFirearmDrawerContent: Firearm saved successfully');
+      setNewFirearm(initialFirearmState); // Reset form
+      setCurrentStep(1); // Reset to first step
+      closeDrawer(); // Close the drawer
+      // Optionally: Show a success message to the user (e.g., using a toast notification)
+    } else {
+      // console.error('AddFirearmDrawerContent: Failed to save firearm. Store error:', storeError);
+      // Error is already set in the store by addFirearm action if API call failed.
+      // You might want to show a generic error message here or rely on a global error display.
+      // Alert.alert('Save Failed', storeError || 'Could not save firearm. Please try again.');
+      // If storeError is specific and user-friendly, you can display it.
+      // For now, we assume the store handles setting a displayable error message if needed.
+      setFieldErrors(prev => ({ ...prev, formError: storeError || 'Failed to save firearm. Please check your connection or try again.' }))
+
     }
   }
 
   // Helper function to determine if a field is the last in its section for styling
   const isLastRowInSection = (field: keyof CreateFirearmPayload): boolean => {
     const primaryDetailsLastFields = ['caliber']
-    const acquisitionLastFields = ['value_raw']
+    const acquisitionLastFields = ['value']
     const usageLastFields = ['last_cleaned']
-    const additionalLastFields = ['image_raw']
+    const additionalLastFields = ['image']
 
     return (
       primaryDetailsLastFields.includes(field) ||
@@ -754,9 +874,9 @@ export const AddFirearmDrawerContent = () => {
               <Text style={styles.sectionTitle}>Acquisition & Value</Text>
             </View>
             <View style={styles.sectionContent}>
-              {renderDetailRow('Acquisition Date', 'acquisition_date_raw', 'Select date', 'date')}
+              {renderDetailRow('Acquisition Date', 'acquisition_date', 'Select date', 'date')}
               {renderDetailRow('Purchase Price', 'purchase_price', 'e.g., 500.00', 'text', undefined, 'numeric')}
-              {renderDetailRow('Current Value', 'value_raw', 'e.g., 450.00', 'text', undefined, 'numeric')}
+              {renderDetailRow('Current Value', 'value', 'e.g., 450.00', 'text', undefined, 'numeric')}
             </View>
           </View>
         )}
@@ -769,7 +889,7 @@ export const AddFirearmDrawerContent = () => {
               <Text style={styles.sectionTitle}>Usage & Maintenance</Text>
             </View>
             <View style={styles.sectionContent}>
-              {renderDetailRow('Round Count', 'round_count_raw', 'e.g., 1500', 'text', undefined, 'numeric')}
+              {renderDetailRow('Round Count', 'round_count', 'e.g., 1500', 'text', undefined, 'numeric')}
               {renderDetailRow('Last Fired Date', 'last_fired', 'Select date', 'date')}
               {renderDetailRow('Last Cleaned Date', 'last_cleaned', 'Select date', 'date')}
             </View>
@@ -784,7 +904,7 @@ export const AddFirearmDrawerContent = () => {
               <Text style={styles.sectionTitle}>Additional Information</Text>
             </View>
             <View style={styles.sectionContent}>
-              {renderDetailRow('Status', 'status_raw', 'e.g., In Service, In Storage', 'text', undefined, 'default')}
+              {renderDetailRow('Status', 'status', 'e.g., In Service, In Storage', 'text', undefined, 'default')}
               {renderDetailRow(
                 'Ballistic Performance',
                 'ballistic_performance',
@@ -793,7 +913,7 @@ export const AddFirearmDrawerContent = () => {
                 undefined,
                 'default'
               )}
-              {renderDetailRow('Image URL', 'image_raw', 'Optional: http://image.url', 'text', undefined, 'default')}
+              {renderDetailRow('Image URL', 'image', 'Optional: http://image.url', 'text', undefined, 'default')}
             </View>
           </View>
         )}

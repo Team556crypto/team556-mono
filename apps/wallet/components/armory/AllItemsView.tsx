@@ -105,24 +105,32 @@ const AllItemsView = () => {
         {error && <Text style={styles.errorText}>Error loading firearms: {error}</Text>}
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollViewContent}>
-          {!isLoading &&
-            firearms.length > 0 &&
-            firearms.map(firearm => (
-              <FirearmCard key={firearm.id} firearm={firearm} onPress={() => handleFirearmPress(firearm)} />
-            ))}
-          {!isLoading && firearms.length >= 0 && (
-            <TouchableOpacity
-              style={styles.addFirearmCard}
-              onPress={() => {
-                openDrawer(<AddFirearmDrawerContent />)
-              }}
-            >
-              <Ionicons name='add-circle-outline' size={48} color={colors.primary} />
-              <Text preset='label' style={styles.addFirearmText}>
-                Add Firearm
-              </Text>
-            </TouchableOpacity>
-          )}
+          {isLoading && firearms.length === 0 ? (
+            <ActivityIndicator
+              key='loading-indicator'
+              size='large'
+              color={colors.primary}
+              style={{ flex: 1, width: CARD_WIDTH }}
+            />
+          ) : ([
+              ...firearms.map(firearm => {
+                console.log('[AllItemsView] Mapping firearm with key:', firearm.id);
+                return <FirearmCard key={firearm.id} firearm={firearm} onPress={() => handleFirearmPress(firearm)} />;
+              }),
+              <TouchableOpacity
+                key='add-firearm-button'
+                style={styles.addFirearmCard}
+                onPress={() => {
+                  openDrawer(<AddFirearmDrawerContent />)
+                }}
+              >
+                <Ionicons name='add-circle-outline' size={48} color={colors.primary} />
+                <Text preset='label' style={styles.addFirearmText}>
+                  Add Firearm
+                </Text>
+              </TouchableOpacity>
+            ])
+          }
         </ScrollView>
       </View>
     </View>

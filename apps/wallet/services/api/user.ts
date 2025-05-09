@@ -18,7 +18,7 @@ export const getUserProfile = async (token: string | null): Promise<User> => {
   }
   return apiClient<User>({
     method: 'GET',
-    endpoint: '/user/profile',
+    endpoint: '/auth/me',
     token,
   });
 };

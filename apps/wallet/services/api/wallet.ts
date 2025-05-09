@@ -52,7 +52,7 @@ export const signTransaction = async (
   const payload: SignTransactionRequest = { password, unsignedTransaction };
   return apiClient<SignTransactionResponse>({
     method: 'POST',
-    endpoint: '/solana/sign-transaction', // Assuming this is the correct endpoint from original context
+    endpoint: '/wallet/sign-transaction', // Corrected endpoint to match main-api
     token,
     body: payload,
   });

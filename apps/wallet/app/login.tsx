@@ -1,12 +1,5 @@
 import React from 'react'
-import {
-  View,
-  StyleSheet,
-  SafeAreaView,
-  TouchableOpacity,
-  Platform,
-  ScrollView
-} from 'react-native'
+import { View, StyleSheet, SafeAreaView, TouchableOpacity, Platform, ScrollView } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Button, Text } from '@team556/ui'
 import LogoSvg from '@/assets/images/logo.svg'
@@ -43,12 +36,7 @@ const MobileLandingScreen = () => {
           <LogoSvg width={150} height={150} />
         </View>
         <View style={[styles.buttonContainerMobile, isTabletOrLarger && styles.buttonContainerMobileTablet]}>
-          <Button
-            title='Sign In'
-            onPress={handleSignInPress}
-            style={styles.signInButtonMobile}
-            fullWidth
-          />
+          <Button title='Sign In' onPress={handleSignInPress} style={styles.signInButtonMobile} fullWidth />
           <TouchableOpacity onPress={handleSignUpPress} style={styles.signUpButtonMobile}>
             <Text style={styles.signUpTextMobile}>Sign Up</Text>
           </TouchableOpacity>
@@ -66,46 +54,42 @@ const WebLandingPage = () => {
   const sectionPadding = isTabletOrLarger ? styles.webSectionPaddingLarge : styles.webSectionPaddingSmall
   const contentWidth = isTabletOrLarger ? styles.webContentWidthLarge : styles.webContentWidthSmall
 
+  const handleGetStarted = () => router.push('/onboarding')
+  const handleLogin = () => router.push('/login')
+
   return (
     <View style={styles.webContainer}>
       <BackgroundEffects />
+      {/* Header is now outside the ScrollView */}
+      {/* <View style={styles.headerWrapper}>
+        <LandingHeader />
+      </View> */}
       <ScrollView style={styles.webScrollView} contentContainerStyle={styles.webScrollViewContent}>
+        {/* Content starts here, HeroSection has its own paddingTop to account for the header */}
         <View style={sectionPadding}>
           <View style={contentWidth}>
-            <LandingHeader />
+            <HeroSection onCreateWallet={handleGetStarted} onLogin={handleLogin} />
           </View>
         </View>
-        
+
         <View style={sectionPadding}>
           <View style={contentWidth}>
-            <HeroSection 
-              onCreateWallet={() => router.push('/onboarding')}
-              onLogin={() => router.push('/signin')}
-            />
+            <CtaSection onCreateWallet={handleGetStarted} onLogin={handleLogin} />
           </View>
         </View>
-        
-        <View style={sectionPadding}>
-          <View style={contentWidth}>
-            <CtaSection 
-              onCreateWallet={() => router.push('/onboarding')}
-              onLogin={() => router.push('/signin')}
-            />
-          </View>
-        </View>
-        
+
         <View style={sectionPadding}>
           <View style={contentWidth}>
             <FeaturesSection />
           </View>
         </View>
-        
+
         <View style={sectionPadding}>
           <View style={contentWidth}>
             <HowItWorksSection />
           </View>
         </View>
-        
+
         <View style={sectionPadding}>
           <View style={contentWidth}>
             <FooterSection />
@@ -172,26 +156,36 @@ const styles = StyleSheet.create({
   },
   webContainer: {
     flex: 1,
-    backgroundColor: Colors.background
+    backgroundColor: Colors.backgroundDarkest
   },
   webScrollView: {
     flex: 1
   },
-  webScrollViewContent: {
-  },
+  webScrollViewContent: {},
   // Responsive layout styles
   webSectionPaddingSmall: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 16
   },
   webSectionPaddingLarge: {
-    paddingHorizontal: 48,
+    paddingHorizontal: 48
   },
   webContentWidthSmall: {
-    width: '100%',
+    width: '100%'
   },
   webContentWidthLarge: {
     width: '100%',
     maxWidth: 1280,
+    marginHorizontal: 'auto'
+  },
+  headerWrapper: {
+    width: '100%',
+    maxWidth: 1280,
     marginHorizontal: 'auto',
+    paddingHorizontal: 20,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10
   }
 })

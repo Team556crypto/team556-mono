@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundDarkest,
     ...(Platform.OS === 'web' 
       ? {
-          background: `linear-gradient(135deg, ${Colors.backgroundDarkest} 0%, ${Colors.backgroundDark} 50%, ${Colors.backgroundDarkest} 100%)`,
+          backgroundImage: `linear-gradient(135deg, ${Colors.backgroundDarkest} 0%, ${Colors.backgroundDark} 50%, ${Colors.backgroundDarkest} 100%)`,
         } 
       : {}),
   },
@@ -48,8 +48,11 @@ const styles = StyleSheet.create({
     opacity: 0.4,
     ...(Platform.OS === 'web'
       ? {
-          background: `radial-gradient(circle at 25% 25%, ${Colors.primarySubtle} 0%, transparent 50%), 
-                       radial-gradient(circle at 75% 75%, ${Colors.secondarySubtle} 0%, transparent 50%)`,
+          // Multiple radial gradients for a more complex effect
+          backgroundImage: `radial-gradient(circle at 25% 25%, ${Colors.primarySubtle} 0%, transparent 50%), 
+                         radial-gradient(circle at 75% 25%, ${Colors.secondarySubtle} 0%, transparent 50%), 
+                         radial-gradient(circle at 50% 75%, ${Colors.primarySubtle} 0%, transparent 60%)`,
+          opacity: 0.2, // Keep it subtle
         }
       : {}),
   }

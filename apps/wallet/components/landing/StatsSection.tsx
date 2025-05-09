@@ -81,7 +81,7 @@ const StatsSection: React.FC = () => {
       switch (type) {
         case 'users':
           return {
-            background: 'linear-gradient(90deg, #9945FF, #b980ff)',
+            backgroundImage: 'linear-gradient(90deg, #9945FF, #b980ff)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -89,7 +89,7 @@ const StatsSection: React.FC = () => {
           };
         case 'firearms':
           return {
-            background: 'linear-gradient(90deg, #44b0ff, #4fceff)',
+            backgroundImage: 'linear-gradient(90deg, #44b0ff, #4fceff)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -97,7 +97,7 @@ const StatsSection: React.FC = () => {
           };
         case 'transactions':
           return {
-            background: 'linear-gradient(90deg, #14F195, #7affc6)',
+            backgroundImage: 'linear-gradient(90deg, #14F195, #7affc6)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -223,22 +223,16 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   primaryIndicator: {
+    backgroundImage: 'linear-gradient(90deg, #9945FF, #b980ff)',
     backgroundColor: Colors.primary || '#9945FF',
-    ...(Platform.OS === 'web' ? {
-      background: 'linear-gradient(90deg, #9945FF, #b980ff)',
-    } : {}),
   },
   blueIndicator: {
+    backgroundImage: 'linear-gradient(90deg, #44b0ff, #4fceff)',
     backgroundColor: '#44b0ff', // Solana blue
-    ...(Platform.OS === 'web' ? {
-      background: 'linear-gradient(90deg, #44b0ff, #4fceff)',
-    } : {}),
   },
   secondaryIndicator: {
+    backgroundImage: 'linear-gradient(90deg, #14F195, #7affc6)',
     backgroundColor: Colors.secondary || '#14F195',
-    ...(Platform.OS === 'web' ? {
-      background: 'linear-gradient(90deg, #14F195, #7affc6)',
-    } : {}),
   },
 });
 

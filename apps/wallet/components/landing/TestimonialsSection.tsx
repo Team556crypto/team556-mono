@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: 'center',
     ...(Platform.OS === 'web' ? {
-      background: 'linear-gradient(90deg, #14F195, #7affc6)',
+      backgroundImage: 'linear-gradient(90deg, #14F195, #7affc6)',
       WebkitBackgroundClip: 'text',
       WebkitTextFillColor: 'transparent',
       backgroundClip: 'text',

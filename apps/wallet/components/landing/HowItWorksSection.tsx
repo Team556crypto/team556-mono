@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
     height: 20,
     backgroundColor: `${Colors.primary}1A`, // 10% opacity
     ...(Platform.OS === 'web' ? {
-      background: 'linear-gradient(90deg, rgba(153, 69, 255, 0.1), rgba(68, 176, 255, 0.1), rgba(20, 241, 149, 0.1))',
+      backgroundImage: 'linear-gradient(90deg, rgba(153, 69, 255, 0.1), rgba(68, 176, 255, 0.1), rgba(20, 241, 149, 0.1))',
       filter: 'blur(120px)',
     } : {}),
   },
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     height: 20,
     backgroundColor: `${Colors.secondary}1A`, // 10% opacity
     ...(Platform.OS === 'web' ? {
-      background: 'linear-gradient(90deg, rgba(20, 241, 149, 0.1), rgba(68, 176, 255, 0.1), rgba(153, 69, 255, 0.1))',
+      backgroundImage: 'linear-gradient(90deg, rgba(20, 241, 149, 0.1), rgba(68, 176, 255, 0.1), rgba(153, 69, 255, 0.1))',
       filter: 'blur(120px)',
     } : {}),
   },
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: 'center',
     ...(Platform.OS === 'web' ? {
-      background: 'linear-gradient(90deg, white, #e0e0e0, #d0d0d0)',
+      backgroundImage: 'linear-gradient(90deg, white, #e0e0e0, #d0d0d0)',
       WebkitBackgroundClip: 'text',
       WebkitTextFillColor: 'transparent',
       backgroundClip: 'text',
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     height: 3,
     backgroundColor: '#444',
     ...(Platform.OS === 'web' ? {
-      background: 'linear-gradient(90deg, rgba(153, 69, 255, 0.8), rgba(68, 176, 255, 0.8), rgba(20, 241, 149, 0.8), rgba(153, 69, 255, 0.8))',
+      backgroundImage: 'linear-gradient(90deg, rgba(153, 69, 255, 0.8), rgba(68, 176, 255, 0.8), rgba(20, 241, 149, 0.8), rgba(153, 69, 255, 0.8))',
       borderRadius: 2,
     } : {}),
   },
@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     backgroundColor: 'rgba(128, 128, 128, 0.3)',
     ...(Platform.OS === 'web' ? {
-      background: 'linear-gradient(90deg, rgba(153, 69, 255, 0.3), rgba(68, 176, 255, 0.3), rgba(20, 241, 149, 0.3))',
+      backgroundImage: 'linear-gradient(90deg, rgba(153, 69, 255, 0.3), rgba(68, 176, 255, 0.3), rgba(20, 241, 149, 0.3))',
     } : {}),
   },
   stepButton: {
@@ -534,19 +534,19 @@ const styles = StyleSheet.create({
   primaryIndicator: {
     backgroundColor: `${Colors.primary}33`, // 20% opacity
     ...(Platform.OS === 'web' ? {
-      background: `linear-gradient(90deg, ${Colors.primary}66, ${Colors.primary}33)`,
+      backgroundImage: `linear-gradient(90deg, ${Colors.primary}66, ${Colors.primary}33)`,
     } : {}),
   },
   solanaIndicator: {
     backgroundColor: 'rgba(68, 176, 255, 0.2)',
     ...(Platform.OS === 'web' ? {
-      background: 'linear-gradient(90deg, rgba(68, 176, 255, 0.4), rgba(68, 176, 255, 0.2))',
+      backgroundImage: 'linear-gradient(90deg, rgba(68, 176, 255, 0.4), rgba(68, 176, 255, 0.2))',
     } : {}),
   },
   secondaryIndicator: {
     backgroundColor: `${Colors.secondary}33`, // 20% opacity
     ...(Platform.OS === 'web' ? {
-      background: `linear-gradient(90deg, ${Colors.secondary}66, ${Colors.secondary}33)`,
+      backgroundImage: `linear-gradient(90deg, ${Colors.secondary}66, ${Colors.secondary}33)`,
     } : {}),
   },
   defaultIndicator: {
@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
     elevation: 8,
     ...(Platform.OS === 'web' ? {
       backdropFilter: 'blur(12px)',
-      background: 'linear-gradient(135deg, rgba(30, 30, 40, 0.6), rgba(20, 20, 30, 0.6))',
+      backgroundImage: 'linear-gradient(135deg, rgba(30, 30, 40, 0.6), rgba(20, 20, 30, 0.6))',
     } : {}),
   },
   securityIconContainer: {

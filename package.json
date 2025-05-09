@@ -33,9 +33,11 @@
     "deploy:main-api": "flyctl deploy -a team556-main-api -c apps/main-api/fly.toml",
     "build:wallet-web": "cd apps/wallet && npx expo export --platform web --clear && cd ../..",
     "deploy:wallet-web": "cd apps/wallet && flyctl deploy && cd ../..",
-    "deploy:wallet-web:full": "yarn build:wallet-web && yarn deploy:wallet-web"
+    "deploy:wallet-web:full": "yarn build:wallet-web && yarn deploy:wallet-web",
+    "clean": "rm -rf node_modules yarn.lock apps/wallet/node_modules apps/wallet/yarn.lock && yarn"
   },
   "devDependencies": {
+    "@types/node": "^22.15.9",
     "concurrently": "^9.1.2",
     "prettier": "^3.5.3",
     "turbo": "^2.5.0",
@@ -51,6 +53,7 @@
     "scripts/*"
   ],
   "dependencies": {
-    "@solana/spl-token": "^0.3.8"
+    "@solana/spl-token": "^0.3.8",
+    "expo-linear-gradient": "^14.1.4"
   }
 }

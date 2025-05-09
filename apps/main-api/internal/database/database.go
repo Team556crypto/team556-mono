@@ -45,6 +45,7 @@ func InitDB(databaseURL string) (*gorm.DB, error) {
 		&models.Wallet{},
 		&models.PresaleCode{},
 		&models.Firearm{},
+		&models.PasswordResetCode{},
 	)
 	if err != nil {
 		// Log migration errors but don't necessarily make it fatal

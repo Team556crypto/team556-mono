@@ -2,7 +2,7 @@ import React from 'react'
 import { StyleSheet } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Colors } from '@/constants/Colors'
-import { ScreenLayout } from '@/components/ScreenLayout'
+import { ScreenLayout } from '@/components/layout/ScreenLayout'
 import { Ionicons } from '@expo/vector-icons'
 import { TouchableOpacity } from 'react-native'
 

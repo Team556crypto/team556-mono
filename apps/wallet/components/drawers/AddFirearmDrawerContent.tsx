@@ -8,7 +8,7 @@ import {
   Platform,
   Modal,
   Dimensions,
-  Animated,
+  Animated, // Ensure this is from 'react-native'
   Easing,
   Image
 } from 'react-native'
@@ -23,6 +23,18 @@ import { useDrawerStore } from '@/store/drawerStore'
 
 // Initial state for a new firearm
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
+
+// Constants for calculating progress bar width
+const DRAWER_HORIZONTAL_PADDING = 20 // From @team556/ui Drawer component's scrollContent
+const HEADER_GRADIENT_HORIZONTAL_PADDING = 20 // From local styles.headerGradient
+const PROGRESS_CONTAINER_OWN_HORIZONTAL_PADDING = 1 // From local styles.progressContainer
+
+const TOTAL_HORIZONTAL_PADDING_FOR_PROGRESS_BAR = 
+  (DRAWER_HORIZONTAL_PADDING * 2) + 
+  (HEADER_GRADIENT_HORIZONTAL_PADDING * 2) + 
+  (PROGRESS_CONTAINER_OWN_HORIZONTAL_PADDING * 2);
+
+const PROGRESS_BAR_RENDER_WIDTH = SCREEN_WIDTH - TOTAL_HORIZONTAL_PADDING_FOR_PROGRESS_BAR; // SCREEN_WIDTH - 40 - 40 - 2 = SCREEN_WIDTH - 82
 
 // Define a type for the form state that allows Date objects for date fields
 // before they are converted to ISO strings for the API payload.
@@ -61,6 +73,11 @@ export const AddFirearmDrawerContent = () => {
   const [currentStep, setCurrentStep] = useState(1)
   const progressAnim = useRef(new Animated.Value(0)).current
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof FirearmFormState, string>>>({})
+
+  const animatedProgressWidth = progressAnim.interpolate({
+    inputRange: [0, 3],
+    outputRange: [0, PROGRESS_BAR_RENDER_WIDTH] // Use calculated numerical width
+  });
 
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
   const [selectedImageBase64, setSelectedImageBase64] = useState<string | null>(null);
@@ -144,7 +161,7 @@ export const AddFirearmDrawerContent = () => {
       padding: 1
     },
     progressBar: {
-      height: '100%',
+      height: 10, // Explicit numerical height
       backgroundColor: colors.primary,
       borderRadius: 6
     },
@@ -843,7 +860,7 @@ export const AddFirearmDrawerContent = () => {
           <Animated.View
             style={[
               styles.progressBar,
-              { width: progressAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }
+              { width: animatedProgressWidth }
             ]}
           />
         </View>

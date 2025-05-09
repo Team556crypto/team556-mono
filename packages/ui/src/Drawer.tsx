@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, Fragment, useState, useRef } from 'react'
+import React, { useEffect, useCallback, Fragment, useState, useMemo } from 'react'
 import {
   View,
   StyleSheet,
@@ -9,7 +9,8 @@ import {
   LayoutChangeEvent,
   Platform,
   ScrollView,
-  Text
+  Text,
+  ActivityIndicator
 } from 'react-native'
 import Animated, {
   useSharedValue,
@@ -17,12 +18,14 @@ import Animated, {
   withTiming,
   withSpring,
   runOnJS,
-  useAnimatedReaction
+  useAnimatedReaction,
+  WithSpringConfig,
+  WithTimingConfig
 } from 'react-native-reanimated'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { DefaultColors, ThemeColors } from '../constants/Colors'
 
-const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window')
+const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 
 // Maximum height the drawer can take (95% of screen height)
 const MAX_DRAWER_HEIGHT = SCREEN_HEIGHT * 0.9
@@ -48,6 +51,8 @@ interface DrawerProps {
   backdropOpacity?: number
   colors?: Partial<ThemeColors>
   title?: string
+  animationConfig?: Partial<WithSpringConfig>
+  timingAnimationConfig?: Partial<WithTimingConfig>
 }
 
 export default function Drawer({
@@ -61,290 +66,294 @@ export default function Drawer({
   handleBarStyle,
   backdropOpacity = 0.5,
   colors = {},
-  title
-}: DrawerProps): JSX.Element {
-  // Merge provided colors with defaults
+  title,
+  animationConfig = {},
+  timingAnimationConfig = {}
+}: DrawerProps): JSX.Element | null {
   const themeColors = { ...DefaultColors, ...colors }
 
-  const [contentHeight, setContentHeight] = useState(0)
-  const [isAnimating, setIsAnimating] = useState(false)
-  const [shouldRender, setShouldRender] = useState(isVisible)
-  const isInitialRender = useRef(true)
+  // Memoize the spring configuration to be used for animations
+  const memoizedSpringConfig = useMemo((): WithSpringConfig => {
+    const { duration, dampingRatio, clamp, ...rest } = animationConfig
+    return {
+      damping: 18,
+      stiffness: 360,
+      mass: 0.7,
+      velocity: 20,
+      ...rest
+    }
+  }, [animationConfig])
 
-  // Function to parse height values that can be numbers or percentage strings
+  const [contentHeight, setContentHeight] = useState(0)
+  const [isContentLoaded, setIsContentLoaded] = useState(false)
+  const [shouldRender, setShouldRender] = useState(isVisible)
+
   const parseHeightValue = (value: number | string | undefined, defaultValue: number): number => {
     if (value === undefined) return defaultValue
-
     if (typeof value === 'number') return value
-
-    // Handle percentage string
     if (typeof value === 'string' && value.endsWith('%')) {
       const percentage = parseFloat(value) / 100
       return SCREEN_HEIGHT * percentage
     }
-
-    // Try to parse as a number
     const parsed = parseFloat(String(value))
     return isNaN(parsed) ? defaultValue : parsed
   }
 
-  // Calculate drawer height based on content with min/max constraints
-  // Add padding, handle height, and a bit extra for shadow/spacing
   const totalPadding = HANDLE_HEIGHT + CONTENT_PADDING + SHADOW_OFFSET
-  const calculatedHeight =
-    contentHeight > 0 ? contentHeight + totalPadding : parseHeightValue(minHeight, MIN_DRAWER_HEIGHT)
+
   const maxHeightValue = parseHeightValue(maxHeight, MAX_DRAWER_HEIGHT)
   const minHeightValue = parseHeightValue(minHeight, MIN_DRAWER_HEIGHT)
-  const drawerHeight = Math.min(maxHeightValue, Math.max(minHeightValue, calculatedHeight))
+
+  const currentDrawerTargetHeight =
+    isContentLoaded && contentHeight > 0
+      ? Math.min(maxHeightValue, Math.max(minHeightValue, contentHeight + totalPadding))
+      : minHeightValue
 
   const translateY = useSharedValue(SCREEN_HEIGHT)
+  const animatedDrawerHeight = useSharedValue(currentDrawerTargetHeight)
   const context = useSharedValue({ y: 0 })
   const backdropOpacityAnimated = useSharedValue(0)
-
-  // Use useAnimatedReaction to safely check shared value changes
-  useAnimatedReaction(
-    () => {
-      return {
-        isVisible,
-        translateYValue: translateY.value
-      }
-    },
-    (result, previous) => {
-      if (!result.isVisible && result.translateYValue === SCREEN_HEIGHT) {
-        // Only run this when the values actually change to avoid unnecessary renders
-        if (
-          !previous ||
-          previous.isVisible !== result.isVisible ||
-          previous.translateYValue !== result.translateYValue
-        ) {
-          runOnJS(setShouldRender)(false)
-        }
-      } else if (!shouldRender) {
-        runOnJS(setShouldRender)(true)
-      }
-    }
-  )
 
   const runOnJSClose = useCallback(() => {
     onClose()
   }, [onClose])
 
-  const handleContentLayout = useCallback(
-    (event: LayoutChangeEvent) => {
-      const { height } = event.nativeEvent.layout
+  const runOnJSSetIsContentLoaded = useCallback((value: boolean) => {
+    setIsContentLoaded(value)
+  }, [])
 
-      // Always update height on layout change
-      setContentHeight(height)
-
-      // If this is our first time showing the drawer and we're still waiting for a measurement,
-      // trigger animation after we know the content size
-      if (isVisible && isInitialRender.current && !isAnimating) {
-        isInitialRender.current = false
-
-        // Small delay to ensure layout calculations are complete
-        setTimeout(() => {
-          translateY.value = withSpring(0, {
-            damping: 22,
-            stiffness: 180,
-            mass: 0.8,
-            velocity: 20
-          })
-          backdropOpacityAnimated.value = withTiming(backdropOpacity, { duration: 150 })
-          setIsAnimating(true)
-        }, 10)
+  useAnimatedReaction(
+    () => {
+      return {
+        isVisibleProp: isVisible,
+        translateYValue: translateY.value
       }
     },
-    [isVisible, isAnimating, backdropOpacity, translateY, backdropOpacityAnimated]
+    (result, previous) => {
+      if (!result.isVisibleProp && result.translateYValue === SCREEN_HEIGHT) {
+        if (
+          !previous ||
+          previous.isVisibleProp !== result.isVisibleProp ||
+          previous.translateYValue !== result.translateYValue
+        ) {
+          runOnJS(setShouldRender)(false)
+        }
+      } else if (result.isVisibleProp && !shouldRender) {
+        runOnJS(setShouldRender)(true)
+      }
+    },
+    [isVisible, shouldRender]
   )
 
   useEffect(() => {
+    const targetY = isVisible ? 0 : SCREEN_HEIGHT
+    const targetOpacity = isVisible ? backdropOpacity : 0
+
+    // Default Timing Animation Configuration
+    const timingConfig: WithTimingConfig = {
+      duration: 150,
+      ...timingAnimationConfig
+    }
+
     if (isVisible) {
-      // --- Scroll Lock for Web ---
       if (Platform.OS === 'web') {
         document.body.style.overflow = 'hidden'
       }
-      // --- End Scroll Lock ---
-
       setShouldRender(true)
-
-      // Only animate immediately if we already have a content height
-      if (contentHeight > 0) {
-        translateY.value = withSpring(0, {
-          damping: 22,
-          stiffness: 180,
-          mass: 0.8,
-          velocity: 20
-        })
-        backdropOpacityAnimated.value = withTiming(backdropOpacity, { duration: 150 })
-        setIsAnimating(true)
-      }
-      // Otherwise wait for onLayout to get content height first
-
-      // Show backdrop immediately
-      backdropOpacityAnimated.value = withTiming(backdropOpacity, { duration: 150 })
-    } else {
-      // --- Scroll Unlock for Web ---
-      if (Platform.OS === 'web') {
-        document.body.style.overflow = 'auto' // Unlock immediately
-      }
-      // --- End Scroll Unlock ---
-
-      translateY.value = withSpring(SCREEN_HEIGHT, {
-        damping: 20,
-        stiffness: 100
+      translateY.value = withSpring(targetY, memoizedSpringConfig, () => {
+        runOnJS(runOnJSSetIsContentLoaded)(true)
       })
-      backdropOpacityAnimated.value = withTiming(0, { duration: 150 })
-      setIsAnimating(false)
-      isInitialRender.current = true
+      backdropOpacityAnimated.value = withTiming(targetOpacity, timingConfig)
+      animatedDrawerHeight.value = withSpring(minHeightValue, memoizedSpringConfig)
+    } else {
+      if (Platform.OS === 'web') {
+        document.body.style.overflow = 'auto'
+      }
+      runOnJS(runOnJSSetIsContentLoaded)(false)
+      translateY.value = withSpring(targetY, memoizedSpringConfig, () => {})
+      backdropOpacityAnimated.value = withTiming(targetOpacity, timingConfig)
+      animatedDrawerHeight.value = withSpring(minHeightValue, memoizedSpringConfig)
     }
-  }, [isVisible, translateY, backdropOpacityAnimated, backdropOpacity, contentHeight])
+  }, [
+    isVisible,
+    backdropOpacity,
+    runOnJSSetIsContentLoaded,
+    memoizedSpringConfig,
+    timingAnimationConfig,
+    minHeightValue,
+    animatedDrawerHeight,
+    backdropOpacityAnimated,
+    translateY
+  ])
 
-  const gesture = Gesture.Pan()
+  useEffect(() => {
+    if (isVisible && isContentLoaded && contentHeight > 0) {
+      const approxTitleHeight = title ? 18 + 10 : 0
+
+      const scrollViewPaddingTop = styles.scrollContent.paddingTop || 0
+      const scrollViewPaddingBottom = styles.scrollContent.paddingBottom || 0
+      const scrollViewInternalVerticalPadding =
+        (typeof scrollViewPaddingTop === 'number' ? scrollViewPaddingTop : 0) +
+        (typeof scrollViewPaddingBottom === 'number' ? scrollViewPaddingBottom : 0)
+
+      const platformSpecificDrawerPaddingBottom = Platform.OS === 'ios' ? 20 : 0
+
+      const calculatedRequiredHeight =
+        HANDLE_HEIGHT +
+        approxTitleHeight +
+        contentHeight +
+        scrollViewInternalVerticalPadding +
+        platformSpecificDrawerPaddingBottom
+
+      const newTargetHeight = Math.min(maxHeightValue, Math.max(minHeightValue, calculatedRequiredHeight))
+      animatedDrawerHeight.value = withSpring(newTargetHeight, memoizedSpringConfig)
+    } else if (!isVisible) {
+      animatedDrawerHeight.value = withSpring(minHeightValue, memoizedSpringConfig)
+    }
+  }, [
+    isVisible,
+    isContentLoaded,
+    contentHeight,
+    maxHeightValue,
+    minHeightValue,
+    memoizedSpringConfig,
+    animatedDrawerHeight,
+    title
+  ])
+
+  const handleContentLayout = useCallback((event: LayoutChangeEvent) => {
+    const { height } = event.nativeEvent.layout
+    setContentHeight(height)
+  }, [])
+
+  const panGesture = Gesture.Pan()
     .onStart(() => {
       context.value = { y: translateY.value }
     })
     .onUpdate(event => {
-      // Only allow dragging down (positive delta)
-      if (event.translationY < 0) {
-        translateY.value = Math.max(0, context.value.y + event.translationY / 2)
-      } else {
-        translateY.value = context.value.y + event.translationY
-      }
+      translateY.value = Math.max(0, context.value.y + event.translationY)
     })
     .onEnd(event => {
-      // If dragged down with significant velocity or distance, close drawer
-      if (event.velocityY > 500 || translateY.value > drawerHeight * 0.4) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
-          damping: 15,
-          stiffness: 90
-        })
-        backdropOpacityAnimated.value = withTiming(0, { duration: 200 })
+      const threshold = animatedDrawerHeight.value * 0.3
+      if (event.translationY > threshold || event.velocityY > 800) {
         runOnJS(runOnJSClose)()
       } else {
-        // Otherwise spring back to open position
-        translateY.value = withSpring(0, {
-          damping: 20,
-          stiffness: 90
-        })
+        translateY.value = withSpring(0, memoizedSpringConfig)
       }
     })
 
-  const animatedBackdropStyle = useAnimatedStyle(() => {
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      height: animatedDrawerHeight.value,
+      transform: [{ translateY: translateY.value }]
+    }
+  })
+
+  const backdropAnimatedStyle = useAnimatedStyle(() => {
     return {
       opacity: backdropOpacityAnimated.value
     }
   })
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateY: translateY.value }]
-    }
-  })
-
   if (!shouldRender) {
-    return <Fragment />
+    return null
   }
 
-  // Define content for better type safety
-  const drawerContent = <Fragment>{children}</Fragment>
-
   return (
-    <View style={styles.rootContainer}>
-      <TouchableWithoutFeedback onPress={onClose}>
-        <Animated.View style={[styles.backdrop, animatedBackdropStyle]} />
+    <Fragment>
+      <TouchableWithoutFeedback onPress={runOnJSClose}>
+        <Animated.View
+          style={[styles.backdrop, { backgroundColor: themeColors.backgroundDarker }, backdropAnimatedStyle]}
+        />
       </TouchableWithoutFeedback>
-
-      <GestureDetector gesture={gesture}>
+      <GestureDetector gesture={panGesture}>
         <Animated.View
           style={[
-            styles.drawer,
-            {
-              height: drawerHeight,
-              backgroundColor: themeColors.backgroundDark
-            },
+            styles.drawerContainer,
+            { backgroundColor: themeColors.background, shadowColor: themeColors.backgroundDarkest },
+            containerStyle,
             style,
             animatedStyle
           ]}
         >
-          <View style={styles.handleBarContainer}>
-            <View style={[styles.handleBar, handleBarStyle]} />
+          <View style={[styles.handleBarContainer, handleBarStyle]}>
+            <View style={[styles.handleBar, { backgroundColor: themeColors.textSecondary }]} />
           </View>
-          {title && (
-            <View style={styles.titleContainer}>
-              <Text style={styles.title}>{title}</Text>
+          {title && <Text style={[styles.titleText, { color: themeColors.text }]}>{title}</Text>}
+          {isContentLoaded ? (
+            <ScrollView
+              style={styles.contentContainer}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              scrollEventThrottle={16}
+            >
+              <View onLayout={handleContentLayout}>
+                <Fragment>{children}</Fragment>
+              </View>
+            </ScrollView>
+          ) : (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={themeColors.primary} />
             </View>
           )}
-          <View style={[styles.contentContainer, containerStyle]} onLayout={handleContentLayout}>
-            <ScrollView>{drawerContent}</ScrollView>
-          </View>
         </Animated.View>
       </GestureDetector>
-    </View>
+    </Fragment>
   )
 }
 
 const styles = StyleSheet.create({
   rootContainer: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
-    zIndex: 999999,
-    elevation: 999999,
-    pointerEvents: 'box-none'
+    flex: 1
   },
   backdrop: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
-    backgroundColor: '#000',
-    zIndex: 999999,
-    elevation: 999999
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1
   },
-  drawer: {
+  drawerContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    width: SCREEN_WIDTH,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    overflow: 'hidden',
-    zIndex: 999999,
-    elevation: 999999,
-    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
+    paddingBottom: Platform.OS === 'ios' ? 20 : 0,
+    shadowOffset: { width: 0, height: -SHADOW_OFFSET / 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 20,
+    zIndex: 2,
+    overflow: 'hidden'
   },
   handleBarContainer: {
-    width: '100%',
-    height: HANDLE_HEIGHT,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 10
+    justifyContent: 'center',
+    paddingVertical: 8,
+    height: HANDLE_HEIGHT
   },
   handleBar: {
     width: 40,
     height: 5,
-    borderRadius: 2.5,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)'
+    borderRadius: 2.5
+  },
+  titleText: {
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 10,
+    marginTop: Platform.OS === 'android' ? -5 : 0
   },
   contentContainer: {
-    padding: 20,
-    marginBottom: 40
+    flex: 1
   },
-  titleContainer: {
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc'
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold'
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: CONTENT_PADDING
   }
 })

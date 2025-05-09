@@ -10,7 +10,8 @@ import {
   Platform,
   ScrollView,
   Text,
-  ActivityIndicator
+  ActivityIndicator,
+  useWindowDimensions
 } from 'react-native'
 import Animated, {
   useSharedValue,
@@ -32,10 +33,16 @@ const MAX_DRAWER_HEIGHT = SCREEN_HEIGHT * 0.9
 // Minimum height for the drawer
 const MIN_DRAWER_HEIGHT = SCREEN_HEIGHT * 0.2
 
+// Responsive breakpoints
+const LARGE_SCREEN_BREAKPOINT = 768
+
 // Constants for layout calculations
 const HANDLE_HEIGHT = 30
 const CONTENT_PADDING = 40
 const SHADOW_OFFSET = 10
+
+// Dialog mode constants
+const DIALOG_MAX_WIDTH = 600 // Maximum width for dialog on large screens
 
 export type DrawerSize = 'auto' | number
 
@@ -53,6 +60,10 @@ interface DrawerProps {
   title?: string
   animationConfig?: Partial<WithSpringConfig>
   timingAnimationConfig?: Partial<WithTimingConfig>
+  /**
+   * Force dialog mode regardless of screen size
+   */
+  forceDialogMode?: boolean
 }
 
 export default function Drawer({
@@ -68,7 +79,8 @@ export default function Drawer({
   colors = {},
   title,
   animationConfig = {},
-  timingAnimationConfig = {}
+  timingAnimationConfig = {},
+  forceDialogMode = false
 }: DrawerProps): JSX.Element | null {
   const themeColors = { ...DefaultColors, ...colors }
 
@@ -109,7 +121,16 @@ export default function Drawer({
       ? Math.min(maxHeightValue, Math.max(minHeightValue, contentHeight + totalPadding))
       : minHeightValue
 
+  // Check if we're on a large screen to enable dialog mode
+  const { width: windowWidth } = useWindowDimensions()
+  const isLargeScreen = forceDialogMode || windowWidth >= LARGE_SCREEN_BREAKPOINT
+
+  // For drawer mode (bottom sheet)
   const translateY = useSharedValue(SCREEN_HEIGHT)
+  // For dialog mode (centered)
+  const translateYDialog = useSharedValue(isLargeScreen ? -50 : 0) // For initial animation (slide down slightly)
+  const scaleDialog = useSharedValue(isLargeScreen ? 0.9 : 1) // For initial animation (scale up)
+
   const animatedDrawerHeight = useSharedValue(currentDrawerTargetHeight)
   const context = useSharedValue({ y: 0 })
   const backdropOpacityAnimated = useSharedValue(0)
@@ -160,19 +181,39 @@ export default function Drawer({
         document.body.style.overflow = 'hidden'
       }
       setShouldRender(true)
-      translateY.value = withSpring(targetY, memoizedSpringConfig, () => {
-        runOnJS(runOnJSSetIsContentLoaded)(true)
-      })
-      backdropOpacityAnimated.value = withTiming(targetOpacity, timingConfig)
-      animatedDrawerHeight.value = withSpring(minHeightValue, memoizedSpringConfig)
+
+      if (isLargeScreen) {
+        // Dialog mode animations (centered)
+        translateYDialog.value = withSpring(0, memoizedSpringConfig)
+        scaleDialog.value = withSpring(1, memoizedSpringConfig, () => {
+          runOnJS(runOnJSSetIsContentLoaded)(true)
+        })
+        backdropOpacityAnimated.value = withTiming(targetOpacity, timingConfig)
+      } else {
+        // Drawer mode animations (bottom sheet)
+        translateY.value = withSpring(targetY, memoizedSpringConfig, () => {
+          runOnJS(runOnJSSetIsContentLoaded)(true)
+        })
+        backdropOpacityAnimated.value = withTiming(targetOpacity, timingConfig)
+        animatedDrawerHeight.value = withSpring(minHeightValue, memoizedSpringConfig)
+      }
     } else {
       if (Platform.OS === 'web') {
         document.body.style.overflow = 'auto'
       }
       runOnJS(runOnJSSetIsContentLoaded)(false)
-      translateY.value = withSpring(targetY, memoizedSpringConfig, () => {})
-      backdropOpacityAnimated.value = withTiming(targetOpacity, timingConfig)
-      animatedDrawerHeight.value = withSpring(minHeightValue, memoizedSpringConfig)
+
+      if (isLargeScreen) {
+        // Dialog mode animations (centered)
+        translateYDialog.value = withSpring(-50, memoizedSpringConfig)
+        scaleDialog.value = withSpring(0.9, memoizedSpringConfig)
+        backdropOpacityAnimated.value = withTiming(targetOpacity, timingConfig)
+      } else {
+        // Drawer mode animations (bottom sheet)
+        translateY.value = withSpring(targetY, memoizedSpringConfig, () => {})
+        backdropOpacityAnimated.value = withTiming(targetOpacity, timingConfig)
+        animatedDrawerHeight.value = withSpring(minHeightValue, memoizedSpringConfig)
+      }
     }
   }, [
     isVisible,
@@ -183,7 +224,10 @@ export default function Drawer({
     minHeightValue,
     animatedDrawerHeight,
     backdropOpacityAnimated,
-    translateY
+    translateY,
+    isLargeScreen,
+    translateYDialog,
+    scaleDialog
   ])
 
   useEffect(() => {
@@ -206,8 +250,12 @@ export default function Drawer({
         platformSpecificDrawerPaddingBottom
 
       const newTargetHeight = Math.min(maxHeightValue, Math.max(minHeightValue, calculatedRequiredHeight))
-      animatedDrawerHeight.value = withSpring(newTargetHeight, memoizedSpringConfig)
-    } else if (!isVisible) {
+
+      // Only adjust height for drawer mode (not dialog mode)
+      if (!isLargeScreen) {
+        animatedDrawerHeight.value = withSpring(newTargetHeight, memoizedSpringConfig)
+      }
+    } else if (!isVisible && !isLargeScreen) {
       animatedDrawerHeight.value = withSpring(minHeightValue, memoizedSpringConfig)
     }
   }, [
@@ -218,7 +266,8 @@ export default function Drawer({
     minHeightValue,
     memoizedSpringConfig,
     animatedDrawerHeight,
-    title
+    title,
+    isLargeScreen
   ])
 
   const handleContentLayout = useCallback((event: LayoutChangeEvent) => {
@@ -226,26 +275,45 @@ export default function Drawer({
     setContentHeight(height)
   }, [])
 
-  const panGesture = Gesture.Pan()
-    .onStart(() => {
-      context.value = { y: translateY.value }
-    })
-    .onUpdate(event => {
-      translateY.value = Math.max(0, context.value.y + event.translationY)
-    })
-    .onEnd(event => {
-      const threshold = animatedDrawerHeight.value * 0.3
-      if (event.translationY > threshold || event.velocityY > 800) {
-        runOnJS(runOnJSClose)()
-      } else {
-        translateY.value = withSpring(0, memoizedSpringConfig)
-      }
-    })
+  // Only use pan gesture for drawer mode (not dialog mode)
+  const panGesture = isLargeScreen
+    ? Gesture.Pan() // Empty gesture for dialog mode
+    : Gesture.Pan()
+        .onStart(() => {
+          context.value = { y: translateY.value }
+        })
+        .onUpdate(event => {
+          translateY.value = Math.max(0, context.value.y + event.translationY)
+        })
+        .onEnd(event => {
+          const threshold = animatedDrawerHeight.value * 0.3
+          if (event.translationY > threshold || event.velocityY > 800) {
+            runOnJS(runOnJSClose)()
+          } else {
+            translateY.value = withSpring(0, memoizedSpringConfig)
+          }
+        })
 
+  // Different animations based on mode (drawer vs. dialog)
   const animatedStyle = useAnimatedStyle(() => {
-    return {
-      height: animatedDrawerHeight.value,
-      transform: [{ translateY: translateY.value }]
+    if (isLargeScreen) {
+      // Dialog mode (centered)
+      return {
+        // Dialog doesn't need a fixed height - it sizes to content
+        maxHeight: maxHeightValue,
+        transform: [
+          { translateX: -DIALOG_MAX_WIDTH / 2 },
+          { translateY: -SCREEN_HEIGHT * 0.45 }, // Position close to center (slightly above)
+          { translateY: translateYDialog.value }, // Add animation offset
+          { scale: scaleDialog.value }
+        ]
+      }
+    } else {
+      // Drawer mode (bottom sheet)
+      return {
+        height: animatedDrawerHeight.value,
+        transform: [{ translateY: translateY.value }]
+      }
     }
   })
 
@@ -269,16 +337,19 @@ export default function Drawer({
       <GestureDetector gesture={panGesture}>
         <Animated.View
           style={[
-            styles.drawerContainer,
+            isLargeScreen ? styles.dialogContainer : styles.drawerContainer,
             { backgroundColor: themeColors.background, shadowColor: themeColors.backgroundDarkest },
             containerStyle,
             style,
             animatedStyle
           ]}
         >
-          <View style={[styles.handleBarContainer, handleBarStyle]}>
-            <View style={[styles.handleBar, { backgroundColor: themeColors.textSecondary }]} />
-          </View>
+          {/* Only show handle bar in drawer mode, not dialog mode */}
+          {!isLargeScreen && (
+            <View style={[styles.handleBarContainer, handleBarStyle]}>
+              <View style={[styles.handleBar, { backgroundColor: themeColors.textSecondary }]} />
+            </View>
+          )}
           {title && <Text style={[styles.titleText, { color: themeColors.text }]}>{title}</Text>}
           {isContentLoaded ? (
             <ScrollView
@@ -293,7 +364,7 @@ export default function Drawer({
             </ScrollView>
           ) : (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={themeColors.primary} />
+              <ActivityIndicator size='large' color={themeColors.primary} />
             </View>
           )}
         </Animated.View>
@@ -322,6 +393,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 10,
     elevation: 20,
+    zIndex: 2,
+    overflow: 'hidden'
+  },
+  dialogContainer: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: DIALOG_MAX_WIDTH,
+    maxWidth: '90%',
+    maxHeight: SCREEN_HEIGHT * 0.8, // Ensure dialog doesn't exceed 80% of screen height
+    borderRadius: 20,
+    paddingBottom: Platform.OS === 'ios' ? 20 : 10,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 24,
     zIndex: 2,
     overflow: 'hidden'
   },

@@ -15,7 +15,7 @@ import {
 import { Text, useTheme, Button, Select } from '@team556/ui'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker'
-import * as ImagePicker from 'expo-image-picker';
+import * as ImagePicker from 'expo-image-picker'
 import { Firearm, CreateFirearmPayload } from '@/services/api'
 import { useFirearmStore } from '@/store/firearmStore'
 import { useAuthStore } from '@/store/authStore'
@@ -29,21 +29,19 @@ const DRAWER_HORIZONTAL_PADDING = 20 // From @team556/ui Drawer component's scro
 const HEADER_GRADIENT_HORIZONTAL_PADDING = 20 // From local styles.headerGradient
 const PROGRESS_CONTAINER_OWN_HORIZONTAL_PADDING = 1 // From local styles.progressContainer
 
-const TOTAL_HORIZONTAL_PADDING_FOR_PROGRESS_BAR = 
-  (DRAWER_HORIZONTAL_PADDING * 2) + 
-  (HEADER_GRADIENT_HORIZONTAL_PADDING * 2) + 
-  (PROGRESS_CONTAINER_OWN_HORIZONTAL_PADDING * 2);
+const TOTAL_HORIZONTAL_PADDING_FOR_PROGRESS_BAR =
+  DRAWER_HORIZONTAL_PADDING * 2 + HEADER_GRADIENT_HORIZONTAL_PADDING * 2 + PROGRESS_CONTAINER_OWN_HORIZONTAL_PADDING * 2
 
-const PROGRESS_BAR_RENDER_WIDTH = SCREEN_WIDTH - TOTAL_HORIZONTAL_PADDING_FOR_PROGRESS_BAR; // SCREEN_WIDTH - 40 - 40 - 2 = SCREEN_WIDTH - 82
+const PROGRESS_BAR_RENDER_WIDTH = SCREEN_WIDTH - TOTAL_HORIZONTAL_PADDING_FOR_PROGRESS_BAR // SCREEN_WIDTH - 40 - 40 - 2 = SCREEN_WIDTH - 82
 
 // Define a type for the form state that allows Date objects for date fields
 // before they are converted to ISO strings for the API payload.
 type FirearmFormState = Omit<CreateFirearmPayload, 'acquisition_date' | 'last_fired' | 'last_cleaned'> & {
-  acquisition_date?: Date | string | undefined;
-  last_fired?: Date | string | undefined;
-  last_cleaned?: Date | string | undefined;
-  image_base64?: string | null;
-};
+  acquisition_date?: Date | string | undefined
+  last_fired?: Date | string | undefined
+  last_cleaned?: Date | string | undefined
+  image_base64?: string | null
+}
 
 const initialFirearmState: FirearmFormState = {
   name: '',
@@ -77,10 +75,10 @@ export const AddFirearmDrawerContent = () => {
   const animatedProgressWidth = progressAnim.interpolate({
     inputRange: [0, 3],
     outputRange: [0, PROGRESS_BAR_RENDER_WIDTH] // Use calculated numerical width
-  });
+  })
 
-  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
-  const [selectedImageBase64, setSelectedImageBase64] = useState<string | null>(null);
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null)
+  const [selectedImageBase64, setSelectedImageBase64] = useState<string | null>(null)
 
   const steps = ['Primary Details', 'Acquisition & Value', 'Usage & Maintenance', 'Additional Info']
 
@@ -402,7 +400,7 @@ export const AddFirearmDrawerContent = () => {
       marginTop: 16,
       width: '100%'
     },
-    imagePreview: { 
+    imagePreview: {
       width: '100%',
       height: 200,
       borderRadius: 8,
@@ -462,24 +460,25 @@ export const AddFirearmDrawerContent = () => {
   const validateStep2 = () => {
     const { value, purchase_price } = newFirearm
     const errors: Partial<Record<keyof FirearmFormState, string>> = {}
-    if (value !== undefined && value !== null && String(value).trim() !== "") {
-      const val = parseFloat(String(value));
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      const val = parseFloat(String(value))
       if (isNaN(val)) {
         errors.value = 'Must be a valid number.'
       }
     }
-    if (purchase_price !== undefined && purchase_price !== null && String(purchase_price).trim() !== "") {
+    if (purchase_price !== undefined && purchase_price !== null && String(purchase_price).trim() !== '') {
       // Allows for decimal numbers. Regex checks for optional leading digits, an optional decimal point, and optional trailing digits.
       // Ensures it's not just whitespace or an empty string if provided.
       if (!/^\d*\.?\d+$/.test(String(purchase_price).trim()) && !/^\d+\.?\d*$/.test(String(purchase_price).trim())) {
-         if (String(purchase_price).trim() !== "") { // only error if not empty and invalid
-            errors.purchase_price = 'Must be a valid price.';
-         }
+        if (String(purchase_price).trim() !== '') {
+          // only error if not empty and invalid
+          errors.purchase_price = 'Must be a valid price.'
+        }
       } else {
         // Additional check for parseFloat if regex passes but could still be problematic (e.g. multiple decimal points if regex was less strict)
-        const priceVal = parseFloat(String(purchase_price).trim());
+        const priceVal = parseFloat(String(purchase_price).trim())
         if (isNaN(priceVal)) {
-             errors.purchase_price = 'Must be a valid price.';
+          errors.purchase_price = 'Must be a valid price.'
         }
       }
     }
@@ -490,8 +489,8 @@ export const AddFirearmDrawerContent = () => {
   const validateStep3 = () => {
     const { round_count } = newFirearm
     const errors: Partial<Record<keyof FirearmFormState, string>> = {}
-    if (round_count !== undefined && round_count !== null && String(round_count).trim() !== "") {
-      const count = parseInt(String(round_count), 10);
+    if (round_count !== undefined && round_count !== null && String(round_count).trim() !== '') {
+      const count = parseInt(String(round_count), 10)
       if (isNaN(count)) {
         errors.round_count = 'Must be a valid number.'
       }
@@ -548,9 +547,10 @@ export const AddFirearmDrawerContent = () => {
 
     // Step 4 validation
     let imageError = false
-    if (!selectedImageBase64) { // Check if a base64 image is selected
+    if (!selectedImageBase64) {
+      // Check if a base64 image is selected
       setFieldErrors(prev => ({ ...prev, image_base64: 'Image is required' }))
-      imageError = true;
+      imageError = true
     } else {
       // Image is selected, make sure it's valid
       setFieldErrors(prev => ({ ...prev, image_base64: undefined }))
@@ -559,8 +559,8 @@ export const AddFirearmDrawerContent = () => {
 
     if (imageError) {
       // If image error exists and we are not on step 4, navigate to step 4
-      if (currentStep !== 4) setCurrentStep(4);
-      return;
+      if (currentStep !== 4) setCurrentStep(4)
+      return
     }
 
     // Prepare the payload for the API - this should match CreateFirearmPayload
@@ -571,85 +571,91 @@ export const AddFirearmDrawerContent = () => {
       serial_number: newFirearm.serial_number,
 
       // Optional string fields - send as plain string or undefined
-      manufacturer: (newFirearm.manufacturer?.trim().toLowerCase() === 'sdf' || !newFirearm.manufacturer?.trim()) 
-        ? undefined 
-        : newFirearm.manufacturer.trim(),
+      manufacturer:
+        newFirearm.manufacturer?.trim().toLowerCase() === 'sdf' || !newFirearm.manufacturer?.trim()
+          ? undefined
+          : newFirearm.manufacturer.trim(),
 
-      model_name: (newFirearm.model_name?.trim().toLowerCase() === 'sdf' || !newFirearm.model_name?.trim()) 
-        ? undefined 
-        : newFirearm.model_name.trim(),
+      model_name:
+        newFirearm.model_name?.trim().toLowerCase() === 'sdf' || !newFirearm.model_name?.trim()
+          ? undefined
+          : newFirearm.model_name.trim(),
 
-      caliber: (newFirearm.caliber?.trim().toLowerCase() === 'sdf' || !newFirearm.caliber?.trim()) 
-        ? undefined 
-        : newFirearm.caliber.trim(),
+      caliber:
+        newFirearm.caliber?.trim().toLowerCase() === 'sdf' || !newFirearm.caliber?.trim()
+          ? undefined
+          : newFirearm.caliber.trim(),
 
       // For dates, send as ISO string or undefined
-      acquisition_date: newFirearm.acquisition_date 
-        ? (newFirearm.acquisition_date instanceof Date 
-            ? newFirearm.acquisition_date.toISOString() 
-            : typeof newFirearm.acquisition_date === 'string' && !isNaN(new Date(newFirearm.acquisition_date).getTime())
-              ? new Date(newFirearm.acquisition_date).toISOString()
-              : undefined)
+      acquisition_date: newFirearm.acquisition_date
+        ? newFirearm.acquisition_date instanceof Date
+          ? newFirearm.acquisition_date.toISOString()
+          : typeof newFirearm.acquisition_date === 'string' && !isNaN(new Date(newFirearm.acquisition_date).getTime())
+            ? new Date(newFirearm.acquisition_date).toISOString()
+            : undefined
         : undefined,
 
       // Purchase price as string or undefined
-      purchase_price: (newFirearm.purchase_price?.trim().toLowerCase() === 'sdf' || !newFirearm.purchase_price?.trim()) 
-        ? undefined 
-        : String(newFirearm.purchase_price).trim(),
+      purchase_price:
+        newFirearm.purchase_price?.trim().toLowerCase() === 'sdf' || !newFirearm.purchase_price?.trim()
+          ? undefined
+          : String(newFirearm.purchase_price).trim(),
 
-      ballistic_performance: (newFirearm.ballistic_performance?.trim().toLowerCase() === 'sdf' || !newFirearm.ballistic_performance?.trim()) 
-        ? undefined 
-        : newFirearm.ballistic_performance.trim(),
+      ballistic_performance:
+        newFirearm.ballistic_performance?.trim().toLowerCase() === 'sdf' || !newFirearm.ballistic_performance?.trim()
+          ? undefined
+          : newFirearm.ballistic_performance.trim(),
 
       image_base64: selectedImageBase64 || undefined, // Add base64 image
       image: undefined, // Explicitly set image URL to undefined as server will handle it
 
       // Numeric values - send as number or undefined
-      round_count: newFirearm.round_count !== undefined && newFirearm.round_count !== null 
-        ? parseInt(String(newFirearm.round_count), 10) 
-        : undefined,
+      round_count:
+        newFirearm.round_count !== undefined && newFirearm.round_count !== null
+          ? parseInt(String(newFirearm.round_count), 10)
+          : undefined,
 
-      value: newFirearm.value !== undefined && newFirearm.value !== null 
-        ? parseFloat(String(newFirearm.value)) 
-        : undefined,
+      value:
+        newFirearm.value !== undefined && newFirearm.value !== null ? parseFloat(String(newFirearm.value)) : undefined,
 
       // Status as string or undefined
-      status: (newFirearm.status?.trim().toLowerCase() === 'sdf' || !newFirearm.status?.trim()) 
-        ? undefined 
-        : newFirearm.status?.trim(),
+      status:
+        newFirearm.status?.trim().toLowerCase() === 'sdf' || !newFirearm.status?.trim()
+          ? undefined
+          : newFirearm.status?.trim(),
 
       // Dates as ISO string or undefined
-      last_fired: newFirearm.last_fired 
-        ? (newFirearm.last_fired instanceof Date 
-            ? newFirearm.last_fired.toISOString() 
-            : typeof newFirearm.last_fired === 'string' && !isNaN(new Date(newFirearm.last_fired).getTime())
-              ? new Date(newFirearm.last_fired).toISOString()
-              : undefined)
+      last_fired: newFirearm.last_fired
+        ? newFirearm.last_fired instanceof Date
+          ? newFirearm.last_fired.toISOString()
+          : typeof newFirearm.last_fired === 'string' && !isNaN(new Date(newFirearm.last_fired).getTime())
+            ? new Date(newFirearm.last_fired).toISOString()
+            : undefined
         : undefined,
 
-      last_cleaned: newFirearm.last_cleaned 
-        ? (newFirearm.last_cleaned instanceof Date 
-            ? newFirearm.last_cleaned.toISOString() 
-            : typeof newFirearm.last_cleaned === 'string' && !isNaN(new Date(newFirearm.last_cleaned).getTime())
-              ? new Date(newFirearm.last_cleaned).toISOString()
-              : undefined)
+      last_cleaned: newFirearm.last_cleaned
+        ? newFirearm.last_cleaned instanceof Date
+          ? newFirearm.last_cleaned.toISOString()
+          : typeof newFirearm.last_cleaned === 'string' && !isNaN(new Date(newFirearm.last_cleaned).getTime())
+            ? new Date(newFirearm.last_cleaned).toISOString()
+            : undefined
         : undefined
-    };
+    }
 
-    console.log('AddFirearmDrawerContent: Saving firearm with payload:', JSON.stringify(firearmToSave, null, 2));
+    console.log('AddFirearmDrawerContent: Saving firearm with payload:', JSON.stringify(firearmToSave, null, 2))
 
     // console.log('AddFirearmDrawerContent: Attempting to save firearm:', firearmToSave);
     // console.log('AddFirearmDrawerContent: Auth token:', token);
 
     // Call the store action to add the firearm
     // The store action should handle the API call
-    const success = await addFirearm(firearmToSave, token); // Pass token and await
+    const success = await addFirearm(firearmToSave, token) // Pass token and await
 
     if (success) {
       // console.log('AddFirearmDrawerContent: Firearm saved successfully');
-      setNewFirearm(initialFirearmState); // Reset form
-      setCurrentStep(1); // Reset to first step
-      closeDrawer(); // Close the drawer
+      setNewFirearm(initialFirearmState) // Reset form
+      setCurrentStep(1) // Reset to first step
+      closeDrawer() // Close the drawer
       // Optionally: Show a success message to the user (e.g., using a toast notification)
     } else {
       // console.error('AddFirearmDrawerContent: Failed to save firearm. Store error:', storeError);
@@ -658,8 +664,10 @@ export const AddFirearmDrawerContent = () => {
       // Alert.alert('Save Failed', storeError || 'Could not save firearm. Please try again.');
       // If storeError is specific and user-friendly, you can display it.
       // For now, we assume the store handles setting a displayable error message if needed.
-      setFieldErrors(prev => ({ ...prev, formError: storeError || 'Failed to save firearm. Please check your connection or try again.' }))
-
+      setFieldErrors(prev => ({
+        ...prev,
+        formError: storeError || 'Failed to save firearm. Please check your connection or try again.'
+      }))
     }
   }
 
@@ -780,32 +788,32 @@ export const AddFirearmDrawerContent = () => {
   // Image Picker Logic
   const requestMediaLibraryPermissions = async () => {
     if (Platform.OS !== 'web') {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
       if (status !== 'granted') {
-        alert('Sorry, we need camera roll permissions to make this work!');
-        return false;
+        alert('Sorry, we need camera roll permissions to make this work!')
+        return false
       }
-      return true;
+      return true
     }
-    return true; // Permissions not typically needed on web for file input
-  };
+    return true // Permissions not typically needed on web for file input
+  }
 
   const pickImageAsync = async () => {
-    const hasPermission = await requestMediaLibraryPermissions();
-    if (!hasPermission) return;
+    const hasPermission = await requestMediaLibraryPermissions()
+    if (!hasPermission) return
 
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.5, // Lower quality for faster uploads & less storage
-      base64: true, // Request base64 data
-    });
+      base64: true // Request base64 data
+    })
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      const asset = result.assets[0];
-      setSelectedImageUri(asset.uri);
-      setSelectedImageBase64(asset.base64 || null); 
+      const asset = result.assets[0]
+      setSelectedImageUri(asset.uri)
+      setSelectedImageBase64(asset.base64 || null)
       // Clear previous image URL error if any
       setFieldErrors(prev => ({ ...prev, image_base64: undefined }))
     } else {
@@ -813,7 +821,7 @@ export const AddFirearmDrawerContent = () => {
       // setSelectedImageUri(null);
       // setSelectedImageBase64(null);
     }
-  };
+  }
 
   // Constants for Select components
   const FIREARM_TYPES = [
@@ -857,12 +865,7 @@ export const AddFirearmDrawerContent = () => {
         </View>
 
         <View style={styles.progressContainer}>
-          <Animated.View
-            style={[
-              styles.progressBar,
-              { width: animatedProgressWidth }
-            ]}
-          />
+          <Animated.View style={[styles.progressBar, { width: animatedProgressWidth }]} />
         </View>
 
         {/* Step 1: Primary Details */}
@@ -923,13 +926,9 @@ export const AddFirearmDrawerContent = () => {
             <View style={styles.sectionContent}>
               <View style={styles.inputRow}>
                 <Text style={styles.label}>Firearm Image</Text>
-                <Button title="Select Image" onPress={pickImageAsync} variant="outline" style={{ marginBottom: 10 }} />
-                {selectedImageUri && (
-                  <Image source={{ uri: selectedImageUri }} style={styles.imagePreview} />
-                )}
-                {fieldErrors.image_base64 && (
-                  <Text style={styles.errorText}>{fieldErrors.image_base64}</Text>
-                )}
+                <Button title='Select Image' onPress={pickImageAsync} variant='outline' style={{ marginBottom: 10 }} />
+                {selectedImageUri && <Image source={{ uri: selectedImageUri }} style={styles.imagePreview} />}
+                {fieldErrors.image_base64 && <Text style={styles.errorText}>{fieldErrors.image_base64}</Text>}
               </View>
               {renderDetailRow('Status', 'status', 'e.g., In Service, In Storage', 'text', undefined, 'default')}
               {renderDetailRow(

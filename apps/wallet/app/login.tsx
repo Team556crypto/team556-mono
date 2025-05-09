@@ -22,7 +22,7 @@ const MobileLandingScreen = () => {
   const { isTabletOrLarger } = useBreakpoint()
 
   const handleSignInPress = () => {
-    router.replace('/signin')
+    router.push('/signin')
   }
 
   const handleSignUpPress = () => {

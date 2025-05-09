@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, StyleSheet, Dimensions, Pressable } from 'react-native'
+import { View, StyleSheet, Pressable } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useTheme } from './ThemeContext'
 import Text from './Text'
@@ -10,13 +10,15 @@ import { Image } from 'expo-image'
 interface FirearmCardProps {
   firearm: Firearm
   onPress?: (id: number) => void
+  width?: number
+  height?: number
 }
 
-const { width } = Dimensions.get('window')
-export const CARD_WIDTH = width * 0.42
-export const CARD_HEIGHT = CARD_WIDTH * 1.4
+// Base card dimensions - adaptable in parent components
+export const DEFAULT_CARD_WIDTH = 180
+export const DEFAULT_CARD_HEIGHT = DEFAULT_CARD_WIDTH * 1.4
 
-export default function FirearmCard({ firearm, onPress }: FirearmCardProps) {
+export default function FirearmCard({ firearm, onPress, width = DEFAULT_CARD_WIDTH, height = DEFAULT_CARD_HEIGHT }: FirearmCardProps) {
   const { colors } = useTheme()
   const handlePress = () => {
     if (onPress) {
@@ -26,8 +28,8 @@ export default function FirearmCard({ firearm, onPress }: FirearmCardProps) {
 
   const styles = StyleSheet.create({
     card: {
-      width: CARD_WIDTH,
-      height: CARD_HEIGHT,
+      width,
+      height,
       borderRadius: 16,
       overflow: 'hidden',
       borderWidth: 1,

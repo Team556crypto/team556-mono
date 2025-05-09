@@ -1,19 +1,33 @@
-import React, { useEffect } from 'react'
-import { View, ScrollView, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native'
+import React, { useEffect, useState, useCallback } from 'react'
+import {
+  View,
+  ScrollView,
+  ActivityIndicator,
+  StyleSheet,
+  TouchableOpacity,
+  useWindowDimensions,
+  FlatList
+} from 'react-native'
 import { useFirearmStore } from '@/store/firearmStore'
 import { useAuthStore } from '@/store/authStore'
-import { FirearmCard, Text, Badge, Button } from '@team556/ui'
+import { FirearmCard, Text, Badge, Button, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui'
 import { useTheme } from '@team556/ui'
 import { Firearm } from '@/services/api'
 import { useDrawerStore } from '@/store/drawerStore'
 import { FirearmDetailsDrawerContent } from '@/components/drawers/FirearmDetailsDrawerContent'
 import { AddFirearmDrawerContent } from '@/components/drawers/AddFirearmDrawerContent'
 import { Ionicons } from '@expo/vector-icons'
-import { CARD_HEIGHT, CARD_WIDTH } from '@team556/ui'
+import { useFocusEffect } from '@react-navigation/native'
+
+// Responsive layout constants
+const CARD_GAP = 16
+const LARGE_SCREEN_BREAKPOINT = 768
+const DESKTOP_BREAKPOINT = 1200
 
 const AllItemsView = () => {
   const { colors } = useTheme()
   const token = useAuthStore(state => state.token)
+  const { width: screenWidth } = useWindowDimensions()
 
   const firearms = useFirearmStore(state => state.firearms)
   const isLoading = useFirearmStore(state => state.isLoading)
@@ -21,6 +35,45 @@ const AllItemsView = () => {
   const fetchInitialFirearms = useFirearmStore(state => state.fetchInitialFirearms)
   const hasAttemptedInitialFetch = useFirearmStore(state => state.hasAttemptedInitialFetch)
   const { openDrawer } = useDrawerStore()
+
+  // Calculate responsive dimensions
+  const getCardDimensions = () => {
+    let cardWidth = DEFAULT_CARD_WIDTH
+    let cardsPerRow = 2
+
+    if (screenWidth >= DESKTOP_BREAKPOINT) {
+      cardsPerRow = 5
+    } else if (screenWidth >= LARGE_SCREEN_BREAKPOINT) {
+      cardsPerRow = 3
+    }
+
+    // For mobile horizontal scroll
+    if (screenWidth < LARGE_SCREEN_BREAKPOINT) {
+      cardWidth = screenWidth * 0.42
+    } else {
+      // For desktop grid layout
+      const effectiveWidth = screenWidth >= LARGE_SCREEN_BREAKPOINT ? screenWidth - 240 : screenWidth
+      const availableWidth = effectiveWidth - 32 - CARD_GAP * (cardsPerRow - 1)
+      cardWidth = availableWidth / cardsPerRow
+    }
+
+    const cardHeight = cardWidth * (DEFAULT_CARD_HEIGHT / DEFAULT_CARD_WIDTH)
+
+    return {
+      cardWidth,
+      cardHeight,
+      cardsPerRow
+    }
+  }
+
+  const [dimensions, setDimensions] = useState(getCardDimensions())
+
+  // Update dimensions when screen size changes
+  useFocusEffect(
+    useCallback(() => {
+      setDimensions(getCardDimensions())
+    }, [screenWidth])
+  )
 
   useEffect(() => {
     if (token && !hasAttemptedInitialFetch && !isLoading) {
@@ -36,14 +89,11 @@ const AllItemsView = () => {
     container: {
       flex: 1
     },
-    scrollViewContent: {
-      paddingVertical: 16,
-      gap: 14
-    },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between'
+      justifyContent: 'space-between',
+      marginBottom: 16
     },
     centerMessage: {
       flex: 1,
@@ -66,26 +116,120 @@ const AllItemsView = () => {
       borderColor: colors.background,
       backgroundColor: colors.backgroundDark,
       gap: 12,
-      paddingVertical: 24
+      paddingVertical: screenWidth >= LARGE_SCREEN_BREAKPOINT ? 48 : 24,
+      minHeight: screenWidth >= LARGE_SCREEN_BREAKPOINT ? 300 : 200
+    },
+    scrollViewContent: {
+      paddingVertical: 16,
+      gap: 14
+    },
+    cardsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: CARD_GAP,
+      justifyContent: 'flex-start',
+      paddingTop: 8,
+      paddingBottom: 24
     },
     addFirearmCard: {
-      width: CARD_WIDTH,
-      height: CARD_HEIGHT,
+      width: dimensions.cardWidth,
+      height: dimensions.cardHeight,
       borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.background,
       backgroundColor: colors.backgroundSubtle,
       justifyContent: 'center',
       alignItems: 'center',
-      marginLeft: 8,
-      marginRight: 16,
-      padding: 16
+      padding: 16,
+      ...(screenWidth >= LARGE_SCREEN_BREAKPOINT
+        ? {}
+        : {
+            marginLeft: 8,
+            marginRight: 16
+          })
     },
     addFirearmText: {
       color: colors.primary,
       marginTop: 8
     }
   })
+
+  // Helper function to render add button
+  const renderAddButton = () => (
+    <TouchableOpacity
+      style={styles.addFirearmCard}
+      onPress={() => {
+        openDrawer(<AddFirearmDrawerContent />)
+      }}
+    >
+      <Ionicons
+        name='add-circle-outline'
+        size={screenWidth >= LARGE_SCREEN_BREAKPOINT ? 32 : 48}
+        color={colors.primary}
+      />
+      <Text preset='label' style={styles.addFirearmText}>
+        Add Firearm
+      </Text>
+    </TouchableOpacity>
+  )
+
+  // Content based on screen size
+  const renderContent = () => {
+    // Show loading state
+    if (isLoading && firearms.length === 0) {
+      return <ActivityIndicator size='large' color={colors.primary} />
+    }
+
+    // Show empty state
+    if (!isLoading && firearms.length === 0) {
+      return (
+        <View style={styles.emptyMessage}>
+          <Text preset='label'>No firearms found</Text>
+          <Button variant='secondary' title='Add firearm' onPress={() => openDrawer(<AddFirearmDrawerContent />)} />
+        </View>
+      )
+    }
+
+    // Show error state
+    if (error) {
+      return <Text style={styles.errorText}>Error loading firearms: {error}</Text>
+    }
+
+    // Show content based on screen size
+    if (screenWidth >= LARGE_SCREEN_BREAKPOINT) {
+      // Grid layout for large screens
+      return (
+        <View style={styles.cardsGrid}>
+          {firearms.map(firearm => (
+            <FirearmCard
+              key={`grid-${firearm.id}`}
+              firearm={firearm}
+              onPress={() => handleFirearmPress(firearm)}
+              width={dimensions.cardWidth}
+              height={dimensions.cardHeight}
+            />
+          ))}
+          {renderAddButton()}
+        </View>
+      )
+    } else {
+      // Horizontal scroll for small screens
+      return (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollViewContent}>
+          {firearms.map(firearm => (
+            <FirearmCard
+              key={`scroll-${firearm.id}`}
+              firearm={firearm}
+              onPress={() => handleFirearmPress(firearm)}
+              width={dimensions.cardWidth}
+              height={dimensions.cardHeight}
+            />
+          ))}
+          {renderAddButton()}
+        </ScrollView>
+      )
+    }
+  }
 
   return (
     <View style={styles.container}>
@@ -95,43 +239,7 @@ const AllItemsView = () => {
           <Button variant='ghost' style={{ marginLeft: 'auto' }} title='See All' onPress={() => {}} />
         </View>
 
-        {isLoading && firearms.length === 0 && <ActivityIndicator size='large' color={colors.primary} />}
-        {!isLoading && firearms.length === 0 && (
-          <View style={styles.emptyMessage}>
-            <Text preset='label'>No firearms found</Text>
-            <Button variant='secondary' title='Add firearm' onPress={() => {}} />
-          </View>
-        )}
-        {error && <Text style={styles.errorText}>Error loading firearms: {error}</Text>}
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollViewContent}>
-          {isLoading && firearms.length === 0 ? (
-            <ActivityIndicator
-              key='loading-indicator'
-              size='large'
-              color={colors.primary}
-              style={{ flex: 1, width: CARD_WIDTH }}
-            />
-          ) : (
-            [
-              ...firearms.map(firearm => {
-                return <FirearmCard key={firearm.id} firearm={firearm} onPress={() => handleFirearmPress(firearm)} />
-              }),
-              <TouchableOpacity
-                key='add-firearm-button'
-                style={styles.addFirearmCard}
-                onPress={() => {
-                  openDrawer(<AddFirearmDrawerContent />)
-                }}
-              >
-                <Ionicons name='add-circle-outline' size={48} color={colors.primary} />
-                <Text preset='label' style={styles.addFirearmText}>
-                  Add Firearm
-                </Text>
-              </TouchableOpacity>
-            ]
-          )}
-        </ScrollView>
+        {renderContent()}
       </View>
     </View>
   )

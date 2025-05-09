@@ -1,23 +1,76 @@
-import React, { useEffect } from 'react'
-import { View, ScrollView, ActivityIndicator, StyleSheet, TouchableOpacity, Dimensions, FlatList } from 'react-native'
+import React, { useEffect, useState, useCallback } from 'react'
+import {
+  View,
+  ScrollView,
+  ActivityIndicator,
+  StyleSheet,
+  TouchableOpacity,
+  Dimensions,
+  FlatList,
+  useWindowDimensions
+} from 'react-native'
 import { useFirearmStore } from '@/store/firearmStore'
 import { useAuthStore } from '@/store/authStore'
-import { FirearmCard, Text, Button } from '@team556/ui'
+import { FirearmCard, Text, Button, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui'
 import { useTheme } from '@team556/ui'
 import { Firearm } from '@/services/api'
 import { useDrawerStore } from '@/store/drawerStore'
 import { FirearmDetailsDrawerContent } from '@/components/drawers/FirearmDetailsDrawerContent'
 import { AddFirearmDrawerContent } from '@/components/drawers/AddFirearmDrawerContent'
 import { Ionicons } from '@expo/vector-icons'
+import { useFocusEffect } from '@react-navigation/native'
 
-const { width } = Dimensions.get('window')
+// Responsive layout constants
 const COLUMN_GAP = 16
-const NUM_COLUMNS = 2
-const ITEM_WIDTH = (width - COLUMN_GAP * (NUM_COLUMNS + 1)) / NUM_COLUMNS
+const PADDING = 16
+const SMALL_SCREEN_BREAKPOINT = 480
+const MEDIUM_SCREEN_BREAKPOINT = 768
+const LARGE_SCREEN_BREAKPOINT = 1024
+const XLARGE_SCREEN_BREAKPOINT = 1366
 
 export const FirearmsView = () => {
   const { colors } = useTheme()
   const token = useAuthStore(state => state.token)
+  const { width: screenWidth } = useWindowDimensions()
+
+  // Responsive sizing based on screen width
+  const getResponsiveLayout = () => {
+    let numColumns = 2 // Default for small screens
+
+    if (screenWidth >= XLARGE_SCREEN_BREAKPOINT) {
+      numColumns = 5
+    } else if (screenWidth >= LARGE_SCREEN_BREAKPOINT) {
+      numColumns = 4
+    } else if (screenWidth >= MEDIUM_SCREEN_BREAKPOINT) {
+      numColumns = 3
+    }
+
+    // Calculate container width (accounting for the sidebar on large screens)
+    const effectiveWidth = screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? screenWidth - 240 : screenWidth
+
+    // Calculate available width for grid (minus padding and gap)
+    const availableWidth = effectiveWidth - PADDING * 2 - COLUMN_GAP * (numColumns - 1)
+
+    // Card width is calculated based on available space
+    const cardWidth = Math.max(DEFAULT_CARD_WIDTH, Math.floor(availableWidth / numColumns))
+
+    // Calculate cardHeight proportionally
+    const cardHeight = Math.floor(cardWidth * (DEFAULT_CARD_HEIGHT / DEFAULT_CARD_WIDTH))
+
+    return { numColumns, cardWidth, cardHeight, effectiveWidth }
+  }
+
+  const { numColumns, cardWidth, cardHeight } = getResponsiveLayout()
+
+  // Listen for screen dimension changes
+  const [dimensions, setDimensions] = useState({ cardWidth, cardHeight, numColumns })
+
+  useFocusEffect(
+    useCallback(() => {
+      const { cardWidth, cardHeight, numColumns } = getResponsiveLayout()
+      setDimensions({ cardWidth, cardHeight, numColumns })
+    }, [screenWidth])
+  )
 
   const firearms = useFirearmStore(state => state.firearms)
   const isLoading = useFirearmStore(state => state.isLoading)
@@ -42,9 +95,14 @@ export const FirearmsView = () => {
 
   const renderItem = ({ item }: { item: Firearm }) => {
     return (
-      <View style={styles.gridItem}>
+      <View style={[styles.gridItem, { width: dimensions.cardWidth }]}>
         <View style={styles.cardWrapper}>
-          <FirearmCard firearm={item} onPress={() => handleFirearmPress(item)} />
+          <FirearmCard
+            firearm={item}
+            onPress={() => handleFirearmPress(item)}
+            width={dimensions.cardWidth}
+            height={dimensions.cardHeight}
+          />
         </View>
       </View>
     )
@@ -81,23 +139,31 @@ export const FirearmsView = () => {
           data={firearms}
           renderItem={renderItem}
           keyExtractor={item => `firearm-${item.id}`}
-          numColumns={NUM_COLUMNS}
+          numColumns={dimensions.numColumns}
           columnWrapperStyle={styles.columnWrapper}
           showsVerticalScrollIndicator={false}
-          scrollEnabled={false} // Disable scroll on FlatList to prevent nested scrolling
-          // Instead of using contentContainerStyle with padding, we'll use a fixed height container
+          scrollEnabled={true} // Enable scrolling for larger datasets
+          contentContainerStyle={styles.gridContent}
         />
       </View>
     )
   }
 
+  const renderAddButton = () => (
+    <TouchableOpacity
+      style={[styles.addButton, screenWidth >= MEDIUM_SCREEN_BREAKPOINT && styles.addButtonLarge]}
+      onPress={handleAddFirearm}
+    >
+      <Ionicons name='add' size={screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? 24 : 32} color={colors.primary} />
+      {screenWidth >= MEDIUM_SCREEN_BREAKPOINT && <Text style={styles.addButtonText}>Add Firearm</Text>}
+    </TouchableOpacity>
+  )
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text preset='h4'>Firearms</Text>
-        <TouchableOpacity style={styles.addButton} onPress={handleAddFirearm}>
-          <Ionicons name='add' size={32} color={colors.primary} />
-        </TouchableOpacity>
+        {renderAddButton()}
       </View>
       {content}
     </View>
@@ -107,26 +173,27 @@ export const FirearmsView = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1
-    // padding: 16
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16
+    marginBottom: 24
   },
   flatListContainer: {
-    flex: 1
-    // Fixed height container that allows content to flow naturally
-    // without creating a nested scrolling situation
+    flex: 1,
+    overflow: 'visible' // Allow content to flow naturally
+  },
+  gridContent: {
+    paddingBottom: 40
   },
   columnWrapper: {
     gap: COLUMN_GAP,
-    justifyContent: 'space-between',
-    marginBottom: COLUMN_GAP
+    justifyContent: 'flex-start', // Change to flex-start for more natural alignment
+    marginBottom: COLUMN_GAP * 1.5 // Increased vertical spacing
   },
   gridItem: {
-    width: ITEM_WIDTH
+    // Width will be applied dynamically in renderItem
   },
   cardWrapper: {
     width: '100%',
@@ -157,6 +224,20 @@ const styles = StyleSheet.create({
     paddingVertical: 48
   },
   addButton: {
-    padding: 8
+    padding: 8,
+    borderRadius: 8
+  },
+  addButtonLarge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(128, 90, 213, 0.1)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 8
+  },
+  addButtonText: {
+    color: '#805AD5', // Using a purple color that matches the UI
+    fontWeight: '600'
   }
 })

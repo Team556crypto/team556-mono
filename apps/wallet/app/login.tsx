@@ -80,13 +80,13 @@ const WebLandingPage = () => {
 
         <View style={sectionPadding}>
           <View style={contentWidth}>
-            <FeaturesSection />
+            <HowItWorksSection />
           </View>
         </View>
 
         <View style={sectionPadding}>
           <View style={contentWidth}>
-            <HowItWorksSection />
+            <FeaturesSection />
           </View>
         </View>
 

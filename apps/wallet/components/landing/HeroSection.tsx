@@ -71,7 +71,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onCreateWallet = () => {}, on
       style={[
         styles.container,
         {
-          paddingVertical: isTabletOrLarger ? 70 : 0 // Space for the header
+          paddingVertical: isTabletOrLarger ? 70 : 50 // Space for the header
         }
       ]}
     >

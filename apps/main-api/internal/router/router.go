@@ -32,7 +32,7 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	auth := api.Group("/auth")
 	wallet := api.Group("/wallet")
 	swap := api.Group("/swap", middleware.AuthMiddleware(cfg.JWTSecret))
-	firearms := api.Group("/firearms")
+	firearms := api.Group("/firearms", middleware.AuthMiddleware(cfg.JWTSecret))
 
 	// Auth Routes
 	auth.Post("/register", authHandler.Register)
@@ -41,6 +41,9 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	auth.Get("/me", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.GetMe)
 	auth.Post("/verify-email", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.VerifyEmail)
 	auth.Post("/resend-verification", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.ResendVerificationEmail)
+	// Password Reset Routes
+	auth.Post("/request-password-reset", authHandler.RequestPasswordReset)
+	auth.Post("/reset-password", authHandler.ResetPassword)
 
 	// Wallet Routes
 	wallet.Use(middleware.AuthMiddleware(cfg.JWTSecret))
@@ -58,9 +61,11 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	swap.Post("/create-token-accounts", swapHandler.HandleCreateTokenAccounts)
 
 	// --- Firearm Routes ---
-	firearms.Post("/", handlers.CreateFirearmHandler(db))
-	firearms.Get("/", handlers.GetFirearmsHandler(db))
-	firearms.Get("/:id", handlers.GetFirearmByIDHandler(db))
-	firearms.Put("/:id", handlers.UpdateFirearmHandler(db))
-	firearms.Delete("/:id", handlers.DeleteFirearmHandler(db))
+	firearms.Post("/", handlers.CreateFirearmHandler(db, cfg))
+	firearms.Get("/", handlers.GetFirearmsHandler(db, cfg))
+	firearms.Get("/:id", handlers.GetFirearmByIDHandler(db, cfg))
+	firearms.Patch("/:id", handlers.UpdateFirearmHandler(db, cfg))
+	firearms.Delete("/:id", handlers.DeleteFirearmHandler(db, cfg)) 
+
+	// --- Add other route groups here ---
 }

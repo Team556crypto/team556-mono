@@ -12,7 +12,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/crypto/bcrypt" // Added missing bcrypt import
 	"gorm.io/gorm"
 
 	"github.com/team556-mono/server/internal/email"
@@ -69,6 +69,18 @@ type GetMeResponse struct {
 	HasRedeemedPresale bool           `json:"has_redeemed_presale"`
 	Wallets           []models.Wallet `json:"wallets,omitempty"`
 	// Add other user fields you want to expose as needed
+}
+
+// RequestPasswordResetPayload defines the input for requesting a password reset
+type RequestPasswordResetPayload struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+// ResetPasswordPayload defines the input for resetting a password with a code
+type ResetPasswordPayload struct {
+	Email       string `json:"email" validate:"required,email"`
+	Code        string `json:"code" validate:"required,len=6"` // Assuming 6-digit code
+	NewPassword string `json:"new_password" validate:"required,min=8"`
 }
 
 // generateVerificationCode creates a random numeric string of the specified length.
@@ -316,7 +328,7 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 
 // GetMe retrieves the authenticated user's details.
 func (h *AuthHandler) GetMe(c *fiber.Ctx) error {
-	// Retrieve user ID from JWT claims (set by AuthMiddleware)
+	// Retrieve user ID from JWT claims (set by middleware)
 	userID, ok := c.Locals("userID").(uint) // Assuming middleware sets uint ID
 	if !ok || userID == 0 {
 		// This case should ideally be prevented by the AuthMiddleware
@@ -347,6 +359,7 @@ func (h *AuthHandler) GetMe(c *fiber.Ctx) error {
 		// Handle potential DB error other than not found
 		log.Printf("Error fetching redeemed presale code for user %d: %v\n", userID, err)
 		// Optionally return an error, or just log and proceed without presale type
+		// For now, logging and continuing, the fields will be nil/false in response.
 	}
 
 	// Prepare response
@@ -371,6 +384,137 @@ func formatValidationErrors(errors validator.ValidationErrors) string {
 		errorMessages = append(errorMessages, err.Error())
 	}
 	return strings.Join(errorMessages, ", ")
+}
+
+// RequestPasswordReset handles requests to initiate a password reset
+func (h *AuthHandler) RequestPasswordReset(c *fiber.Ctx) error {
+	// 1. Parse Request Body
+	var req RequestPasswordResetPayload
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	// 2. Validate Request Body
+	if err := h.Validate.Struct(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Validation failed", "details": FormatValidationErrors(err)})
+	}
+
+	// 3. Find user by email
+	var user models.User
+	err := h.DB.Where("email = ? AND email_verified = ?", strings.ToLower(req.Email), true).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Printf("Password reset request for non-existent or unverified email: %s", req.Email)
+		} else {
+			log.Printf("Database error looking up user for password reset %s: %v", req.Email, err)
+		}
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "If an account with that email exists and is verified, a password reset code has been sent."})
+	}
+
+	// 4. Generate reset code
+	resetCode, err := generateVerificationCode(6) // 6-digit code
+	if err != nil {
+		log.Printf("Failed to generate password reset code for user %s: %v", user.Email, err)
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "If an account with that email exists and is verified, a password reset code has been sent."})
+	}
+
+	// 5. Store password reset code
+	passwordResetEntry := models.PasswordResetCode{
+		UserID:    user.ID,
+		Code:      resetCode, 
+		ExpiresAt: time.Now().Add(15 * time.Minute),
+		Used:      false,
+	}
+
+	if err := h.DB.Create(&passwordResetEntry).Error; err != nil {
+		log.Printf("Failed to store password reset code for user %s: %v", user.Email, err)
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "If an account with that email exists and is verified, a password reset code has been sent."})
+	}
+
+	// 6. Send password reset email in a goroutine
+	go func(email, code string) {
+		if h.EmailClient != nil {
+			if err := h.EmailClient.SendPasswordResetEmail(email, code); err != nil {
+				log.Printf("Error sending password reset email to %s: %v", email, err)
+			} else {
+				log.Printf("Successfully sent password reset email to %s", email)
+			}
+		} else {
+			log.Printf("EmailClient not configured, cannot send password reset email.")
+		}
+	}(user.Email, resetCode)
+
+	log.Printf("Password reset process initiated for user: %s (ID: %d)", user.Email, user.ID)
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "If an account with that email exists and is verified, a password reset code has been sent."})
+}
+
+// ResetPassword handles the actual password reset using a valid code
+func (h *AuthHandler) ResetPassword(c *fiber.Ctx) error {
+	// 1. Parse Request Body
+	var req ResetPasswordPayload
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	// 2. Validate Request Body
+	if err := h.Validate.Struct(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Validation failed", "details": FormatValidationErrors(err)})
+	}
+
+	// 3. Find user by email
+	var user models.User
+	if err := h.DB.Where("email = ? AND email_verified = ?", strings.ToLower(req.Email), true).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found or not verified"})
+		}
+		log.Printf("Database error looking up user for password reset %s: %v", req.Email, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error finding user"})
+	}
+
+	// 4. Find PasswordResetCode
+	var resetEntry models.PasswordResetCode
+	if err := h.DB.Where("user_id = ? AND code = ? AND used = ?", user.ID, req.Code, false).Order("created_at DESC").First(&resetEntry).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid or expired password reset code"})
+		}
+		log.Printf("Database error finding password reset code for user %d: %v", user.ID, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error verifying reset code"})
+	}
+
+	// 5. Check if code has expired
+	if time.Now().After(resetEntry.ExpiresAt) {
+		// Optionally mark as used or delete expired codes here if needed by a separate cleanup process
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Password reset code has expired"})
+	}
+
+	// 6. Hash the new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("Failed to hash new password for user %s: %v", user.Email, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to process new password"})
+	}
+
+	// 7. Update user's password and mark code as used in a transaction
+	err = h.DB.Transaction(func(tx *gorm.DB) error {
+		user.Password = string(hashedPassword)
+		if err := tx.Save(&user).Error; err != nil {
+			return err // Rollback
+		}
+
+		resetEntry.Used = true
+		if err := tx.Save(&resetEntry).Error; err != nil {
+			return err // Rollback
+		}
+		return nil // Commit
+	})
+
+	if err != nil {
+		log.Printf("Transaction failed during password reset for user %s: %v", user.Email, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update password"})
+	}
+
+	log.Printf("Password successfully reset for user: %s (ID: %d)", user.Email, user.ID)
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Password successfully reset. You can now log in with your new password."})
 }
 
 // VerifyEmailRequest defines the expected request body for email verification

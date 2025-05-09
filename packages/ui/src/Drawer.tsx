@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, Fragment, useState, useRef } from 'react'
+import React, { useEffect, useCallback, Fragment, useState, useMemo } from 'react'
 import {
   View,
   StyleSheet,
@@ -8,7 +8,10 @@ import {
   TouchableWithoutFeedback,
   LayoutChangeEvent,
   Platform,
-  ScrollView
+  ScrollView,
+  Text,
+  ActivityIndicator,
+  useWindowDimensions
 } from 'react-native'
 import Animated, {
   useSharedValue,
@@ -16,22 +19,30 @@ import Animated, {
   withTiming,
   withSpring,
   runOnJS,
-  useAnimatedReaction
+  useAnimatedReaction,
+  WithSpringConfig,
+  WithTimingConfig
 } from 'react-native-reanimated'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import { DefaultColors, ThemeColors } from '../constants/Colors'
 
-const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window')
+const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 
 // Maximum height the drawer can take (95% of screen height)
-const MAX_DRAWER_HEIGHT = SCREEN_HEIGHT * 0.95
+const MAX_DRAWER_HEIGHT = SCREEN_HEIGHT * 0.9
 // Minimum height for the drawer
 const MIN_DRAWER_HEIGHT = SCREEN_HEIGHT * 0.2
+
+// Responsive breakpoints
+const LARGE_SCREEN_BREAKPOINT = 768
 
 // Constants for layout calculations
 const HANDLE_HEIGHT = 30
 const CONTENT_PADDING = 40
 const SHADOW_OFFSET = 10
+
+// Dialog mode constants
+const DIALOG_MAX_WIDTH = 600 // Maximum width for dialog on large screens
 
 export type DrawerSize = 'auto' | number
 
@@ -39,13 +50,20 @@ interface DrawerProps {
   children: React.ReactNode
   isVisible: boolean
   onClose: () => void
-  maxHeight?: number
-  minHeight?: number
+  maxHeight?: number | string
+  minHeight?: number | string
   style?: StyleProp<ViewStyle>
   containerStyle?: StyleProp<ViewStyle>
   handleBarStyle?: StyleProp<ViewStyle>
   backdropOpacity?: number
   colors?: Partial<ThemeColors>
+  title?: string
+  animationConfig?: Partial<WithSpringConfig>
+  timingAnimationConfig?: Partial<WithTimingConfig>
+  /**
+   * Force dialog mode regardless of screen size
+   */
+  forceDialogMode?: boolean
 }
 
 export default function Drawer({
@@ -58,255 +76,375 @@ export default function Drawer({
   containerStyle,
   handleBarStyle,
   backdropOpacity = 0.5,
-  colors = {}
-}: DrawerProps): JSX.Element {
-  // Merge provided colors with defaults
+  colors = {},
+  title,
+  animationConfig = {},
+  timingAnimationConfig = {},
+  forceDialogMode = false
+}: DrawerProps): JSX.Element | null {
   const themeColors = { ...DefaultColors, ...colors }
 
+  // Memoize the spring configuration to be used for animations
+  const memoizedSpringConfig = useMemo((): WithSpringConfig => {
+    const { duration, dampingRatio, clamp, ...rest } = animationConfig
+    return {
+      damping: 18,
+      stiffness: 360,
+      mass: 0.7,
+      velocity: 20,
+      ...rest
+    }
+  }, [animationConfig])
+
   const [contentHeight, setContentHeight] = useState(0)
-  const [isAnimating, setIsAnimating] = useState(false)
+  const [isContentLoaded, setIsContentLoaded] = useState(false)
   const [shouldRender, setShouldRender] = useState(isVisible)
-  const isInitialRender = useRef(true)
 
-  // Calculate drawer height based on content with min/max constraints
-  // Add padding, handle height, and a bit extra for shadow/spacing
+  const parseHeightValue = (value: number | string | undefined, defaultValue: number): number => {
+    if (value === undefined) return defaultValue
+    if (typeof value === 'number') return value
+    if (typeof value === 'string' && value.endsWith('%')) {
+      const percentage = parseFloat(value) / 100
+      return SCREEN_HEIGHT * percentage
+    }
+    const parsed = parseFloat(String(value))
+    return isNaN(parsed) ? defaultValue : parsed
+  }
+
   const totalPadding = HANDLE_HEIGHT + CONTENT_PADDING + SHADOW_OFFSET
-  const calculatedHeight = contentHeight > 0 ? contentHeight + totalPadding : minHeight
-  const drawerHeight = Math.min(maxHeight, Math.max(minHeight, calculatedHeight))
 
+  const maxHeightValue = parseHeightValue(maxHeight, MAX_DRAWER_HEIGHT)
+  const minHeightValue = parseHeightValue(minHeight, MIN_DRAWER_HEIGHT)
+
+  const currentDrawerTargetHeight =
+    isContentLoaded && contentHeight > 0
+      ? Math.min(maxHeightValue, Math.max(minHeightValue, contentHeight + totalPadding))
+      : minHeightValue
+
+  // Check if we're on a large screen to enable dialog mode
+  const { width: windowWidth } = useWindowDimensions()
+  const isLargeScreen = forceDialogMode || windowWidth >= LARGE_SCREEN_BREAKPOINT
+
+  // For drawer mode (bottom sheet)
   const translateY = useSharedValue(SCREEN_HEIGHT)
+  // For dialog mode (centered)
+  const translateYDialog = useSharedValue(isLargeScreen ? -50 : 0) // For initial animation (slide down slightly)
+  const scaleDialog = useSharedValue(isLargeScreen ? 0.9 : 1) // For initial animation (scale up)
+
+  const animatedDrawerHeight = useSharedValue(currentDrawerTargetHeight)
   const context = useSharedValue({ y: 0 })
   const backdropOpacityAnimated = useSharedValue(0)
-
-  // Use useAnimatedReaction to safely check shared value changes
-  useAnimatedReaction(
-    () => {
-      return {
-        isVisible,
-        translateYValue: translateY.value
-      }
-    },
-    (result, previous) => {
-      if (!result.isVisible && result.translateYValue === SCREEN_HEIGHT) {
-        // Only run this when the values actually change to avoid unnecessary renders
-        if (
-          !previous ||
-          previous.isVisible !== result.isVisible ||
-          previous.translateYValue !== result.translateYValue
-        ) {
-          runOnJS(setShouldRender)(false)
-        }
-      } else if (!shouldRender) {
-        runOnJS(setShouldRender)(true)
-      }
-    }
-  )
 
   const runOnJSClose = useCallback(() => {
     onClose()
   }, [onClose])
 
-  const handleContentLayout = useCallback(
-    (event: LayoutChangeEvent) => {
-      const { height } = event.nativeEvent.layout
+  const runOnJSSetIsContentLoaded = useCallback((value: boolean) => {
+    setIsContentLoaded(value)
+  }, [])
 
-      // Always update height on layout change
-      setContentHeight(height)
-
-      // If this is our first time showing the drawer and we're still waiting for a measurement,
-      // trigger animation after we know the content size
-      if (isVisible && isInitialRender.current && !isAnimating) {
-        isInitialRender.current = false
-
-        // Small delay to ensure layout calculations are complete
-        setTimeout(() => {
-          translateY.value = withSpring(0, {
-            damping: 22,
-            stiffness: 180,
-            mass: 0.8,
-            velocity: 20
-          })
-          backdropOpacityAnimated.value = withTiming(backdropOpacity, { duration: 150 })
-          setIsAnimating(true)
-        }, 10)
+  useAnimatedReaction(
+    () => {
+      return {
+        isVisibleProp: isVisible,
+        translateYValue: translateY.value
       }
     },
-    [isVisible, isAnimating, backdropOpacity, translateY, backdropOpacityAnimated]
+    (result, previous) => {
+      if (!result.isVisibleProp && result.translateYValue === SCREEN_HEIGHT) {
+        if (
+          !previous ||
+          previous.isVisibleProp !== result.isVisibleProp ||
+          previous.translateYValue !== result.translateYValue
+        ) {
+          runOnJS(setShouldRender)(false)
+        }
+      } else if (result.isVisibleProp && !shouldRender) {
+        runOnJS(setShouldRender)(true)
+      }
+    },
+    [isVisible, shouldRender]
   )
 
   useEffect(() => {
+    const targetY = isVisible ? 0 : SCREEN_HEIGHT
+    const targetOpacity = isVisible ? backdropOpacity : 0
+
+    // Default Timing Animation Configuration
+    const timingConfig: WithTimingConfig = {
+      duration: 150,
+      ...timingAnimationConfig
+    }
+
     if (isVisible) {
-      // --- Scroll Lock for Web ---
       if (Platform.OS === 'web') {
         document.body.style.overflow = 'hidden'
       }
-      // --- End Scroll Lock ---
-
       setShouldRender(true)
 
-      // Only animate immediately if we already have a content height
-      if (contentHeight > 0) {
-        translateY.value = withSpring(0, {
-          damping: 22,
-          stiffness: 180,
-          mass: 0.8,
-          velocity: 20
+      if (isLargeScreen) {
+        // Dialog mode animations (centered)
+        translateYDialog.value = withSpring(0, memoizedSpringConfig)
+        scaleDialog.value = withSpring(1, memoizedSpringConfig, () => {
+          runOnJS(runOnJSSetIsContentLoaded)(true)
         })
-        backdropOpacityAnimated.value = withTiming(backdropOpacity, { duration: 150 })
-        setIsAnimating(true)
+        backdropOpacityAnimated.value = withTiming(targetOpacity, timingConfig)
+      } else {
+        // Drawer mode animations (bottom sheet)
+        translateY.value = withSpring(targetY, memoizedSpringConfig, () => {
+          runOnJS(runOnJSSetIsContentLoaded)(true)
+        })
+        backdropOpacityAnimated.value = withTiming(targetOpacity, timingConfig)
+        animatedDrawerHeight.value = withSpring(minHeightValue, memoizedSpringConfig)
       }
-      // Otherwise wait for onLayout to get content height first
-
-      // Show backdrop immediately
-      backdropOpacityAnimated.value = withTiming(backdropOpacity, { duration: 150 })
     } else {
-      // --- Scroll Unlock for Web ---
       if (Platform.OS === 'web') {
-        document.body.style.overflow = 'auto' // Unlock immediately
+        document.body.style.overflow = 'auto'
       }
-      // --- End Scroll Unlock ---
+      runOnJS(runOnJSSetIsContentLoaded)(false)
 
-      translateY.value = withSpring(SCREEN_HEIGHT, {
-        damping: 20,
-        stiffness: 100
-      })
-      backdropOpacityAnimated.value = withTiming(0, { duration: 150 })
-      setIsAnimating(false)
-      isInitialRender.current = true
+      if (isLargeScreen) {
+        // Dialog mode animations (centered)
+        translateYDialog.value = withSpring(-50, memoizedSpringConfig)
+        scaleDialog.value = withSpring(0.9, memoizedSpringConfig)
+        backdropOpacityAnimated.value = withTiming(targetOpacity, timingConfig)
+      } else {
+        // Drawer mode animations (bottom sheet)
+        translateY.value = withSpring(targetY, memoizedSpringConfig, () => {})
+        backdropOpacityAnimated.value = withTiming(targetOpacity, timingConfig)
+        animatedDrawerHeight.value = withSpring(minHeightValue, memoizedSpringConfig)
+      }
     }
-  }, [isVisible, translateY, backdropOpacityAnimated, backdropOpacity, contentHeight])
+  }, [
+    isVisible,
+    backdropOpacity,
+    runOnJSSetIsContentLoaded,
+    memoizedSpringConfig,
+    timingAnimationConfig,
+    minHeightValue,
+    animatedDrawerHeight,
+    backdropOpacityAnimated,
+    translateY,
+    isLargeScreen,
+    translateYDialog,
+    scaleDialog
+  ])
 
-  const gesture = Gesture.Pan()
-    .onStart(() => {
-      context.value = { y: translateY.value }
-    })
-    .onUpdate(event => {
-      // Only allow dragging down (positive delta)
-      if (event.translationY < 0) {
-        translateY.value = Math.max(0, context.value.y + event.translationY / 2)
-      } else {
-        translateY.value = context.value.y + event.translationY
-      }
-    })
-    .onEnd(event => {
-      // If dragged down with significant velocity or distance, close drawer
-      if (event.velocityY > 500 || translateY.value > drawerHeight * 0.4) {
-        translateY.value = withSpring(SCREEN_HEIGHT, {
-          damping: 15,
-          stiffness: 90
-        })
-        backdropOpacityAnimated.value = withTiming(0, { duration: 200 })
-        runOnJS(runOnJSClose)()
-      } else {
-        // Otherwise spring back to open position
-        translateY.value = withSpring(0, {
-          damping: 20,
-          stiffness: 90
-        })
-      }
-    })
+  useEffect(() => {
+    if (isVisible && isContentLoaded && contentHeight > 0) {
+      const approxTitleHeight = title ? 18 + 10 : 0
 
-  const animatedBackdropStyle = useAnimatedStyle(() => {
+      const scrollViewPaddingTop = styles.scrollContent.paddingTop || 0
+      const scrollViewPaddingBottom = styles.scrollContent.paddingBottom || 0
+      const scrollViewInternalVerticalPadding =
+        (typeof scrollViewPaddingTop === 'number' ? scrollViewPaddingTop : 0) +
+        (typeof scrollViewPaddingBottom === 'number' ? scrollViewPaddingBottom : 0)
+
+      const platformSpecificDrawerPaddingBottom = Platform.OS === 'ios' ? 20 : 0
+
+      const calculatedRequiredHeight =
+        HANDLE_HEIGHT +
+        approxTitleHeight +
+        contentHeight +
+        scrollViewInternalVerticalPadding +
+        platformSpecificDrawerPaddingBottom
+
+      const newTargetHeight = Math.min(maxHeightValue, Math.max(minHeightValue, calculatedRequiredHeight))
+
+      // Only adjust height for drawer mode (not dialog mode)
+      if (!isLargeScreen) {
+        animatedDrawerHeight.value = withSpring(newTargetHeight, memoizedSpringConfig)
+      }
+    } else if (!isVisible && !isLargeScreen) {
+      animatedDrawerHeight.value = withSpring(minHeightValue, memoizedSpringConfig)
+    }
+  }, [
+    isVisible,
+    isContentLoaded,
+    contentHeight,
+    maxHeightValue,
+    minHeightValue,
+    memoizedSpringConfig,
+    animatedDrawerHeight,
+    title,
+    isLargeScreen
+  ])
+
+  const handleContentLayout = useCallback((event: LayoutChangeEvent) => {
+    const { height } = event.nativeEvent.layout
+    setContentHeight(height)
+  }, [])
+
+  // Only use pan gesture for drawer mode (not dialog mode)
+  const panGesture = isLargeScreen
+    ? Gesture.Pan() // Empty gesture for dialog mode
+    : Gesture.Pan()
+        .onStart(() => {
+          context.value = { y: translateY.value }
+        })
+        .onUpdate(event => {
+          translateY.value = Math.max(0, context.value.y + event.translationY)
+        })
+        .onEnd(event => {
+          const threshold = animatedDrawerHeight.value * 0.3
+          if (event.translationY > threshold || event.velocityY > 800) {
+            runOnJS(runOnJSClose)()
+          } else {
+            translateY.value = withSpring(0, memoizedSpringConfig)
+          }
+        })
+
+  // Different animations based on mode (drawer vs. dialog)
+  const animatedStyle = useAnimatedStyle(() => {
+    if (isLargeScreen) {
+      // Dialog mode (centered)
+      return {
+        // Dialog doesn't need a fixed height - it sizes to content
+        maxHeight: maxHeightValue,
+        transform: [
+          { translateX: -DIALOG_MAX_WIDTH / 2 },
+          { translateY: -SCREEN_HEIGHT * 0.45 }, // Position close to center (slightly above)
+          { translateY: translateYDialog.value }, // Add animation offset
+          { scale: scaleDialog.value }
+        ]
+      }
+    } else {
+      // Drawer mode (bottom sheet)
+      return {
+        height: animatedDrawerHeight.value,
+        transform: [{ translateY: translateY.value }]
+      }
+    }
+  })
+
+  const backdropAnimatedStyle = useAnimatedStyle(() => {
     return {
       opacity: backdropOpacityAnimated.value
     }
   })
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateY: translateY.value }]
-    }
-  })
-
   if (!shouldRender) {
-    return <Fragment />
+    return null
   }
 
-  // Define content for better type safety
-  const drawerContent = <Fragment>{children}</Fragment>
-
   return (
-    <View style={styles.rootContainer}>
-      <TouchableWithoutFeedback onPress={onClose}>
-        <Animated.View style={[styles.backdrop, animatedBackdropStyle]} />
+    <Fragment>
+      <TouchableWithoutFeedback onPress={runOnJSClose}>
+        <Animated.View
+          style={[styles.backdrop, { backgroundColor: themeColors.backgroundDarker }, backdropAnimatedStyle]}
+        />
       </TouchableWithoutFeedback>
-
-      <GestureDetector gesture={gesture}>
+      <GestureDetector gesture={panGesture}>
         <Animated.View
           style={[
-            styles.drawer,
-            {
-              height: drawerHeight,
-              backgroundColor: themeColors.backgroundDark
-            },
+            isLargeScreen ? styles.dialogContainer : styles.drawerContainer,
+            { backgroundColor: themeColors.background, shadowColor: themeColors.backgroundDarkest },
+            containerStyle,
             style,
             animatedStyle
           ]}
         >
-          <View style={styles.handleBarContainer}>
-            <View style={[styles.handleBar, handleBarStyle]} />
-          </View>
-          <View style={[styles.contentContainer, containerStyle]} onLayout={handleContentLayout}>
-            <ScrollView>{drawerContent}</ScrollView>
-          </View>
+          {/* Only show handle bar in drawer mode, not dialog mode */}
+          {!isLargeScreen && (
+            <View style={[styles.handleBarContainer, handleBarStyle]}>
+              <View style={[styles.handleBar, { backgroundColor: themeColors.textSecondary }]} />
+            </View>
+          )}
+          {title && <Text style={[styles.titleText, { color: themeColors.text }]}>{title}</Text>}
+          {isContentLoaded ? (
+            <ScrollView
+              style={styles.contentContainer}
+              contentContainerStyle={[styles.scrollContent, isLargeScreen && styles.scrollContentLarge]}
+              showsVerticalScrollIndicator={false}
+              scrollEventThrottle={16}
+            >
+              <View onLayout={handleContentLayout}>
+                <Fragment>{children}</Fragment>
+              </View>
+            </ScrollView>
+          ) : (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size='large' color={themeColors.primary} />
+            </View>
+          )}
         </Animated.View>
       </GestureDetector>
-    </View>
+    </Fragment>
   )
 }
 
 const styles = StyleSheet.create({
   rootContainer: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
-    zIndex: 999999,
-    elevation: 999999,
-    pointerEvents: 'box-none'
+    flex: 1
   },
   backdrop: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
-    backgroundColor: '#000',
-    zIndex: 999999,
-    elevation: 999999
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1
   },
-  drawer: {
+  drawerContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    width: SCREEN_WIDTH,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    overflow: 'hidden',
-    zIndex: 999999,
-    elevation: 999999,
-    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
+    paddingBottom: Platform.OS === 'ios' ? 20 : 0,
+    shadowOffset: { width: 0, height: -SHADOW_OFFSET / 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 20,
+    zIndex: 2,
+    overflow: 'hidden'
+  },
+  dialogContainer: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: DIALOG_MAX_WIDTH,
+    maxWidth: '90%',
+    maxHeight: SCREEN_HEIGHT * 0.8, // Ensure dialog doesn't exceed 80% of screen height
+    borderRadius: 20,
+    paddingBottom: Platform.OS === 'ios' ? 20 : 10,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 24,
+    zIndex: 2,
+    overflow: 'hidden'
   },
   handleBarContainer: {
-    width: '100%',
-    height: HANDLE_HEIGHT,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 10
+    justifyContent: 'center',
+    paddingVertical: 8,
+    height: HANDLE_HEIGHT
   },
   handleBar: {
     width: 40,
     height: 5,
-    borderRadius: 2.5,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)'
+    borderRadius: 2.5
+  },
+  titleText: {
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 10,
+    marginTop: Platform.OS === 'android' ? -5 : 0
   },
   contentContainer: {
-    padding: 20
+    flex: 1
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: CONTENT_PADDING
+  },
+
+  scrollContentLarge: {
+    paddingBottom: 0
   }
 })

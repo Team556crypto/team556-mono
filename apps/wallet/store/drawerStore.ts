@@ -4,13 +4,13 @@ import { ReactNode } from 'react'
 interface DrawerState {
   isVisible: boolean
   content: ReactNode | null
-  maxHeight?: number
-  minHeight?: number
-  openDrawer: (content: ReactNode, options?: { maxHeight?: number; minHeight?: number }) => void
+  maxHeight?: number | string
+  minHeight?: number | string
+  openDrawer: (content: ReactNode, options?: { maxHeight?: number | string; minHeight?: number | string }) => void
   closeDrawer: () => void
 }
 
-export const useDrawerStore = create<DrawerState>((set) => ({
+export const useDrawerStore = create<DrawerState>(set => ({
   isVisible: false,
   content: null,
   maxHeight: undefined,

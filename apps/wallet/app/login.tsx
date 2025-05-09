@@ -22,11 +22,11 @@ const MobileLandingScreen = () => {
   const { isTabletOrLarger } = useBreakpoint()
 
   const handleSignInPress = () => {
-    router.push('/signin' as any)
+    router.replace('/signin')
   }
 
   const handleSignUpPress = () => {
-    router.push('/signup' as any)
+    router.push('/signup')
   }
 
   return (
@@ -55,7 +55,7 @@ const WebLandingPage = () => {
   const contentWidth = isTabletOrLarger ? styles.webContentWidthLarge : styles.webContentWidthSmall
 
   const handleGetStarted = () => router.push('/onboarding')
-  const handleLogin = () => router.push('/signin')
+  const handleLogin = () => router.replace('/signin')
 
   return (
     <View style={styles.webContainer}>

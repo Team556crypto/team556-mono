@@ -18,8 +18,6 @@ export const CARD_HEIGHT = CARD_WIDTH * 1.4
 
 export default function FirearmCard({ firearm, onPress }: FirearmCardProps) {
   const { colors } = useTheme()
-  console.log('[FirearmCard] Received firearm prop. Image URL:', firearm.image, 'Full firearm:', firearm);
-
   const handlePress = () => {
     if (onPress) {
       onPress(firearm.id)
@@ -124,9 +122,11 @@ export default function FirearmCard({ firearm, onPress }: FirearmCardProps) {
 
   const renderImage = () => {
     if (firearm.image) {
+      const imageUri = firearm.image
+
       return (
         <>
-          <Image source={{ uri: firearm.image }} style={styles.image} contentFit="cover" />
+          <Image source={{ uri: imageUri }} style={styles.image} contentFit='cover' />
           <View style={styles.categoryTag}>
             <Text style={styles.categoryText}>{firearm.type || 'Firearm'}</Text>
           </View>

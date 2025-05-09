@@ -1,12 +1,10 @@
 package handlers
 
 import (
-	"bytes"
-	"encoding/json"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -85,35 +83,7 @@ type UpdateFirearmRequest struct {
 	ImageSize *int    `json:"imageSize,omitempty"` // Size in bytes
 }
 
-// Structure for UploadThing API request
-type UploadThingFile struct {
-	Name string `json:"name"`
-	Data string `json:"data"` // Base64 encoded string
-	Size int    `json:"size"` // Size of the file in bytes
-	Type string `json:"type"` // MIME type e.g., image/png
-}
-
-// This struct is for the overall request body to UploadThing
-type UploadThingRequestBody struct {
-	Files []UploadThingFile `json:"files"`
-}
-
-// UploadThingFileDetail captures the details of a single uploaded file from UploadThing's response.
-// It's for objects inside the "data" array in the API response.
-type UploadThingFileDetail struct {
-	FileUrl  string  `json:"fileUrl"` // This is the actual CDN URL of the uploaded file
-	FileName string  `json:"fileName"`
-	FileType string  `json:"fileType"`
-	// UploadThing might also include an 'error' field per file, add if needed:
-	// Error   *string `json:"error,omitempty"` 
-}
-
-// UploadThingAPIRealResponse is the top-level structure of the JSON response 
-// from the UploadThing /api/uploadFiles endpoint.
-type UploadThingAPIRealResponse struct {
-	Data  []UploadThingFileDetail `json:"data"`
-	Error *string                 `json:"error,omitempty"` // For any top-level error from the API call itself
-}
+// Removed UploadThing-related structs since we're now storing base64 images directly
 
 // CreateFirearmHandler handles the creation of a new firearm
 func CreateFirearmHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
@@ -153,91 +123,18 @@ func CreateFirearmHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 			BallisticPerformance: requestPayload.BallisticPerformance,
 		}
 
-		// Handle image upload if provided
+		// Store base64 image directly if provided
 		if requestPayload.ImageBase64 != nil && *requestPayload.ImageBase64 != "" {
-			// Prepare the UploadThing API request
+			// Store the base64 image string directly in the database
 			imageBase64Str := *requestPayload.ImageBase64
 			
-			// TODO: Ideally, the client should send the MIME type.
-			// For now, defaulting to image/png. This might need adjustment.
-			imageMimeType := "image/png" 
-
-			// Calculate size. Length of base64 string is a proxy. 
-			// A more accurate decoded size could be calculated if needed: (len(imageBase64Str) * 3 / 4) - padding
-			imageSize := len(imageBase64Str)
-
-			uploadReqBody := UploadThingRequestBody{
-				Files: []UploadThingFile{
-					{Name: "firearm_image.png", Data: imageBase64Str, Size: imageSize, Type: imageMimeType},
-				},
+			// Add data:image prefix if not already present
+			if !strings.HasPrefix(imageBase64Str, "data:image") {
+				imageBase64Str = "data:image/png;base64," + imageBase64Str
 			}
-			jsonBody, err := json.Marshal(uploadReqBody)
-			if err != nil {
-				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to prepare image upload request", "details": err.Error()})
-			}
-
-			// Use UploadthingApiURL from config, with a fallback
-			uploadURL := cfg.UploadthingApiURL
-			if uploadURL == "" {
-				uploadURL = "https://uploadthing.com/api/uploadFiles" // Default if not set in config
-			}
-
-			req, err := http.NewRequest("POST", uploadURL, bytes.NewBuffer(jsonBody))
-			if err != nil {
-				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create image upload request", "details": err.Error()})
-			}
-			req.Header.Set("Content-Type", "application/json")
-			// Use UploadthingSecret from config for the API Key
-			if cfg.UploadthingSecret == "" {
-				log.Println("Error: GLOBAL__UPLOADTHING_SECRET is not configured. Cannot upload image.")
-				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Image upload service is not configured (secret missing)"})
-			}
-			req.Header.Set("X-Uploadthing-Api-Key", cfg.UploadthingSecret)
-
-			client := &http.Client{Timeout: time.Second * 20} // Increased timeout for upload
-			resp, err := client.Do(req)
-			if err != nil {
-				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to upload image to CDN", "details": err.Error()})
-			}
-			defer resp.Body.Close()
-
-			bodyBytes, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to read image upload response from CDN", "details": err.Error()})
-			}
-
-			if resp.StatusCode != http.StatusOK {
-				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-					"error":   "Image upload to CDN failed",
-					"details": string(bodyBytes),
-					"cdn_status_code": resp.StatusCode,
-				})
-			}
-
-			// Parse the UploadThing API response - it's an object containing a 'data' array
-			var utApiResponse UploadThingAPIRealResponse
-			if err := json.Unmarshal(bodyBytes, &utApiResponse); err != nil {
-				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to parse image upload response from CDN", "details": err.Error(), "raw_response": string(bodyBytes)})
-			}
-
-			// Check for top-level API errors first
-			if utApiResponse.Error != nil && *utApiResponse.Error != "" {
-				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "CDN API reported a top-level error", "details": *utApiResponse.Error, "raw_response": string(bodyBytes)})
-			}
-
-			// Check for errors in the response and get the URL from the first file
-			if len(utApiResponse.Data) > 0 {
-				fileDetail := utApiResponse.Data[0] // Assuming we only sent one file
-				// Potentially check fileDetail.Error here if UploadThing can return per-file errors not covered by the top-level one
-
-				if fileDetail.FileUrl != "" {
-					firearmModel.Image = &fileDetail.FileUrl
-				} else {
-					return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "CDN response did not contain a fileUrl", "raw_response": string(bodyBytes)})
-				}
-			} else {
-				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "CDN response data array was empty or malformed", "raw_response": string(bodyBytes)})
-			}
+			
+			// Set the image field directly with the base64 string
+			firearmModel.Image = &imageBase64Str
 		}
 
 		if err := db.Create(firearmModel).Error; err != nil {
@@ -391,84 +288,30 @@ func UpdateFirearmHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 		// Handle new image upload if ImageData is provided
 		newImageURL := existingFirearmModel.Image // Keep existing image URL by default
 		if requestPayload.ImageData != nil && *requestPayload.ImageData != "" {
-			log.Println("UpdateFirearmHandler: ImageData received. Processing new image upload.")
-			if requestPayload.ImageName != nil { log.Printf("UpdateFirearmHandler: Received ImageName: %s", *requestPayload.ImageName) }
-			if requestPayload.ImageType != nil { log.Printf("UpdateFirearmHandler: Received ImageType: %s", *requestPayload.ImageType) }
-			if requestPayload.ImageSize != nil { log.Printf("UpdateFirearmHandler: Received ImageSize: %d", *requestPayload.ImageSize) }
-			// Log a snippet of ImageData to confirm presence (be careful with very long strings in logs)
+			log.Println("UpdateFirearmHandler: ImageData received. Processing base64 image.")
+			
+			// Log info about the received image (truncated to avoid huge logs)
 			if len(*requestPayload.ImageData) > 50 {
 				log.Printf("UpdateFirearmHandler: Received ImageData (first 50 chars): %s...", (*requestPayload.ImageData)[:50])
 			} else {
 				log.Printf("UpdateFirearmHandler: Received ImageData: %s", *requestPayload.ImageData)
 			}
 
-			imageName := "firearm_update_image.png" // Default name
-			if requestPayload.ImageName != nil && *requestPayload.ImageName != "" {
-				imageName = *requestPayload.ImageName
-			}
-			imageMimeType := "image/png" // Default MIME type
-			if requestPayload.ImageType != nil && *requestPayload.ImageType != "" {
-				imageMimeType = *requestPayload.ImageType
-			}
-			imageSize := len(*requestPayload.ImageData) // Approx size from base64 length
-			if requestPayload.ImageSize != nil && *requestPayload.ImageSize > 0 {
-				imageSize = *requestPayload.ImageSize
+			// Store the base64 string directly
+			imageBase64Str := *requestPayload.ImageData
+
+			// Add data:image prefix if not already present
+			if !strings.HasPrefix(imageBase64Str, "data:image") {
+				// Use the provided mime type if available, otherwise default to png
+				imageMimeType := "image/png"
+				if requestPayload.ImageType != nil && *requestPayload.ImageType != "" {
+					imageMimeType = *requestPayload.ImageType
+				}
+				imageBase64Str = "data:" + imageMimeType + ";base64," + imageBase64Str
 			}
 
-			uploadReqBody := UploadThingRequestBody{
-				Files: []UploadThingFile{
-					{Name: imageName, Data: *requestPayload.ImageData, Size: imageSize, Type: imageMimeType},
-				},
-			}
-			jsonBody, err := json.Marshal(uploadReqBody)
-			if err != nil {
-				log.Printf("Error marshaling UploadThing request: %v", err)
-				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to prepare image upload request"})
-			}
-
-			req, err := http.NewRequest("POST", cfg.UploadthingApiURL, bytes.NewBuffer(jsonBody))
-			if err != nil {
-				log.Printf("Error creating UploadThing HTTP request: %v", err)
-				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create image upload request"})
-			}
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("X-Uploadthing-Api-Key", cfg.UploadthingSecret)
-			req.Header.Set("X-Uploadthing-Version", "6.4.0") // Use a recent or required version
-
-			client := &http.Client{Timeout: time.Second * 10}
-			resp, err := client.Do(req)
-			if err != nil {
-				log.Printf("Error sending request to UploadThing: %v", err)
-				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to upload image to storage"})
-			}
-			defer resp.Body.Close()
-
-			bodyBytes, _ := ioutil.ReadAll(resp.Body)
-			if resp.StatusCode != http.StatusOK {
-				log.Printf("UploadThing API error. Status: %s, Body: %s", resp.Status, string(bodyBytes))
-				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Image storage service returned an error"})
-			}
-
-			var utResponse UploadThingAPIRealResponse
-			if err := json.Unmarshal(bodyBytes, &utResponse); err != nil {
-				log.Printf("Error unmarshaling UploadThing response: %v, Body: %s", err, string(bodyBytes))
-				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to parse image upload response"})
-			}
-
-			log.Printf("UpdateFirearmHandler: UploadThing response: %+v", utResponse) // Log the full UploadThing response
-
-			if utResponse.Error != nil {
-				log.Printf("UploadThing API reported error: %s", *utResponse.Error)
-				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Image storage service reported an error processing the file"})
-			}
-			if len(utResponse.Data) > 0 && utResponse.Data[0].FileUrl != "" {
-				newImageURL = &utResponse.Data[0].FileUrl
-			} else {
-				log.Println("UploadThing response did not contain a valid file URL.")
-				// Decide if this is a hard error or if we proceed without new image
-				// For now, let's treat it as a failure to update image
-				return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to get new image URL from storage service"})
-			}
+			// Set the image field with the base64 string
+			newImageURL = &imageBase64Str
 		} else if requestPayload.Image != nil && *requestPayload.Image == "" { 
 			log.Println("UpdateFirearmHandler: Clearing image as per request (Image field is empty string).")
 			// If image field is explicitly sent as empty string, intent is to remove image

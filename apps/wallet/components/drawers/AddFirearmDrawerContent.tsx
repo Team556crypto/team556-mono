@@ -535,7 +535,9 @@ export const AddFirearmDrawerContent = () => {
       setFieldErrors(prev => ({ ...prev, image_base64: 'Image is required' }))
       imageError = true;
     } else {
+      // Image is selected, make sure it's valid
       setFieldErrors(prev => ({ ...prev, image_base64: undefined }))
+      console.log('Image base64 data is available (length):', selectedImageBase64.length)
     }
 
     if (imageError) {

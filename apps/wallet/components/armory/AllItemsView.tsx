@@ -112,10 +112,10 @@ const AllItemsView = () => {
               color={colors.primary}
               style={{ flex: 1, width: CARD_WIDTH }}
             />
-          ) : ([
+          ) : (
+            [
               ...firearms.map(firearm => {
-                console.log('[AllItemsView] Mapping firearm with key:', firearm.id);
-                return <FirearmCard key={firearm.id} firearm={firearm} onPress={() => handleFirearmPress(firearm)} />;
+                return <FirearmCard key={firearm.id} firearm={firearm} onPress={() => handleFirearmPress(firearm)} />
               }),
               <TouchableOpacity
                 key='add-firearm-button'
@@ -129,8 +129,8 @@ const AllItemsView = () => {
                   Add Firearm
                 </Text>
               </TouchableOpacity>
-            ])
-          }
+            ]
+          )}
         </ScrollView>
       </View>
     </View>

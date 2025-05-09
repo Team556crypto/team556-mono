@@ -39,13 +39,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         try {
           // Call getUserProfile immediately using the stored token
           const userProfile = await getUserProfile(storedToken)
-          console.log('[AuthStore Init] Received userProfile from API:', JSON.stringify(userProfile, null, 2))
           set({ user: userProfile }) // Update user state
         } catch (profileError: any) {
           console.error('Failed to fetch profile during init:', profileError)
           // If token is invalid (401) or user not found (404), logout
           if (profileError?.response?.status === 401 || profileError?.response?.status === 404) {
-            console.log(`Logging out due to ${profileError.response.status} on profile fetch during init.`)
             get().logout()
             // After logout, reset necessary state again for clarity
             set({ token: null, isAuthenticated: false, user: null, error: null })
@@ -75,16 +73,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
     try {
       const updatedUser = await getUserProfile(token)
-      console.log('[AuthStore Update] Received updatedUser from API:', JSON.stringify(updatedUser, null, 2))
       set({ user: updatedUser })
     } catch (error: any) {
       // Handle specific errors: logout if token is invalid (401) or user not found (404)
       if (error?.response?.status === 401 || error?.response?.status === 404) {
-        console.log(`Logging out due to ${error.response.status} on profile update.`)
         get().logout() // Call logout if token is invalid or user not found
       } else {
         // Keep existing error state or set a new one? Depends on desired behavior.
-        console.error('Failed to update user profile:', error)
         set({ error: 'Failed to update user profile' })
       }
     }
@@ -94,7 +89,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true, error: null })
     try {
       const { token, user } = await loginUser(credentials) // Call API service
-      console.log('[AuthStore Login] Received user from API:', JSON.stringify(user, null, 2))
       await SecureStoreUtils.saveToken(token)
       set({ token, user, isAuthenticated: true, isLoading: false, error: null })
 
@@ -102,7 +96,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Navigation is now handled in _layout.tsx based on auth state and user wallets
       // ================================
     } catch (error: any) {
-      console.error('Login failed:', error)
       const errorMessage = error.response?.data?.error || error.message || 'Login failed'
       set({ token: null, user: null, isAuthenticated: false, isLoading: false, error: errorMessage })
       await SecureStoreUtils.deleteToken() // Clear any potentially invalid token
@@ -135,8 +128,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Automatically log in the user after successful signup
       await SecureStoreUtils.saveToken(token)
-
-      console.log('[AuthStore Signup] Received user from API:', JSON.stringify(user, null, 2))
 
       set({ token, user, isAuthenticated: true, isLoading: false, error: null })
 

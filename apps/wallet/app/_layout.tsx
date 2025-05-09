@@ -51,8 +51,6 @@ function InitialLayout() {
           // User's email is not verified, must go to onboarding
           if (!inOnboarding) {
             router.replace('/onboarding')
-          } else {
-            console.log(`[Layout] Unverified user already in onboarding: ${currentSegment}`)
           }
         } else {
           // Email is verified, proceed with wallet check
@@ -62,29 +60,20 @@ function InitialLayout() {
             // Verified user with wallets. Should be in tabs or allowed standalone.
             if (!inAuthGroup && !inAllowedStandalone) {
               router.replace('/(tabs)/' as any)
-            } else {
-              console.log(`[Layout] Verified user with wallets in allowed route: ${currentSegment}`)
             }
           } else {
             // Verified user has no wallets, should be in onboarding
             if (!inOnboarding) {
               router.replace('/onboarding')
-            } else {
-              console.log(`[Layout] Verified user without wallets in onboarding: ${currentSegment}`)
             }
           }
         }
-      } else {
-        // User object might still be loading after isAuthenticated is true
-        console.log('[Layout] Authenticated but user object not yet available.')
       }
     } else {
       // Not authenticated
       // Redirect to login if not already there or on another allowed standalone route
       if (!inLogin && !inAllowedStandalone) {
         router.replace('/login')
-      } else {
-        console.log('[Layout] Unauthenticated user in login route.')
       }
     }
     // Add router to dependency array as it's used inside the effect

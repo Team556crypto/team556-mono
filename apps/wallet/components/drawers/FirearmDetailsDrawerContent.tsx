@@ -9,7 +9,7 @@ import type { Firearm, UpdateFirearmPayload } from '@team556/ui'
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker'
 import { useFirearmStore } from '@/store/firearmStore'
 import { useAuthStore } from '@/store/authStore'
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system'
 
 const SCREEN_HEIGHT = Dimensions.get('window').height
 const windowWidth = Dimensions.get('window').width
@@ -35,7 +35,6 @@ type EditableFirearm = Firearm & {
 type FirearmDateFieldKey = 'acquisition_date' | 'last_fired' | 'last_cleaned'
 
 export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentProps> = ({ firearm }) => {
-  console.log('[FirearmDetailsDrawerContent] Received firearm prop:', JSON.stringify(firearm, null, 2))
   const { colors } = useTheme()
   const { updateFirearm: updateFirearmAction, isLoading: isStoreLoading, error: storeError } = useFirearmStore()
   const { token } = useAuthStore()
@@ -126,67 +125,71 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
       return
     }
 
-    setIsEditing(true);
+    setIsEditing(true)
 
     // Create a shallow copy to avoid direct mutation if editableFirearm is part of a larger state or prop
-    const tempEditableFirearm = { ...editableFirearm };
+    const tempEditableFirearm = { ...editableFirearm }
 
     // Remove newImagePreviewUri and newImageFile from the direct payload sent to backend
     // These are client-side helpers for UI and image data preparation
-    delete tempEditableFirearm.newImagePreviewUri;
-    delete tempEditableFirearm.newImageFile;
+    delete tempEditableFirearm.newImagePreviewUri
+    delete tempEditableFirearm.newImageFile
 
-    const { id, owner_user_id, created_at, updated_at, ...payloadFromState } = tempEditableFirearm as Omit<EditableFirearm, 'newImagePreviewUri' | 'newImageFile'>;
+    const { id, owner_user_id, created_at, updated_at, ...payloadFromState } = tempEditableFirearm as Omit<
+      EditableFirearm,
+      'newImagePreviewUri' | 'newImageFile'
+    >
 
-    const updatePayload: UpdateFirearmPayload = { 
-      id: firearm.id, 
+    const updatePayload: UpdateFirearmPayload = {
+      id: firearm.id,
       ...(payloadFromState as Partial<Omit<Firearm, 'id' | 'owner_user_id' | 'created_at' | 'updated_at'>>)
-    };
+    }
 
     // If a new image file was selected, prepare its data for upload
     if (editableFirearm.newImageFile) {
       try {
-        const fileInfo = await FileSystem.getInfoAsync(editableFirearm.newImageFile.uri);
+        const fileInfo = await FileSystem.getInfoAsync(editableFirearm.newImageFile.uri)
         if (!fileInfo.exists) {
-          Alert.alert('Error', 'Selected image file does not exist.');
-          setIsEditing(false);
-          return;
+          Alert.alert('Error', 'Selected image file does not exist.')
+          setIsEditing(false)
+          return
         }
 
         const base64ImageData = await FileSystem.readAsStringAsync(editableFirearm.newImageFile.uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-        updatePayload.imageData = base64ImageData;
-        updatePayload.imageName = editableFirearm.newImageFile.fileName || `firearm_${firearm.id}_new_image`;
-        updatePayload.imageType = editableFirearm.newImageFile.mimeType || 'application/octet-stream';
-        updatePayload.imageSize = editableFirearm.newImageFile.fileSize;
+          encoding: FileSystem.EncodingType.Base64
+        })
+
+        // Just send the base64 data - the backend will handle adding the data:image prefix if needed
+        updatePayload.imageData = base64ImageData
+
+        // These fields are still useful for metadata, though not required for base64 storage
+        updatePayload.imageName = editableFirearm.newImageFile.fileName || `firearm_${firearm.id}_new_image`
+        updatePayload.imageType = editableFirearm.newImageFile.mimeType || 'image/png'
+        updatePayload.imageSize = editableFirearm.newImageFile.fileSize
 
         // Since new image data is being sent, ensure the old 'image' URL field is not part of payload unless intended
         // If backend clears image if imageData is present, this is fine.
         // Or explicitly set updatePayload.image = undefined; if your backend uses that to mean 'no change to existing URL unless imageData is also present'
-
       } catch (error) {
-        console.error('Error reading image file for upload:', error);
-        Alert.alert('Error', 'Could not prepare image for upload.');
-        setIsEditing(false);
-        return;
+        console.error('Error reading image file for upload:', error)
+        Alert.alert('Error', 'Could not prepare image for upload.')
+        setIsEditing(false)
+        return
       }
     } else if (editableFirearm.newImagePreviewUri === null && firearm.image && !editableFirearm.newImageFile) {
       // This condition means user explicitly cleared the image (e.g., via a "Remove Image" button)
       // and there was an original image, and no new file was selected to replace it.
-      updatePayload.image = ''; // Send empty string to signal removal to backend
+      updatePayload.image = '' // Send empty string to signal removal to backend
       // Also clear out any potential lingering new image fields if any were partially set then cleared
-      delete updatePayload.imageData;
-      delete updatePayload.imageName;
-      delete updatePayload.imageType;
-      delete updatePayload.imageSize;
+      delete updatePayload.imageData
+      delete updatePayload.imageName
+      delete updatePayload.imageType
+      delete updatePayload.imageSize
     }
-    
+
     // Ensure other fields that might be undefined are handled correctly
     // (e.g. if a field was null and is now undefined in payloadFromState, ensure it's passed as null or omitted as per backend expectation)
     // This is generally handled by Partial and how ...spread works with undefined properties.
-
-    console.log('[FirearmDetailsDrawerContent] Update payload:', JSON.stringify(updatePayload, null, 2));
 
     try {
       await updateFirearmAction(firearm.id, updatePayload, token)
@@ -281,22 +284,32 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
     editImageButton: {
       // Style for the edit image button/overlay
       position: 'absolute',
-      top: 8,
-      right: 8,
-      backgroundColor: 'rgba(0,0,0,0.6)',
+      top: 12,
+      right: 12,
+      backgroundColor: 'rgba(0,0,0,0.7)',
       padding: 8,
       borderRadius: 20,
-      zIndex: 1
+      zIndex: 2, // Higher z-index to ensure it's above other elements
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.5,
+      shadowRadius: 2,
+      elevation: 5 // For Android
     },
     removeImageButton: {
       // Style for removing a newly selected image
       position: 'absolute',
-      top: 8,
-      left: 8,
+      top: 12,
+      right: 56, // Position to the left of the edit button
       backgroundColor: 'rgba(200,0,0,0.7)',
       padding: 8,
       borderRadius: 20,
-      zIndex: 1
+      zIndex: 2, // Higher z-index to ensure it's above other elements
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.5,
+      shadowRadius: 2,
+      elevation: 5 // For Android
     },
     image: {
       width: '100%',
@@ -315,15 +328,20 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
       position: 'absolute',
       top: 12,
       left: 12,
-      backgroundColor: colors.primarySubtle,
+      backgroundColor: 'rgba(0, 0, 0, 0.7)', // Dark semi-transparent background for better contrast
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 16,
       borderWidth: 1,
-      borderColor: colors.primary
+      borderColor: colors.primary,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.8,
+      shadowRadius: 3,
+      elevation: 5 // For Android
     },
     categoryText: {
-      color: colors.primary,
+      color: '#FFFFFF', // White text for maximum readability
       fontWeight: 'bold',
       fontSize: 12
     },
@@ -514,7 +532,7 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
           <Image
             source={{ uri: editableFirearm.newImagePreviewUri || editableFirearm.image }}
             style={styles.image}
-            contentFit='contain'
+            contentFit='cover'
           />
         ) : (
           <View style={styles.placeholder}>

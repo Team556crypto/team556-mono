@@ -6,10 +6,11 @@ import { Ionicons } from '@expo/vector-icons'
 import { formatWalletAddress } from '@/utils/formatters'
 import { useWalletClipboard } from '@/hooks/useWalletClipboard'
 import { useAuthStore } from '@/store/authStore'
-import { logoutUser } from '@/services/api'
+import { logoutUser, requestPasswordReset } from '@/services/api'
 import { ScreenLayout } from '@/components/layout/ScreenLayout'
 import { Colors } from '@/constants/Colors'
 import { useDrawerStore } from '@/store/drawerStore'
+import { Alert } from 'react-native';
 
 // Import moved drawer components
 import ComingSoonDrawerContent from '@/components/drawers/ComingSoonDrawerContent'
@@ -46,6 +47,23 @@ export default function SettingsScreen() {
   const handleChangePasswordPress = () => {
     openDrawer(<ComingSoonDrawerContent onClose={closeDrawer} />)
   }
+
+  const handleInitiatePasswordReset = async () => {
+    if (!user?.email) {
+      Alert.alert('Error', 'Could not find your email address.');
+      return;
+    }
+    try {
+      // Consider adding a loading state if this takes time
+      const response = await requestPasswordReset(user.email);
+      Alert.alert('Check Your Email', response.message);
+      router.push({ pathname: '/auth/ResetPasswordScreen', params: { email: user.email } });
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error.message || 'Failed to initiate password reset. Please try again.';
+      Alert.alert('Error', errorMessage);
+      console.error('Initiate Password Reset Error:', error.response?.data || error);
+    }
+  };
 
   const handleViewRecoveryPhrasePress = () => {
     openDrawer(<ViewRecoveryPhraseDrawerContent onClose={closeDrawer} />)
@@ -118,6 +136,17 @@ export default function SettingsScreen() {
               <View style={styles.menuItemContent}>
                 <Text preset='label'>Change Password</Text>
                 <Text preset='caption'>Update your account password</Text>
+              </View>
+              <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} onPress={handleInitiatePasswordReset}>
+              <View style={styles.menuItemIcon}>
+                <Ionicons name='key-outline' size={22} color={Colors.primary} />
+              </View>
+              <View style={styles.menuItemContent}>
+                <Text preset='label'>Reset Password (via Email)</Text>
+                <Text preset='caption'>Send a reset code to your email</Text>
               </View>
               <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
             </TouchableOpacity>

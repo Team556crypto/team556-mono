@@ -41,6 +41,9 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	auth.Get("/me", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.GetMe)
 	auth.Post("/verify-email", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.VerifyEmail)
 	auth.Post("/resend-verification", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.ResendVerificationEmail)
+	// Password Reset Routes
+	auth.Post("/request-password-reset", authHandler.RequestPasswordReset)
+	auth.Post("/reset-password", authHandler.ResetPassword)
 
 	// Wallet Routes
 	wallet.Use(middleware.AuthMiddleware(cfg.JWTSecret))

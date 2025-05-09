@@ -176,11 +176,7 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
 
     setIsEditing(true)
 
-    // Create a shallow copy to avoid direct mutation if editableFirearm is part of a larger state or prop
     const tempEditableFirearm = { ...editableFirearm }
-
-    // Remove newImagePreviewUri and newImageFile from the direct payload sent to backend
-    // These are client-side helpers for UI and image data preparation
     delete tempEditableFirearm.newImagePreviewUri
     delete tempEditableFirearm.newImageFile
 
@@ -194,36 +190,42 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
       ...(payloadFromState as Partial<Omit<Firearm, 'id' | 'owner_user_id' | 'created_at' | 'updated_at'>>)
     }
 
-    // If a new image file was selected, prepare its data for upload
     if (editableFirearm.newImageFile) {
-      try {
-        const fileInfo = await FileSystem.getInfoAsync(editableFirearm.newImageFile.uri)
-        if (!fileInfo.exists) {
-          Alert.alert('Error', 'Selected image file does not exist.')
-          setIsEditing(false)
+      if (Platform.OS === 'web' && editableFirearm.newImageFile.base64) {
+        console.log('[Web] Using direct base64 from image picker for firearm update.');
+        updatePayload.imageData = editableFirearm.newImageFile.base64;
+        updatePayload.imageName = editableFirearm.newImageFile.fileName || `firearm_${firearm.id}_new_image`;
+        updatePayload.imageType = editableFirearm.newImageFile.mimeType || 'image/png'; // Or derive from base64 prefix if needed
+        updatePayload.imageSize = editableFirearm.newImageFile.fileSize;
+      } else if (Platform.OS !== 'web') { // Native platforms or web without direct base64
+        try {
+          const fileInfo = await FileSystem.getInfoAsync(editableFirearm.newImageFile.uri)
+          if (!fileInfo.exists) {
+            Alert.alert('Error', 'Selected image file does not exist.')
+            setIsEditing(false) // Restored
+            return
+          }
+
+          const base64ImageData = await FileSystem.readAsStringAsync(editableFirearm.newImageFile.uri, {
+            encoding: FileSystem.EncodingType.Base64
+          })
+
+          updatePayload.imageData = base64ImageData
+          updatePayload.imageName = editableFirearm.newImageFile.fileName || `firearm_${firearm.id}_new_image`
+          updatePayload.imageType = editableFirearm.newImageFile.mimeType || 'image/png'
+          updatePayload.imageSize = editableFirearm.newImageFile.fileSize
+        } catch (error: any) {
+          console.error('Error reading image file for upload:', error)
+          Alert.alert('Error', error.message || 'Could not prepare image for upload.')
+          setIsEditing(false) // Restored
           return
         }
-
-        const base64ImageData = await FileSystem.readAsStringAsync(editableFirearm.newImageFile.uri, {
-          encoding: FileSystem.EncodingType.Base64
-        })
-
-        // Just send the base64 data - the backend will handle adding the data:image prefix if needed
-        updatePayload.imageData = base64ImageData
-
-        // These fields are still useful for metadata, though not required for base64 storage
-        updatePayload.imageName = editableFirearm.newImageFile.fileName || `firearm_${firearm.id}_new_image`
-        updatePayload.imageType = editableFirearm.newImageFile.mimeType || 'image/png'
-        updatePayload.imageSize = editableFirearm.newImageFile.fileSize
-
-        // Since new image data is being sent, ensure the old 'image' URL field is not part of payload unless intended
-        // If backend clears image if imageData is present, this is fine.
-        // Or explicitly set updatePayload.image = undefined; if your backend uses that to mean 'no change to existing URL unless imageData is also present'
-      } catch (error) {
-        console.error('Error reading image file for upload:', error)
-        Alert.alert('Error', 'Could not prepare image for upload.')
-        setIsEditing(false)
-        return
+      } else {
+        // Web platform but no base64 data from picker - this might indicate an issue or a very large file
+        console.warn('[Web] Image file selected, but no direct base64 data was available from picker. Upload might fail or be incomplete.');
+        Alert.alert('Warning', 'Could not directly get image data for web. Please try a smaller image or check console.');
+        setIsEditing(false); // Ensured this is present
+        return;
       }
     } else if (editableFirearm.newImagePreviewUri === null && firearm.image && !editableFirearm.newImageFile) {
       // This condition means user explicitly cleared the image (e.g., via a "Remove Image" button)
@@ -286,10 +288,11 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
     }
 
     const pickerResult = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'], // Corrected: Use string array as per docs
       allowsEditing: true, // Consider if you want users to crop/resize
       aspect: [16, 10], // If allowsEditing is true, this can guide the crop aspect ratio
-      quality: 0.4 // Compress image to 70% quality
+      quality: 0.4, // Compress image to 70% quality
+      base64: Platform.OS === 'web', // Request base64 only on web for now, native can use FileSystem
     })
 
     if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {

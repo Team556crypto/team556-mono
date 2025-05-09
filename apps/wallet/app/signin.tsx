@@ -65,6 +65,10 @@ const SignInScreen = () => {
             placeholderTextColor={Colors.textSecondary}
             leftIcon={<Ionicons name='lock-closed-outline' size={20} color={Colors.icon} />}
           />
+          {/* Forgot Password Link */}
+          <TouchableOpacity onPress={() => router.push('/auth/ForgotPasswordScreen' as any)} style={styles.forgotPasswordButton}>
+            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+          </TouchableOpacity>
           <Button
             title={isLoading ? 'Signing In...' : 'Sign In'}
             onPress={handleSignIn}
@@ -140,6 +144,16 @@ const styles = StyleSheet.create({
     left: 20,
     zIndex: 1, // Ensure it's above other content
     padding: 10 // Make tap area larger
+  },
+  forgotPasswordButton: {
+    alignSelf: 'flex-end',
+    marginTop: 10,
+    marginBottom: 10, // Adjust as needed for spacing before the main button
+  },
+  forgotPasswordText: {
+    color: Colors.primary,
+    fontSize: 14,
+    fontWeight: '500',
   },
 })
 

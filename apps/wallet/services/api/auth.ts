@@ -3,7 +3,22 @@ import type {
   UserCredentials,
   LoginResponse,
   ApiErrorResponse,
+  User,
 } from './types';
+
+interface PasswordResetRequestPayload {
+  email: string;
+}
+
+interface ResetPasswordPayload {
+  email: string;
+  code: string;
+  new_password: string;
+}
+
+interface GenericMessageResponse {
+  message: string;
+}
 
 /**
  * Makes a POST request to the login endpoint.
@@ -57,5 +72,38 @@ export const logoutUser = async (token: string | null): Promise<void> => {
     method: 'POST',
     endpoint: '/auth/logout',
     token,
+  });
+};
+
+/**
+ * Makes a POST request to request a password reset code.
+ * @param email - The user's email address.
+ * @returns A promise that resolves with a success message.
+ * @throws An ApiClientError if the request fails.
+ */
+export const requestPasswordReset = async (
+  email: string
+): Promise<GenericMessageResponse> => {
+  const payload: PasswordResetRequestPayload = { email };
+  return apiClient<GenericMessageResponse>({
+    method: 'POST',
+    endpoint: '/auth/request-password-reset',
+    body: payload,
+  });
+};
+
+/**
+ * Makes a POST request to reset the password using a code.
+ * @param data - The email, code, and new password.
+ * @returns A promise that resolves with a success message.
+ * @throws An ApiClientError if the request fails.
+ */
+export const resetPassword = async (
+  data: ResetPasswordPayload
+): Promise<GenericMessageResponse> => {
+  return apiClient<GenericMessageResponse>({
+    method: 'POST',
+    endpoint: '/auth/reset-password',
+    body: data,
   });
 };

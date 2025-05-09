@@ -40,7 +40,7 @@ function InitialLayout() {
     const inAuthGroup = currentSegment === '(tabs)'
     const inOnboarding = currentSegment === 'onboarding'
     const inLogin = currentSegment === 'login'
-    const allowedStandaloneRoutes = ['privacy', 'terms', 'signin', 'signup'] // Explicitly allow these
+    const allowedStandaloneRoutes = ['privacy', 'terms', 'signin', 'signup', 'auth'] // Explicitly allow these
     const inAllowedStandalone = allowedStandaloneRoutes.includes(currentSegment)
 
     if (isAuthenticated) {
@@ -97,6 +97,10 @@ function InitialLayout() {
       <Stack.Screen name='onboarding' options={{ headerShown: false }} />
       <Stack.Screen name='privacy' options={{ headerShown: false }} />
       <Stack.Screen name='terms' options={{ headerShown: false }} />
+      {/* <Stack.Screen name='auth' options={{ headerShown: false }} /> */}
+      {/* Explicitly define screens from the auth group if the group setting doesn't take effect */}
+      <Stack.Screen name='auth/ForgotPasswordScreen' options={{ headerShown: false }} />
+      <Stack.Screen name='auth/ResetPasswordScreen' options={{ headerShown: false }} />
       <Stack.Screen name='+not-found' />
       <Stack.Screen name='signin' options={{ headerShown: false }} />
       <Stack.Screen name='signup' options={{ headerShown: false }} />

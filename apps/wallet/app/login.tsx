@@ -55,7 +55,7 @@ const WebLandingPage = () => {
   const contentWidth = isTabletOrLarger ? styles.webContentWidthLarge : styles.webContentWidthSmall
 
   const handleGetStarted = () => router.push('/onboarding')
-  const handleLogin = () => router.push('/login')
+  const handleLogin = () => router.push('/signin')
 
   return (
     <View style={styles.webContainer}>

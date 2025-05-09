@@ -8,7 +8,7 @@ const { width } = Dimensions.get('window')
 export const assetDetailsStyles = StyleSheet.create({
   drawerContentContainer: {
     // padding: 24,
-    backgroundColor: Colors.backgroundDark
+    backgroundColor: Colors.background
   },
   drawerHeader: {
     flexDirection: 'row',

@@ -20,6 +20,8 @@ import { Firearm, CreateFirearmPayload } from '@/services/api'
 import { useFirearmStore } from '@/store/firearmStore'
 import { useAuthStore } from '@/store/authStore'
 import { useDrawerStore } from '@/store/drawerStore'
+import DatePicker from 'react-datepicker'
+import 'react-datepicker/dist/react-datepicker.css'
 
 // Initial state for a new firearm
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
@@ -407,11 +409,20 @@ export const AddFirearmDrawerContent = () => {
       marginBottom: 10,
       backgroundColor: colors.backgroundSubtle, // Changed from colors.backgroundOffset
       resizeMode: 'contain'
-    }
+    },
+    datePickerWeb: {
+      // Add any specific wrapper styles for DatePicker on web if needed
+      // For example, to ensure it aligns with other inputs
+      width: '100%',
+    },
   })
 
   const handleInputChange = (field: keyof FirearmFormState, value: any) => {
     setNewFirearm((prev: FirearmFormState) => ({ ...prev, [field]: value }))
+    setFieldErrors((prev: Partial<Record<keyof FirearmFormState, string>>) => ({
+      ...prev,
+      [field]: '' // Clear error when input changes
+    }))
   }
 
   // Specific handler for date changes from the picker
@@ -686,6 +697,48 @@ export const AddFirearmDrawerContent = () => {
     )
   }
 
+  const formatDateForWebInput = (dateValue: Date | string | undefined): string => {
+    if (!dateValue) return '';
+    let date: Date;
+    if (typeof dateValue === 'string') {
+      // Try to parse if it's a full date string, otherwise check if it's already YYYY-MM-DD
+      const d = new Date(dateValue);
+      if (!isNaN(d.getTime())) {
+        date = d;
+      } else {
+        // Check if it's already in YYYY-MM-DD format
+        const parts = dateValue.split('-');
+        if (parts.length === 3 && parts[0].length === 4 && parts[1].length === 2 && parts[2].length === 2 &&
+            !isNaN(parseInt(parts[0])) && !isNaN(parseInt(parts[1])) && !isNaN(parseInt(parts[2]))) {
+          return dateValue; // Already in correct format
+        }
+        return ''; // Invalid or not in YYYY-MM-DD format
+      }
+    } else {
+      date = dateValue; // It's a Date object
+    }
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getDateForPicker = (value: string | Date | undefined): Date | null => {
+    if (value instanceof Date) {
+      return value;
+    }
+    if (typeof value === 'string') {
+      // Attempt to parse common date string formats, including YYYY-MM-DD
+      const d = new Date(value);
+      if (!isNaN(d.getTime())) {
+        // If the string was just a year like "2023", new Date("2023") might interpret it as Jan 1st, 2023 UTC.
+        // For YYYY-MM-DD, it's generally fine. For robustness, ensure the input string matches expected format if needed.
+        return d;
+      }
+    }
+    return null;
+  };
+
   const renderDetailRow = (
     label: string,
     field: keyof FirearmFormState,
@@ -702,16 +755,35 @@ export const AddFirearmDrawerContent = () => {
     let inputComponent: React.ReactNode = null
 
     if (inputType === 'date') {
-      const displayValue = fieldValue
-        ? fieldValue instanceof Date
-          ? (fieldValue as Date).toLocaleDateString()
-          : new Date(fieldValue as string).toLocaleDateString()
-        : placeholder
-      inputComponent = (
-        <TouchableOpacity onPress={() => showMode(field)} style={styles.dateContainer}>
-          <Text style={[styles.dateText, fieldValue ? {} : styles.placeholderText]}>{displayValue}</Text>
-        </TouchableOpacity>
-      )
+      if (Platform.OS === 'web') {
+        inputComponent = (
+          <View style={styles.datePickerWeb}> 
+            <DatePicker
+              selected={getDateForPicker(fieldValue as Date | string | undefined)}
+              onChange={(date: Date | null) => handleInputChange(field, date)}
+              dateFormat="yyyy-MM-dd"
+              placeholderText='YYYY-MM-DD'
+              customInput={<TextInput style={styles.inputStyle} onChangeText={(text: string) => handleInputChange(field, text)} placeholderTextColor={colors.textTertiary} />}
+              portalId="datepicker-portal"
+              calendarClassName="dark-theme-datepicker"
+              popperClassName="dark-theme-datepicker-popper"
+            />
+          </View>
+        )
+      } else {
+        const displayValue = fieldValue
+          ? fieldValue instanceof Date
+            ? (fieldValue as Date).toLocaleDateString()
+            : typeof fieldValue === 'string' && new Date(fieldValue).toString() !== 'Invalid Date'
+              ? new Date(fieldValue as string).toLocaleDateString()
+              : placeholder // Fallback to placeholder if string is not a valid date
+          : placeholder
+        inputComponent = (
+          <TouchableOpacity onPress={() => showMode(field as any)} style={styles.dateContainer}>
+            <Text style={[styles.dateText, fieldValue ? {} : styles.placeholderText]}>{displayValue}</Text>
+          </TouchableOpacity>
+        )
+      }
     } else if (inputType === 'select') {
       inputComponent = (
         <View style={styles.inputContainer}>
@@ -765,8 +837,8 @@ export const AddFirearmDrawerContent = () => {
       inputComponent = (
         <TextInput
           style={styles.inputStyle}
-          value={fieldValue ? String(fieldValue) : ''}
-          onChangeText={text => handleInputChange(field, text)}
+          value={fieldValue as string}
+          onChangeText={(text: string) => handleInputChange(field, text)}
           placeholder={placeholder}
           placeholderTextColor={colors.textTertiary}
           keyboardType={keyboardType}

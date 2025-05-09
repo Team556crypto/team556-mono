@@ -131,7 +131,8 @@ const createStyles = (theme: ThemeContextType) =>
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.3,
       shadowRadius: 6,
-      overflow: 'hidden'
+      overflow: 'hidden',
+      maxWidth: 400
     },
     modalHeaderContainer: {
       paddingVertical: 20,

@@ -10,6 +10,8 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { useFirearmStore } from '@/store/firearmStore'
 import { useAuthStore } from '@/store/authStore'
 import * as FileSystem from 'expo-file-system'
+import DatePicker from 'react-datepicker'
+import 'react-datepicker/dist/react-datepicker.css'
 
 const SCREEN_HEIGHT = Dimensions.get('window').height
 const windowWidth = Dimensions.get('window').width
@@ -33,6 +35,45 @@ type EditableFirearm = Firearm & {
 }
 
 type FirearmDateFieldKey = 'acquisition_date' | 'last_fired' | 'last_cleaned'
+
+// Helper function for formatting date to YYYY-MM-DD for web input
+const formatDateForWebInput = (dateValue: Date | string | undefined): string => {
+  if (!dateValue) return '';
+  let date: Date;
+  if (typeof dateValue === 'string') {
+    const d = new Date(dateValue);
+    if (!isNaN(d.getTime())) {
+      date = d;
+    } else {
+      const parts = dateValue.split('-');
+      if (parts.length === 3 && parts[0].length === 4 && parts[1].length === 2 && parts[2].length === 2 &&
+          !isNaN(parseInt(parts[0])) && !isNaN(parseInt(parts[1])) && !isNaN(parseInt(parts[2]))) {
+        return dateValue;
+      }
+      return '';
+    }
+  } else {
+    date = dateValue;
+  }
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// Helper function to get a Date object for react-datepicker
+const getDateForPicker = (value: string | Date | undefined): Date | null => {
+  if (value instanceof Date) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const d = new Date(value);
+    if (!isNaN(d.getTime())) {
+      return d;
+    }
+  }
+  return null;
+};
 
 export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentProps> = ({ firearm }) => {
   const { colors } = useTheme()
@@ -67,7 +108,15 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
   }
 
   const handleInputChange = (field: keyof UpdateFirearmPayload, value: any) => {
-    setEditableFirearm(prev => ({ ...prev, [field]: value }))
+    setEditableFirearm((prev: EditableFirearm) => ({
+      ...prev,
+      [field]: value
+    }))
+    // If changing an image, value will be an object { uri: string, base64: string }
+    // Clear specific errors when field changes
+    if (fieldErrors[field as keyof typeof fieldErrors]) {
+      setFieldErrors((prev: Partial<Record<keyof UpdateFirearmPayload, string>>) => ({ ...prev, [field]: undefined }))
+    }
   }
 
   // Called by DateTimePicker's onChange inside the modal
@@ -270,7 +319,8 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
     },
     imageContainer: {
       width: windowWidth * 0.9, // 90% of screen width
-      aspectRatio: 16 / 10, // Maintain a 4:3 aspect ratio
+      maxWidth: 500, // Cap the width for large screens
+      aspectRatio: 16 / 10, // Maintain a 16:10 aspect ratio
       alignSelf: 'center', // Center the container
       backgroundColor: colors.backgroundDark,
       borderRadius: 10,
@@ -487,7 +537,10 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
       justifyContent: 'flex-end',
       marginTop: 16,
       width: '100%'
-    }
+    },
+    datePickerWeb: {
+      width: '100%',
+    },
   })
 
   const renderDetailRow = (
@@ -512,6 +565,8 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
     const date = new Date(dateString)
     return isNaN(date.getTime()) ? undefined : date
   }
+
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof UpdateFirearmPayload, string>>>({})
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 80 }}>
@@ -738,19 +793,34 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
           <>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Acquisition Date</Text>
-              <TouchableOpacity onPress={() => showDatepickerForField('acquisition_date')} style={styles.dateTouchable}>
-                <MaterialCommunityIcons
-                  name='calendar-blank-outline'
-                  size={20}
-                  color={colors.textSecondary}
-                  style={styles.datePickerIcon}
-                />
-                <Text style={editableFirearm.acquisition_date ? styles.dateText : styles.placeholderDateText}>
-                  {editableFirearm.acquisition_date
-                    ? formatDateForDisplay(editableFirearm.acquisition_date)
-                    : 'Select Date'}
-                </Text>
-              </TouchableOpacity>
+              {Platform.OS === 'web' ? (
+                <View style={styles.datePickerWeb}>
+                  <DatePicker
+                    selected={getDateForPicker(editableFirearm.acquisition_date)}
+                    onChange={(date: Date | null) => handleInputChange('acquisition_date', date)}
+                    dateFormat="yyyy-MM-dd"
+                    placeholderText='YYYY-MM-DD'
+                    customInput={<Input style={styles.inputField} onChangeText={(text: string) => handleInputChange('acquisition_date', text)} />}
+                    portalId="datepicker-portal"
+                    calendarClassName="dark-theme-datepicker"
+                    popperClassName="dark-theme-datepicker-popper"
+                  />
+                </View>
+              ) : (
+                <TouchableOpacity onPress={() => showDatepickerForField('acquisition_date')} style={styles.dateTouchable}>
+                  <MaterialCommunityIcons
+                    name='calendar-blank-outline'
+                    size={20}
+                    color={colors.textSecondary}
+                    style={styles.datePickerIcon}
+                  />
+                  <Text style={editableFirearm.acquisition_date ? styles.dateText : styles.placeholderDateText}>
+                    {editableFirearm.acquisition_date
+                      ? formatDateForDisplay(editableFirearm.acquisition_date)
+                      : 'Select Date'}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Purchase Price</Text>
@@ -799,17 +869,32 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
           <>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Last Fired</Text>
-              <TouchableOpacity onPress={() => showDatepickerForField('last_fired')} style={styles.dateTouchable}>
-                <MaterialCommunityIcons
-                  name='calendar-blank-outline'
-                  size={20}
-                  color={colors.textSecondary}
-                  style={styles.datePickerIcon}
-                />
-                <Text style={editableFirearm.last_fired ? styles.dateText : styles.placeholderDateText}>
-                  {editableFirearm.last_fired ? formatDateForDisplay(editableFirearm.last_fired) : 'Select Date'}
-                </Text>
-              </TouchableOpacity>
+              {Platform.OS === 'web' ? (
+                <View style={styles.datePickerWeb}>
+                  <DatePicker
+                    selected={getDateForPicker(editableFirearm.last_fired)}
+                    onChange={(date: Date | null) => handleInputChange('last_fired', date)}
+                    dateFormat="yyyy-MM-dd"
+                    placeholderText='YYYY-MM-DD'
+                    customInput={<Input style={styles.inputField} onChangeText={(text: string) => handleInputChange('last_fired', text)} />}
+                    portalId="datepicker-portal"
+                    calendarClassName="dark-theme-datepicker"
+                    popperClassName="dark-theme-datepicker-popper"
+                  />
+                </View>
+              ) : (
+                <TouchableOpacity onPress={() => showDatepickerForField('last_fired')} style={styles.dateTouchable}>
+                  <MaterialCommunityIcons
+                    name='calendar-blank-outline'
+                    size={20}
+                    color={colors.textSecondary}
+                    style={styles.datePickerIcon}
+                  />
+                  <Text style={editableFirearm.last_fired ? styles.dateText : styles.placeholderDateText}>
+                    {editableFirearm.last_fired ? formatDateForDisplay(editableFirearm.last_fired) : 'Select Date'}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Round Count</Text>
@@ -824,17 +909,32 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Last Cleaned</Text>
-              <TouchableOpacity onPress={() => showDatepickerForField('last_cleaned')} style={styles.dateTouchable}>
-                <MaterialCommunityIcons
-                  name='calendar-blank-outline'
-                  size={20}
-                  color={colors.textSecondary}
-                  style={styles.datePickerIcon}
-                />
-                <Text style={editableFirearm.last_cleaned ? styles.dateText : styles.placeholderDateText}>
-                  {editableFirearm.last_cleaned ? formatDateForDisplay(editableFirearm.last_cleaned) : 'Select Date'}
-                </Text>
-              </TouchableOpacity>
+              {Platform.OS === 'web' ? (
+                <View style={styles.datePickerWeb}>
+                  <DatePicker
+                    selected={getDateForPicker(editableFirearm.last_cleaned)}
+                    onChange={(date: Date | null) => handleInputChange('last_cleaned', date)}
+                    dateFormat="yyyy-MM-dd"
+                    placeholderText='YYYY-MM-DD'
+                    customInput={<Input style={styles.inputField} onChangeText={(text: string) => handleInputChange('last_cleaned', text)} />}
+                    portalId="datepicker-portal"
+                    calendarClassName="dark-theme-datepicker"
+                    popperClassName="dark-theme-datepicker-popper"
+                  />
+                </View>
+              ) : (
+                <TouchableOpacity onPress={() => showDatepickerForField('last_cleaned')} style={styles.dateTouchable}>
+                  <MaterialCommunityIcons
+                    name='calendar-blank-outline'
+                    size={20}
+                    color={colors.textSecondary}
+                    style={styles.datePickerIcon}
+                  />
+                  <Text style={editableFirearm.last_cleaned ? styles.dateText : styles.placeholderDateText}>
+                    {editableFirearm.last_cleaned ? formatDateForDisplay(editableFirearm.last_cleaned) : 'Select Date'}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           </>
         ) : (

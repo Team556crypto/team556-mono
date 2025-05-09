@@ -354,7 +354,7 @@ export default function Drawer({
           {isContentLoaded ? (
             <ScrollView
               style={styles.contentContainer}
-              contentContainerStyle={styles.scrollContent}
+              contentContainerStyle={[styles.scrollContent, isLargeScreen && styles.scrollContentLarge]}
               showsVerticalScrollIndicator={false}
               scrollEventThrottle={16}
             >
@@ -442,5 +442,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: CONTENT_PADDING
+  },
+
+  scrollContentLarge: {
+    paddingBottom: 0
   }
 })

@@ -7,7 +7,7 @@ import { Colors } from '@/constants/Colors'
 import { Ionicons, Feather } from '@expo/vector-icons'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useAuthStore } from '@/store/authStore'
-import LogoSvg from '@/assets/images/logo-wide-new.svg'
+import LogoSvg from '@/assets/images/logo-wide.svg'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const SignInScreen = () => {
@@ -111,7 +111,7 @@ const SignInScreen = () => {
           }}
         >
           <View style={styles.logoContainer}>
-            <LogoSvg width={200} height={60} style={styles.logo} />
+            <LogoSvg width={160} height={60} style={styles.logo} />
           </View>
         </Animated.View>
 

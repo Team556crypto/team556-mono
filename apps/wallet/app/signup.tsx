@@ -7,7 +7,7 @@ import { Colors } from '@/constants/Colors'
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useAuthStore } from '@/store/authStore'
-import LogoSvg from '@/assets/images/logo-wide-new.svg'
+import LogoSvg from '@/assets/images/logo-wide.svg'
 
 const SignUpScreen = () => {
   const [email, setEmail] = useState('')
@@ -56,7 +56,7 @@ const SignUpScreen = () => {
     <View style={styles.infoSide}>
       <View style={styles.infoContent}>
         <Animated.View style={[styles.logoContainer, { opacity: fadeAnim }]}>
-          <LogoSvg width={200} height={60} style={styles.logo} />
+          <LogoSvg width={160} height={60} style={styles.logo} />
         </Animated.View>
 
         {/* Status badge */}

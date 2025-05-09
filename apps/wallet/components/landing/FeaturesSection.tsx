@@ -165,6 +165,44 @@ const FeaturesSection: React.FC = () => {
             </View>
           ))}
         </View>
+
+        {/* Encryption section */}
+        <View style={styles.encryptionSectionWrapper}>
+          <View style={styles.encryptionSection}>
+            {/* Shield icon */}
+            <View style={styles.encryptionIconContainer}>
+              <Feather name="shield" size={32} color={Colors.primary} />
+            </View>
+            
+            {/* Title */}
+            <Text style={styles.encryptionTitle}>End-to-End Encryption</Text>
+            
+            {/* Description */}
+            <Text style={styles.encryptionDescription}>
+              Your data never leaves your device unencrypted. We use AES-256 encryption and
+              zero-knowledge architecture to ensure your information remains private and
+              secure, even from us.
+            </Text>
+            
+            {/* Feature badges */}
+            <View style={styles.encryptionBadgesContainer}>
+              <View style={styles.encryptionBadge}>
+                <View style={[styles.badgeDot, styles.nistBadgeDot]} />
+                <Text style={styles.encryptionBadgeText}>NIST Compliant</Text>
+              </View>
+
+              <View style={styles.encryptionBadge}>
+                <View style={[styles.badgeDot, styles.zkBadgeDot]} />
+                <Text style={styles.encryptionBadgeText}>Zero-Knowledge</Text>
+              </View>
+
+              <View style={styles.encryptionBadge}>
+                <View style={[styles.badgeDot, styles.militaryBadgeDot]} />
+                <Text style={styles.encryptionBadgeText}>Military-Grade</Text>
+              </View>
+            </View>
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -384,6 +422,81 @@ const styles = StyleSheet.create({
   },
   arrowIcon: {
     marginLeft: 8,
+  },
+  // Encryption section styles
+  encryptionSectionWrapper: {
+    marginTop: 64,
+    width: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  encryptionSection: {
+    maxWidth: 720,
+    backgroundColor: 'rgba(17, 24, 39, 0.7)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(55, 65, 81, 0.5)',
+    padding: 40,
+    alignItems: 'center',
+    textAlign: 'center' as any,
+    overflow: 'hidden',
+  },
+  encryptionIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(107, 124, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(107, 124, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  encryptionTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  encryptionDescription: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 32,
+    maxWidth: 560,
+  },
+  encryptionBadgesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  encryptionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(55, 65, 81, 0.5)',
+  },
+  encryptionBadgeText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.text,
+  },
+  nistBadgeDot: {
+    backgroundColor: '#4ADE80', // Green dot for NIST
+  },
+  zkBadgeDot: {
+    backgroundColor: Colors.primary, // Blue dot for Zero-Knowledge
+  },
+  militaryBadgeDot: {
+    backgroundColor: '#C084FC', // Purple dot for Military-Grade
   },
 });
 

@@ -1,15 +1,4 @@
-import BackgroundEffects from './BackgroundEffects';
-import LandingHeader from './LandingHeader';
-import HeroSection from './HeroSection';
-import CtaSection from './CtaSection';
-import FeaturesSection from './FeaturesSection';
-import StatsSection from './StatsSection';
-import HowItWorksSection from './HowItWorksSection';
-import TestimonialsSection from './TestimonialsSection';
-import FooterSection from './FooterSection';
-import ScrollToTop from './ScrollToTop';
-
-// Export all landing page components
+// Export all landing page components directly to avoid potential circular dependencies
 export { default as BackgroundEffects } from './BackgroundEffects';
 export { default as LandingHeader } from './LandingHeader';
 export { default as HeroSection } from './HeroSection';

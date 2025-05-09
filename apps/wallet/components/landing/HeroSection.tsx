@@ -4,7 +4,7 @@ import { Button, Text } from '@repo/ui'
 import { Colors } from '@/constants/Colors'
 import { useRouter } from 'expo-router'
 import { useBreakpoint } from '@/hooks/useBreakpoint' // Import useBreakpoint
-import LogoSvg from '@/assets/images/logo.svg'
+import LogoSvgWide from '@/assets/images/logo-wide.svg'
 import DashboardMockup from './DashboardMockup' // Import the DashboardMockup component
 import { Feather, Ionicons } from '@expo/vector-icons'
 
@@ -80,6 +80,11 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onCreateWallet = () => {}, on
           {/* Left Column - Hero Content */}
           <View style={[styles.leftColumn, isTabletOrLarger && styles.leftColumnLarge]}>
             {/* Animated status badge */}
+
+            <View style={styles.logoContainer}>
+              <LogoSvgWide width={220} height={70} />
+            </View>
+
             <Animated.View
               style={[
                 styles.statusBadge,
@@ -249,6 +254,9 @@ const styles = StyleSheet.create({
     flexDirection: 'column', // Default to column
     alignItems: 'center',
     justifyContent: 'space-between'
+  },
+  logoContainer: {
+    marginBottom: 36
   },
   heroFlexContainerLarge: {
     flexDirection: 'row' // Row on large screens

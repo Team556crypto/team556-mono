@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { genericStyles } from '@/constants/GenericStyles'
 import { LAMPORTS_PER_SOL } from '@solana/web3.js'
 import { debounce } from 'lodash'
-import { getSwapQuote, executeSwap, submitTokenAccountTransaction, signTransaction } from '../services/api'
+import { getSwapQuote, executeSwap, submitTokenAccountTransaction, signTransaction } from '@/services/api'
 
 // Basic type for Jupiter V6 Quote Response (expand as needed)
 // Consider moving to a shared types package
@@ -163,13 +163,6 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
           parseFloat(fetchAmount) * (from === 'SOL' ? LAMPORTS_PER_SOL : 10 ** teamMintDecimals)
         )
 
-        console.log('Fetching quote with:', {
-          inputMint,
-          outputMint,
-          amount: amountInSmallestUnit.toString(),
-          slippageBps: 50 // Example slippage (0.5%)
-        })
-
         const quotePayload = {
           inputMint,
           outputMint,
@@ -252,8 +245,6 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
     setSwapStatus('swapping')
 
     try {
-      console.log('Creating token accounts with transaction:', tokenAccountSetup.createAccountTransaction)
-
       // IMPORTANT: First sign the transaction using the wallet service
       // This is the critical step we were missing
       const signResponse = await signTransaction(token, password, tokenAccountSetup.createAccountTransaction)
@@ -265,8 +256,6 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
       // Now submit the SIGNED transaction
       const response = await submitTokenAccountTransaction(signResponse.signedTransaction, password, token)
 
-      console.log('Token account creation response:', response)
-
       if (response && response.status === 'success') {
         showToast(`Token account(s) created! Tx: ${response.signature.substring(0, 10)}...`, 'success')
 
@@ -277,7 +266,6 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
         // Now proceed to the swap
         setTokenAccountSetup(null)
         // Directly call handleConfirmSwap to retry the swap automatically
-        console.log('Token accounts created, automatically retrying swap...')
         await handleConfirmSwap(password) // Pass the current password state
 
         // Note: handleConfirmSwap will handle setting the final status (success/error) and clearing the password
@@ -332,16 +320,13 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
     setSwapStatus('swapping')
 
     try {
-      console.log('Attempting swap with quote:', quoteResponse)
       // Call the backend API to execute the swap
       const swapPayload = {
         password: effectivePassword, // Send plain password for backend decryption
         quoteResponse: quoteResponse, // Send the fetched quote response
         publicKey: userWalletAddress // Send the wallet's public key
       }
-      const response = await executeSwap(swapPayload, token, userWalletAddress)
-
-      console.log('Swap API Response:', response)
+      const response = await executeSwap(swapPayload, token)
 
       // Check if token accounts need to be created
       if (response.status === 'needs_token_accounts' && response.createAccountTransaction) {
@@ -434,8 +419,6 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
 
       // Step 2: Submit the signed transaction
       const result = await submitTokenAccountTransaction(signedData.signedTransaction, password, token)
-
-      console.log('Token account created:', result)
 
       // Wait for confirmation
       await new Promise(resolve => setTimeout(resolve, 2000))

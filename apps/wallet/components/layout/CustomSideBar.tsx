@@ -26,7 +26,7 @@ export function CustomSideBar({ state, descriptors, navigation }: BottomTabBarPr
       ]}
     >
       <View style={styles.header}>
-        <LogoWideSvg width={160} height={30} style={styles.logo} />
+        <LogoWideSvg width={140} height={36} style={styles.logo} />
       </View>
       <View style={styles.navContainer}>
         {state.routes.map((route, index) => {

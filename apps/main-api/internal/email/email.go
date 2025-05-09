@@ -48,3 +48,31 @@ func (c *Client) SendVerificationEmail(toEmail, verificationCode string) error {
 	fmt.Printf("Verification email sent successfully to %s (ID: %s)\n", toEmail, sent.Id)
 	return nil
 }
+
+// SendPasswordResetEmail sends the password reset code to the user.
+func (c *Client) SendPasswordResetEmail(toEmail, resetCode string) error {
+	subject := "Your Password Reset Code for Team556 Wallet"
+	body := fmt.Sprintf(`
+        <p>Hello,</p>
+        <p>You requested to reset your password for Team556 Wallet.</p>
+        <p>Your password reset code is: <strong>%s</strong></p>
+        <p>This code will expire in 15 minutes.</p>
+        <p>If you did not request a password reset, please ignore this email or contact support if you have concerns.</p>
+    `, resetCode)
+
+	params := &resend.SendEmailRequest{
+		From:    senderAddress,
+		To:      []string{toEmail},
+		Subject: subject,
+		Html:    body,
+	}
+
+	sent, err := c.resendClient.Emails.Send(params)
+	if err != nil {
+		fmt.Printf("Error sending password reset email to %s: %v\n", toEmail, err)
+		return err
+	}
+
+	fmt.Printf("Password reset email sent successfully to %s (ID: %s)\n", toEmail, sent.Id)
+	return nil
+}

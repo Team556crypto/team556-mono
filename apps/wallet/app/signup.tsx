@@ -1,14 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { 
-  View, 
-  StyleSheet, 
-  Alert, 
-  SafeAreaView, 
-  Platform, 
-  TouchableOpacity,
-  ScrollView,
-  Animated
-} from 'react-native'
+import { View, StyleSheet, Alert, SafeAreaView, Platform, TouchableOpacity, ScrollView, Animated } from 'react-native'
 import { Button, Input, Text } from '@repo/ui'
 import { useRouter, Link } from 'expo-router'
 import { genericStyles } from '@/constants/GenericStyles'
@@ -16,7 +7,7 @@ import { Colors } from '@/constants/Colors'
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useAuthStore } from '@/store/authStore'
-import LogoSvg from '@/assets/images/logo.svg';
+import LogoSvg from '@/assets/images/logo-wide-new.svg'
 
 const SignUpScreen = () => {
   const [email, setEmail] = useState('')
@@ -27,24 +18,24 @@ const SignUpScreen = () => {
   const router = useRouter()
 
   // Animation references for left side
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const translateAnim = useRef(new Animated.Value(20)).current;
-  
+  const fadeAnim = useRef(new Animated.Value(0)).current
+  const translateAnim = useRef(new Animated.Value(20)).current
+
   // Trigger animations on component mount
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 700,
-        useNativeDriver: true,
+        useNativeDriver: true
       }),
       Animated.timing(translateAnim, {
         toValue: 0,
         duration: 700,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
+        useNativeDriver: true
+      })
+    ]).start()
+  }, [])
 
   const handleSignUp = async () => {
     setAuthError(null)
@@ -57,7 +48,7 @@ const SignUpScreen = () => {
       // Navigation is handled by the root _layout based on auth state
     } catch (err) {
       // Error is set in the store
-      console.error("Sign up failed in component:", err)
+      console.error('Sign up failed in component:', err)
     }
   }
 
@@ -65,11 +56,11 @@ const SignUpScreen = () => {
     <View style={styles.infoSide}>
       <View style={styles.infoContent}>
         <Animated.View style={[styles.logoContainer, { opacity: fadeAnim }]}>
-          <LogoSvg width={60} height={60} style={styles.logo} />
+          <LogoSvg width={200} height={60} style={styles.logo} />
         </Animated.View>
 
         {/* Status badge */}
-        <Animated.View 
+        <Animated.View
           style={[
             styles.statusBadge,
             {
@@ -82,18 +73,21 @@ const SignUpScreen = () => {
             <View style={[styles.badgeGradientOverlay, { backgroundColor: Colors.secondary }]} />
             <View style={styles.badgeContent}>
               <View style={styles.liveDotContainer}>
-                <Animated.View style={[styles.liveDotPulse, {
-                  opacity: fadeAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, 0.75]
-                  }),
-                  backgroundColor: Colors.secondary
-                }]} />
+                <Animated.View
+                  style={[
+                    styles.liveDotPulse,
+                    {
+                      opacity: fadeAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, 0.75]
+                      }),
+                      backgroundColor: Colors.secondary
+                    }
+                  ]}
+                />
                 <View style={[styles.liveDot, { backgroundColor: Colors.secondary }]} />
               </View>
-              <Text style={styles.badgeText}>
-                Non-Custodial Wallet • Self-Sovereign Identity • Asset Management
-              </Text>
+              <Text style={styles.badgeText}>Non-Custodial Wallet • Self-Sovereign Identity • Asset Management</Text>
             </View>
           </View>
         </Animated.View>
@@ -104,39 +98,38 @@ const SignUpScreen = () => {
             styles.headingContainer,
             {
               opacity: fadeAnim,
-              transform: [{ 
-                translateY: Animated.multiply(translateAnim, 1.4) 
-              }]
+              transform: [
+                {
+                  translateY: Animated.multiply(translateAnim, 1.4)
+                }
+              ]
             }
           ]}
         >
-          <Text style={styles.heading}>
-            Join the Future of 
-          </Text>
-          <Text style={[styles.heading, styles.headingHighlight]}>
-            Digital & Physical
-          </Text>
-          <Text style={styles.heading}>
-            Asset Ownership
-          </Text>
+          <Text style={styles.heading}>Join the Future of</Text>
+          <Text style={[styles.heading, styles.headingHighlight]}>Digital & Physical</Text>
+          <Text style={styles.heading}>Asset Ownership</Text>
         </Animated.View>
 
         {/* Subheading text */}
         <Animated.View
           style={{
             opacity: fadeAnim,
-            transform: [{ 
-              translateY: Animated.multiply(translateAnim, 1.6) 
-            }]
+            transform: [
+              {
+                translateY: Animated.multiply(translateAnim, 1.6)
+              }
+            ]
           }}
         >
           <Text style={styles.subheading}>
-            Create your secure wallet to start managing your digital tokens and physical assets using advanced blockchain technology.
+            Create your secure wallet to start managing your digital tokens and physical assets using advanced
+            blockchain technology.
           </Text>
         </Animated.View>
 
         {/* Benefits */}
-        <Animated.View 
+        <Animated.View
           style={[
             styles.featuresGrid,
             {
@@ -146,41 +139,50 @@ const SignUpScreen = () => {
           ]}
         >
           <View style={styles.featureCard}>
-            <MaterialCommunityIcons name="shield-key" color={Colors.secondary} size={24} style={styles.featureIcon} />
+            <MaterialCommunityIcons name='shield-key' color={Colors.secondary} size={24} style={styles.featureIcon} />
             <Text style={styles.featureTitle}>Self-Sovereign</Text>
             <Text style={styles.featureDescription}>You own your private keys & control your identity</Text>
           </View>
-          
+
           <View style={styles.featureCard}>
-            <MaterialCommunityIcons name="database-lock" color={Colors.secondary} size={24} style={styles.featureIcon} />
+            <MaterialCommunityIcons
+              name='database-lock'
+              color={Colors.secondary}
+              size={24}
+              style={styles.featureIcon}
+            />
             <Text style={styles.featureTitle}>Data Sovereignty</Text>
             <Text style={styles.featureDescription}>Your data stays private & encrypted on your device</Text>
           </View>
-          
+
           <View style={styles.featureCard}>
-            <FontAwesome5 name="wallet" color={Colors.secondary} size={24} style={styles.featureIcon} />
+            <FontAwesome5 name='wallet' color={Colors.secondary} size={24} style={styles.featureIcon} />
             <Text style={styles.featureTitle}>Multi-Asset Wallet</Text>
             <Text style={styles.featureDescription}>Manage crypto, NFTs & physical assets in one place</Text>
           </View>
-          
+
           <View style={styles.featureCard}>
-            <MaterialCommunityIcons name="account-check" color={Colors.secondary} size={24} style={styles.featureIcon} />
+            <MaterialCommunityIcons
+              name='account-check'
+              color={Colors.secondary}
+              size={24}
+              style={styles.featureIcon}
+            />
             <Text style={styles.featureTitle}>Easy Onboarding</Text>
             <Text style={styles.featureDescription}>Simple setup with powerful security & backup options</Text>
           </View>
         </Animated.View>
       </View>
     </View>
-  );
+  )
 
   const renderFormSide = () => (
-    <ScrollView 
-      contentContainerStyle={styles.formScrollContainer}
-      keyboardShouldPersistTaps="handled"
-    >
+    <ScrollView contentContainerStyle={styles.formScrollContainer} keyboardShouldPersistTaps='handled'>
       <View style={styles.formContainer}>
         <View style={styles.formCard}>
-          <Text preset='h2' style={styles.formTitle}>Create Your Wallet</Text>
+          <Text preset='h2' style={styles.formTitle}>
+            Create Your Wallet
+          </Text>
           <Text style={styles.formSubtitle}>Sign up to start managing your assets securely</Text>
 
           {authError && (
@@ -196,7 +198,7 @@ const SignUpScreen = () => {
             onChangeText={setEmail}
             keyboardType='email-address'
             autoCapitalize='none'
-            style={[genericStyles.input, styles.input]} 
+            style={[genericStyles.input, styles.input]}
             placeholderTextColor={Colors.textSecondary}
             leftIcon={<Ionicons name='mail-outline' size={20} color={Colors.icon} />}
           />
@@ -225,37 +227,40 @@ const SignUpScreen = () => {
 
           <TouchableOpacity onPress={handleSignUp} disabled={isLoading} style={styles.signUpButtonContainer}>
             <View style={styles.signUpButton}>
-              <Ionicons name='person-add-outline' size={20} color={Colors.backgroundDarkest} style={{marginRight: 8}}/>
-              <Text style={styles.signUpButtonText}>
-                {isLoading ? 'Creating Account...' : 'Create Wallet'}
-              </Text>
+              <Ionicons
+                name='person-add-outline'
+                size={20}
+                color={Colors.backgroundDarkest}
+                style={{ marginRight: 8 }}
+              />
+              <Text style={styles.signUpButtonText}>{isLoading ? 'Creating Account...' : 'Create Wallet'}</Text>
             </View>
           </TouchableOpacity>
-          
+
           <View style={styles.loginContainer}>
             <Text style={styles.loginText}>Already have a wallet? </Text>
-            <Link href="/signin">
-               <Text style={styles.linkText}>Sign In</Text>
+            <Link href='/signin'>
+              <Text style={styles.linkText}>Sign In</Text>
             </Link>
           </View>
         </View>
       </View>
     </ScrollView>
-  );
+  )
 
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* Show back button ONLY on native platforms AND when NOT in two-column layout */}
       {Platform.OS !== 'web' && !isTabletOrLarger && (
         <TouchableOpacity onPress={() => router.back()} style={styles.backButtonMobile}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text} />
+          <Ionicons name='arrow-back' size={24} color={Colors.text} />
         </TouchableOpacity>
       )}
       <View style={styles.outerContainer}>
         {/* Use two-column layout if the screen is large enough (tablet or desktop/web) */}
         {isTabletOrLarger ? (
           <View style={styles.desktopContainer}>
-            {renderInfoSide()} 
+            {renderInfoSide()}
             {renderFormSide()}
           </View>
         ) : (
@@ -270,39 +275,40 @@ const SignUpScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.backgroundDarkest,
+    backgroundColor: Colors.backgroundDarkest
   },
   outerContainer: {
-    flex: 1,
+    flex: 1
   },
   desktopContainer: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: 'row'
   },
   infoSide: {
     flex: 1,
     backgroundColor: Colors.backgroundDarkest,
     padding: 40,
-    justifyContent: 'space-between',
+    justifyContent: 'space-between'
   },
   infoContent: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   // Logo styles
   logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 12,
+    marginTop: 10
   },
   logo: {
-    marginRight: 12,
+    marginRight: 12
   },
   logoText: {
     fontSize: 20,
     fontWeight: 'bold',
     color: Colors.text,
-    letterSpacing: 1,
+    letterSpacing: 1
   },
   // Status badge styles
   statusBadge: {
@@ -314,7 +320,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 10,
-    elevation: 5,
+    elevation: 5
   },
   statusBadgeInner: {
     backgroundColor: Colors.backgroundDarker,
@@ -322,7 +328,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 30,
     padding: 12,
-    position: 'relative',
+    position: 'relative'
   },
   badgeGradientOverlay: {
     position: 'absolute',
@@ -331,22 +337,22 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     opacity: 0.2,
-    borderRadius: 30,
+    borderRadius: 30
   },
   badgeContent: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   liveDotContainer: {
     width: 8,
     height: 8,
     marginRight: 8,
-    position: 'relative',
+    position: 'relative'
   },
   liveDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: 4
   },
   liveDotPulse: {
     position: 'absolute',
@@ -354,41 +360,41 @@ const styles = StyleSheet.create({
     left: -4,
     width: 16,
     height: 16,
-    borderRadius: 8,
+    borderRadius: 8
   },
   badgeText: {
     fontSize: 14,
-    color: Colors.text,
+    color: Colors.text
   },
   // Heading styles
   headingContainer: {
-    marginBottom: 24,
+    marginBottom: 24
   },
   heading: {
     color: Colors.text,
     fontSize: 36,
     fontWeight: 'bold',
-    lineHeight: 44,
+    lineHeight: 44
   },
   headingHighlight: {
-    color: Colors.secondary,
+    color: Colors.secondary
   },
   subheading: {
     color: Colors.textSecondary,
     fontSize: 16,
     marginBottom: 40,
     lineHeight: 24,
-    maxWidth: 500,
+    maxWidth: 500
   },
   // Feature grid
   featuresGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginBottom: 40,
-    gap: 16,
+    gap: 16
   },
   featureCard: {
-    flex: 1, 
+    flex: 1,
     minWidth: '45%',
     backgroundColor: Colors.backgroundDarker,
     borderRadius: 12,
@@ -402,41 +408,41 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 10,
-    elevation: 5,
+    elevation: 5
   },
   featureIcon: {
-    marginBottom: 12,
+    marginBottom: 12
   },
   featureTitle: {
     color: Colors.text,
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 8
   },
   featureDescription: {
     color: Colors.textSecondary,
     fontSize: 12,
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 16
   },
   footer: {
     fontSize: 12,
     color: Colors.textSecondary,
     marginTop: 20,
-    textAlign: 'center',
+    textAlign: 'center'
   },
   // Form styles
   formScrollContainer: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   formContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: Colors.backgroundDark,
-    padding: Platform.OS === 'web' ? 40 : 20,
+    padding: Platform.OS === 'web' ? 40 : 20
   },
   formCard: {
     width: '100%',
@@ -448,77 +454,74 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.1,
     shadowRadius: 20,
-    elevation: 5,
+    elevation: 5
   },
   formTitle: {
     marginBottom: 8,
     textAlign: 'center',
-    color: Colors.text,
+    color: Colors.text
   },
   formSubtitle: {
     marginBottom: 30,
     textAlign: 'center',
     color: Colors.textSecondary,
-    fontSize: 14,
+    fontSize: 14
   },
   label: {
     fontSize: 14,
     color: Colors.textSecondary,
     marginBottom: 8,
-    fontWeight: '500',
+    fontWeight: '500'
   },
   input: {
     backgroundColor: Colors.backgroundDark,
-    borderWidth: 1,
-    borderColor: Colors.background,
     borderRadius: 8,
-    marginBottom: 15,
     color: Colors.text,
-    height: 50,
+    height: 50
   },
   signUpButtonContainer: {
     borderRadius: 8,
     height: 50,
-    marginBottom: 25,
+    marginBottom: 25
   },
   signUpButton: {
-    flex: 1, 
+    flex: 1,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
     flexDirection: 'row',
-    backgroundColor: Colors.secondary,
+    backgroundColor: Colors.secondary
   },
   signUpButtonText: {
     color: Colors.backgroundDarkest,
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 16
   },
   loginContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   loginText: {
     color: Colors.textSecondary,
-    fontSize: 13,
+    fontSize: 13
   },
   linkText: {
     color: Colors.secondary,
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '500'
   },
   errorContainer: {
     marginBottom: 15,
     padding: 10,
     backgroundColor: Colors.errorBackground,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: 'center'
   },
   errorText: {
     color: Colors.errorText,
     textAlign: 'center',
-    fontSize: 13,
+    fontSize: 13
   },
   backButtonMobile: {
     position: 'absolute',
@@ -527,8 +530,8 @@ const styles = StyleSheet.create({
     zIndex: 1,
     padding: 10,
     backgroundColor: Colors.backgroundDarker,
-    borderRadius: 20,
-  },
+    borderRadius: 20
+  }
 })
 
 export default SignUpScreen

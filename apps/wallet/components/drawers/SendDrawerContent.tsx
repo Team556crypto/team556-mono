@@ -118,9 +118,7 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
         throw new Error('Solana RPC URL is not configured.')
       }
       connection = new Connection(SOLANA_RPC_URL, 'confirmed')
-      console.log('Connected to:', SOLANA_RPC_URL)
     } catch (setupError: any) {
-      console.error('Connection setup error:', setupError)
       setError(`Connection failed: ${setupError.message || 'Unknown error'}`)
       showToast(`Connection failed: ${setupError.message || 'Unknown error'}`, 'error')
       setSendStatus('error')
@@ -131,7 +129,6 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
       // 2. Construct Transaction (reusing logic from original handleSend)
       // --- Add Guard Clause ---
       if (!senderWalletAddress) {
-        console.error('Send Error: Sender wallet address is missing from user state.')
         setError('Your wallet information is not available. Please try logging out and back in.')
         showToast('Wallet info missing. Please re-login.', 'error')
         setSendStatus('error')
@@ -153,15 +150,9 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
             lamports: lamportsToSend
           })
         )
-        console.log(`Prepared SOL transfer of ${numericAmount} SOL`)
       } else {
         const teamMintAddress = process.env.EXPO_PUBLIC_GLOBAL__MINT_ADDRESS
         if (!teamMintAddress) {
-          console.error('EXPO_PUBLIC_GLOBAL__MINT_ADDRESS environment variable is not set!')
-          Alert.alert(
-            'Configuration Error',
-            'The application is missing essential configuration. Cannot proceed with the transaction.'
-          )
           setSendStatus('idle')
           return // Stop execution if the mint address is missing
         }
@@ -181,12 +172,8 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
         const senderTokenAccountAddress = await getAssociatedTokenAddress(teamMintPublicKey, senderPublicKey)
         const recipientTokenAccountAddress = await getAssociatedTokenAddress(teamMintPublicKey, recipientPublicKey)
 
-        console.log('Sender ATA:', senderTokenAccountAddress.toBase58())
-        console.log('Recipient ATA:', recipientTokenAccountAddress.toBase58())
-
         const recipientAtaInfo = await connection.getAccountInfo(recipientTokenAccountAddress)
         if (!recipientAtaInfo) {
-          console.log('Recipient ATA does not exist. Creating...')
           transaction.add(
             createAssociatedTokenAccountInstruction(
               senderPublicKey, // Payer
@@ -205,7 +192,6 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
             amountInSmallestUnit // Amount
           )
         )
-        console.log(`Prepared TEAM transfer of ${numericAmount} TEAM`)
       }
 
       // Set recent blockhash
@@ -214,28 +200,21 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
       transaction.feePayer = senderPublicKey
 
       // 3. Serialize Unsigned Transaction
-      console.log('Serializing unsigned transaction...')
       const serializedUnsignedTx = transaction.serialize({ requireAllSignatures: false, verifySignatures: false })
       const unsignedTxBase64 = Buffer.from(serializedUnsignedTx).toString('base64')
 
       // 4. Call API to Sign Transaction
-      console.log('Calling signTransaction API...')
       const token = useAuthStore.getState().token // Get token
       if (!token) throw new Error('Authentication token not found.')
 
       const signResponse = await signTransaction(token, password, unsignedTxBase64)
-      console.log('API sign response received.')
 
       // 5. Send Signed Transaction
-      console.log('Decoding and sending signed transaction...')
       const signedTxBytes = Buffer.from(signResponse.signedTransaction, 'base64')
       const signature = await connection.sendRawTransaction(signedTxBytes)
-      console.log('Raw transaction sent. Signature:', signature)
 
       // 6. Confirm Transaction
-      console.log('Confirming transaction...')
       await connection.confirmTransaction(signature, 'confirmed')
-      console.log('Transaction confirmed!')
 
       // 7. Success State Update
       setTxSignature(signature)
@@ -251,7 +230,6 @@ export const SendDrawerContent: React.FC<SendDrawerProps> = ({
       // Optionally close the drawer after success
       // onClose();
     } catch (sendError: any) {
-      console.error('Send transaction error:', sendError)
       const errorMessage =
         sendError?.response?.data?.error || // API error structure
         sendError.message ||

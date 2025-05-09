@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     height: 4,
     backgroundColor: Colors.primary || '#9945FF',
     ...(Platform.OS === 'web' ? {
-      background: 'linear-gradient(90deg, #9945FF, #44b0ff, #14F195)',
+      backgroundImage: 'linear-gradient(90deg, #9945FF, #44b0ff, #14F195)',
     } : {}),
   },
   gridPatternOverlay: {
@@ -349,14 +349,14 @@ const styles = StyleSheet.create({
   featureShowcaseWrapper: {
     padding: 4,
     borderRadius: 16,
-    backgroundColor: 'rgba(153, 69, 255, 0.2)', 
+    backgroundImage: 'linear-gradient(135deg, rgba(153, 69, 255, 0.4), rgba(68, 176, 255, 0.4), rgba(20, 241, 149, 0.4))', 
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
     transform: [{ rotate: '1deg' }],
     ...(Platform.OS === 'web' ? {
-      background: 'linear-gradient(135deg, rgba(153, 69, 255, 0.4), rgba(68, 176, 255, 0.4), rgba(20, 241, 149, 0.4))',
+      backgroundImage: 'linear-gradient(135deg, rgba(153, 69, 255, 0.4), rgba(68, 176, 255, 0.4), rgba(20, 241, 149, 0.4))',
     } : {}),
   },
   featureShowcaseInner: {
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(153, 69, 255, 0.2)',
+    backgroundImage: 'linear-gradient(135deg, rgba(153, 69, 255, 0.2), rgba(68, 176, 255, 0.2), rgba(20, 241, 149, 0.2))',
     ...(Platform.OS === 'web' ? {
       filter: 'blur(30px)',
     } : {}),
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: 'rgba(20, 241, 149, 0.2)',
+    backgroundImage: 'linear-gradient(135deg, rgba(20, 241, 149, 0.2), rgba(68, 176, 255, 0.2), rgba(153, 69, 255, 0.2))',
     ...(Platform.OS === 'web' ? {
       filter: 'blur(30px)',
     } : {}),

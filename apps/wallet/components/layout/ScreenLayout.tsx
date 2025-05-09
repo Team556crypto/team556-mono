@@ -64,8 +64,8 @@ const styles = StyleSheet.create({
   },
   containerTablet: {
     marginLeft: 240, // Standard sidebar width adjustment for tablet
-    paddingTop: 24,
-    paddingRight: 32 // Different padding for tablet
+    paddingTop: 32,
+    paddingRight: 32 // Different padding for tablet,
   },
   headerRow: {
     flexDirection: 'row',

@@ -439,10 +439,10 @@ const styles = StyleSheet.create({
   },
   encryptionSection: {
     maxWidth: 720,
-    backgroundColor: 'rgba(17, 24, 39, 0.7)',
+    backgroundColor: Colors.backgroundDark,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(55, 65, 81, 0.5)',
+    borderColor: Colors.backgroundLight,
     padding: 40,
     alignItems: 'center',
     textAlign: 'center' as any,

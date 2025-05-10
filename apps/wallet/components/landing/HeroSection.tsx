@@ -399,10 +399,10 @@ const styles = StyleSheet.create({
   },
   featureCard: {
     flex: 1,
-    backgroundColor: Colors.backgroundCard,
+    backgroundColor: Colors.backgroundDark,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: Colors.backgroundLight,
     padding: 12,
     alignItems: 'center',
     justifyContent: 'center',

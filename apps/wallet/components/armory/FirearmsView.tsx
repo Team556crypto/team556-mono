@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   Dimensions,
   FlatList,
-  useWindowDimensions
+  useWindowDimensions,
+  Alert
 } from 'react-native'
 import { useFirearmStore } from '@/store/firearmStore'
 import { useAuthStore } from '@/store/authStore'
@@ -79,6 +80,9 @@ export const FirearmsView = () => {
   const hasAttemptedInitialFetch = useFirearmStore(state => state.hasAttemptedInitialFetch)
   const { openDrawer } = useDrawerStore()
 
+  const canAddFirearm = firearms.length < 2
+  const betaMaxFirearmsMessage = 'Max 2 firearms (beta test limit)'
+
   useEffect(() => {
     if (token && !hasAttemptedInitialFetch && !isLoading) {
       fetchInitialFirearms(token)
@@ -90,6 +94,10 @@ export const FirearmsView = () => {
   }
 
   const handleAddFirearm = () => {
+    if (!canAddFirearm) {
+      Alert.alert('Limit Reached', betaMaxFirearmsMessage)
+      return
+    }
     openDrawer(<AddFirearmDrawerContent />)
   }
 
@@ -101,23 +109,26 @@ export const FirearmsView = () => {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: 12
+      marginBottom: 18
+    },
+    headerTitleContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8
     },
     flatListContainer: {
       flex: 1,
-      overflow: 'visible' // Allow content to flow naturally
+      overflow: 'visible'
     },
     gridContent: {
       paddingBottom: 40
     },
     columnWrapper: {
       gap: COLUMN_GAP,
-      justifyContent: 'flex-start', // Change to flex-start for more natural alignment
-      marginBottom: COLUMN_GAP * 1.5 // Increased vertical spacing
+      justifyContent: 'flex-start',
+      marginBottom: COLUMN_GAP * 1.5
     },
-    gridItem: {
-      // Width will be applied dynamically in renderItem
-    },
+    gridItem: {},
     cardWrapper: {
       width: '100%',
       alignItems: 'center',
@@ -133,6 +144,11 @@ export const FirearmsView = () => {
       color: 'red',
       textAlign: 'center'
     },
+    limitReachedText: {
+      fontSize: 12,
+      marginLeft: 8,
+      color: colors.textSecondary
+    },
     emptyMessage: {
       flex: 1,
       width: '100%',
@@ -147,7 +163,6 @@ export const FirearmsView = () => {
       paddingVertical: 48
     },
     addButton: {
-      padding: 8,
       borderRadius: 8
     },
     addButtonLarge: {
@@ -160,7 +175,7 @@ export const FirearmsView = () => {
       gap: 8
     },
     addButtonText: {
-      color: '#805AD5', // Using a purple color that matches the UI
+      color: '#805AD5',
       fontWeight: '600'
     }
   })
@@ -180,7 +195,6 @@ export const FirearmsView = () => {
     )
   }
 
-  // Use direct rendering instead of a function to avoid React reconciliation issues
   let content = null
 
   if (isLoading && firearms.length === 0) {
@@ -193,7 +207,8 @@ export const FirearmsView = () => {
     content = (
       <View style={styles.emptyMessage}>
         <Text preset='label'>No firearms found</Text>
-        <Button variant='secondary' title='Add firearm' onPress={handleAddFirearm} />
+        <Button variant='secondary' title='Add firearm' onPress={handleAddFirearm} disabled={!canAddFirearm} />
+        {!canAddFirearm && <Text style={styles.limitReachedText}>{betaMaxFirearmsMessage}</Text>}
       </View>
     )
   } else if (error) {
@@ -203,8 +218,6 @@ export const FirearmsView = () => {
       </View>
     )
   } else {
-    // When using FlatList inside a screen that might already have a ScrollView,
-    // we need to make sure the FlatList doesn't try to scroll the entire screen
     content = (
       <View style={styles.flatListContainer}>
         <FlatList
@@ -214,7 +227,7 @@ export const FirearmsView = () => {
           numColumns={dimensions.numColumns}
           columnWrapperStyle={styles.columnWrapper}
           showsVerticalScrollIndicator={false}
-          scrollEnabled={true} // Enable scrolling for larger datasets
+          scrollEnabled={true}
           contentContainerStyle={styles.gridContent}
         />
       </View>
@@ -222,19 +235,33 @@ export const FirearmsView = () => {
   }
 
   const renderAddButton = () => (
-    <TouchableOpacity
-      style={[styles.addButton, screenWidth >= MEDIUM_SCREEN_BREAKPOINT && styles.addButtonLarge]}
-      onPress={handleAddFirearm}
-    >
-      <Ionicons name='add' size={screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? 24 : 32} color={colors.primary} />
-      {screenWidth >= MEDIUM_SCREEN_BREAKPOINT && <Text style={styles.addButtonText}>Add Firearm</Text>}
-    </TouchableOpacity>
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <TouchableOpacity
+        style={[styles.addButton, screenWidth >= MEDIUM_SCREEN_BREAKPOINT && styles.addButtonLarge]}
+        onPress={handleAddFirearm}
+        disabled={!canAddFirearm}
+      >
+        <Ionicons
+          name='add'
+          size={screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? 24 : 32}
+          color={!canAddFirearm ? colors.backgroundDark : colors.primary}
+        />
+        {screenWidth >= MEDIUM_SCREEN_BREAKPOINT && (
+          <Text style={[styles.addButtonText, !canAddFirearm && { color: colors.backgroundDark }]}>Add Firearm</Text>
+        )}
+      </TouchableOpacity>
+    </View>
   )
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text preset='h4'>Firearms</Text>
+        <View style={styles.headerTitleContainer}>
+          <Text preset='h4'>Firearms</Text>
+          {!canAddFirearm && (
+            <Text style={[styles.limitReachedText, { marginTop: 0, marginLeft: 0 }]}>({betaMaxFirearmsMessage})</Text>
+          )}
+        </View>
         {renderAddButton()}
       </View>
       {content}

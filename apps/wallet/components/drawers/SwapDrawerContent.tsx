@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { View, StyleSheet, ActivityIndicator } from 'react-native'
+import { View, StyleSheet, ActivityIndicator, Platform } from 'react-native'
 import { Text, Button, Input } from '@team556/ui'
 import { Colors } from '@/constants/Colors'
 import { useAuthStore } from '@/store/authStore'
@@ -9,6 +9,7 @@ import { genericStyles } from '@/constants/GenericStyles'
 import { LAMPORTS_PER_SOL } from '@solana/web3.js'
 import { debounce } from 'lodash'
 import { getSwapQuote, executeSwap, submitTokenAccountTransaction, signTransaction } from '@/services/api'
+import DexScreenerChart from './DexScreenerChart'
 
 // Basic type for Jupiter V6 Quote Response (expand as needed)
 // Consider moving to a shared types package
@@ -525,6 +526,11 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
               Exchange Rate: 1 {fromToken} ≈ {exchangeRate ? Number(exchangeRate).toFixed(4) : '-'} {toToken}
             </Text>
           </View>
+
+          {/* DexScreener Chart - Conditional Rendering */}
+          {Platform.OS === 'web' && fromToken === 'SOL' && toToken === 'TEAM' && (
+            <DexScreenerChart />
+          )}
 
           {/* Error Message - Show only if not loading */}
           {error && !isQuoteLoading && <Text style={styles.errorText}>{error}</Text>}

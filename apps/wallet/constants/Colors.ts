@@ -15,7 +15,7 @@ export const Colors = {
   backgroundLight: '#262838',
   background: '#1D1F2B', // More neutral dark background with less blue
   backgroundDark: '#191B25', // More neutral dark shade with less blue
-  backgroundDarker: '#14161E', // Darker neutral shade with minimal blue
+  backgroundDarker: '#161821', // Darker neutral shade with minimal blue
   backgroundDarkest: '#11131A', // Slightly lighter sidebar color with minimal blue
   errorBackground: '#FFCDD2', // Light red background for errors
   errorText: '#D32F2F', // Dark red text for errors

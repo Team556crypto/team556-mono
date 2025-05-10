@@ -101,7 +101,7 @@ const AssetCard: React.FC<AssetCardProps> = ({ name, ticker, balance, price, val
 
 const styles = StyleSheet.create({
   assetCardContainer: {
-    backgroundColor: Colors.backgroundDark,
+    backgroundColor: Colors.background,
     borderRadius: 12,
     padding: Platform.OS === 'ios' ? 18 : 16, // Slightly more padding for iOS
     marginBottom: 16,

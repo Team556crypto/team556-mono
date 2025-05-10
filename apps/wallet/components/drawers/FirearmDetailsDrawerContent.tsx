@@ -38,42 +38,49 @@ type FirearmDateFieldKey = 'acquisition_date' | 'last_fired' | 'last_cleaned'
 
 // Helper function for formatting date to YYYY-MM-DD for web input
 const formatDateForWebInput = (dateValue: Date | string | undefined): string => {
-  if (!dateValue) return '';
-  let date: Date;
+  if (!dateValue) return ''
+  let date: Date
   if (typeof dateValue === 'string') {
-    const d = new Date(dateValue);
+    const d = new Date(dateValue)
     if (!isNaN(d.getTime())) {
-      date = d;
+      date = d
     } else {
-      const parts = dateValue.split('-');
-      if (parts.length === 3 && parts[0].length === 4 && parts[1].length === 2 && parts[2].length === 2 &&
-          !isNaN(parseInt(parts[0])) && !isNaN(parseInt(parts[1])) && !isNaN(parseInt(parts[2]))) {
-        return dateValue;
+      const parts = dateValue.split('-')
+      if (
+        parts.length === 3 &&
+        parts[0].length === 4 &&
+        parts[1].length === 2 &&
+        parts[2].length === 2 &&
+        !isNaN(parseInt(parts[0])) &&
+        !isNaN(parseInt(parts[1])) &&
+        !isNaN(parseInt(parts[2]))
+      ) {
+        return dateValue
       }
-      return '';
+      return ''
     }
   } else {
-    date = dateValue;
+    date = dateValue
   }
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+  const year = date.getFullYear()
+  const month = (date.getMonth() + 1).toString().padStart(2, '0')
+  const day = date.getDate().toString().padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 // Helper function to get a Date object for react-datepicker
 const getDateForPicker = (value: string | Date | undefined): Date | null => {
   if (value instanceof Date) {
-    return value;
+    return value
   }
   if (typeof value === 'string') {
-    const d = new Date(value);
+    const d = new Date(value)
     if (!isNaN(d.getTime())) {
-      return d;
+      return d
     }
   }
-  return null;
-};
+  return null
+}
 
 export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentProps> = ({ firearm }) => {
   const { colors } = useTheme()
@@ -192,12 +199,13 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
 
     if (editableFirearm.newImageFile) {
       if (Platform.OS === 'web' && editableFirearm.newImageFile.base64) {
-        console.log('[Web] Using direct base64 from image picker for firearm update.');
-        updatePayload.imageData = editableFirearm.newImageFile.base64;
-        updatePayload.imageName = editableFirearm.newImageFile.fileName || `firearm_${firearm.id}_new_image`;
-        updatePayload.imageType = editableFirearm.newImageFile.mimeType || 'image/png'; // Or derive from base64 prefix if needed
-        updatePayload.imageSize = editableFirearm.newImageFile.fileSize;
-      } else if (Platform.OS !== 'web') { // Native platforms or web without direct base64
+        console.log('[Web] Using direct base64 from image picker for firearm update.')
+        updatePayload.imageData = editableFirearm.newImageFile.base64
+        updatePayload.imageName = editableFirearm.newImageFile.fileName || `firearm_${firearm.id}_new_image`
+        updatePayload.imageType = editableFirearm.newImageFile.mimeType || 'image/png' // Or derive from base64 prefix if needed
+        updatePayload.imageSize = editableFirearm.newImageFile.fileSize
+      } else if (Platform.OS !== 'web') {
+        // Native platforms or web without direct base64
         try {
           const fileInfo = await FileSystem.getInfoAsync(editableFirearm.newImageFile.uri)
           if (!fileInfo.exists) {
@@ -222,10 +230,15 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
         }
       } else {
         // Web platform but no base64 data from picker - this might indicate an issue or a very large file
-        console.warn('[Web] Image file selected, but no direct base64 data was available from picker. Upload might fail or be incomplete.');
-        Alert.alert('Warning', 'Could not directly get image data for web. Please try a smaller image or check console.');
-        setIsEditing(false); // Ensured this is present
-        return;
+        console.warn(
+          '[Web] Image file selected, but no direct base64 data was available from picker. Upload might fail or be incomplete.'
+        )
+        Alert.alert(
+          'Warning',
+          'Could not directly get image data for web. Please try a smaller image or check console.'
+        )
+        setIsEditing(false) // Ensured this is present
+        return
       }
     } else if (editableFirearm.newImagePreviewUri === null && firearm.image && !editableFirearm.newImageFile) {
       // This condition means user explicitly cleared the image (e.g., via a "Remove Image" button)
@@ -292,7 +305,7 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
       allowsEditing: true, // Consider if you want users to crop/resize
       aspect: [16, 10], // If allowsEditing is true, this can guide the crop aspect ratio
       quality: 0.4, // Compress image to 70% quality
-      base64: Platform.OS === 'web', // Request base64 only on web for now, native can use FileSystem
+      base64: Platform.OS === 'web' // Request base64 only on web for now, native can use FileSystem
     })
 
     if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
@@ -542,8 +555,8 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
       width: '100%'
     },
     datePickerWeb: {
-      width: '100%',
-    },
+      width: '100%'
+    }
   })
 
   const renderDetailRow = (
@@ -801,16 +814,24 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
                   <DatePicker
                     selected={getDateForPicker(editableFirearm.acquisition_date)}
                     onChange={(date: Date | null) => handleInputChange('acquisition_date', date)}
-                    dateFormat="yyyy-MM-dd"
+                    dateFormat='yyyy-MM-dd'
                     placeholderText='YYYY-MM-DD'
-                    customInput={<Input style={styles.inputField} onChangeText={(text: string) => handleInputChange('acquisition_date', text)} />}
-                    portalId="datepicker-portal"
-                    calendarClassName="dark-theme-datepicker"
-                    popperClassName="dark-theme-datepicker-popper"
+                    customInput={
+                      <Input
+                        style={styles.inputField}
+                        onChangeText={(text: string) => handleInputChange('acquisition_date', text)}
+                      />
+                    }
+                    portalId='datepicker-portal'
+                    calendarClassName='dark-theme-datepicker'
+                    popperClassName='dark-theme-datepicker-popper'
                   />
                 </View>
               ) : (
-                <TouchableOpacity onPress={() => showDatepickerForField('acquisition_date')} style={styles.dateTouchable}>
+                <TouchableOpacity
+                  onPress={() => showDatepickerForField('acquisition_date')}
+                  style={styles.dateTouchable}
+                >
                   <MaterialCommunityIcons
                     name='calendar-blank-outline'
                     size={20}
@@ -836,17 +857,6 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
                 placeholderTextColor={colors.textTertiary}
               />
             </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Current Value</Text>
-              <Input
-                style={styles.inputField}
-                value={String(editableFirearm.value || '')}
-                onChangeText={text => handleInputChange('value', text)}
-                placeholder='Enter current value'
-                keyboardType='numeric'
-                placeholderTextColor={colors.textTertiary}
-              />
-            </View>
           </>
         ) : (
           <>
@@ -854,11 +864,6 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
             {renderDetailRow(
               'Purchase Price',
               firearm.purchase_price ? `$${Number(firearm.purchase_price).toLocaleString()}` : 'N/A'
-            )}
-            {renderDetailRow(
-              'Current Value',
-              firearm.value ? `$${Number(firearm.value).toLocaleString()}` : 'N/A',
-              true
             )}
           </>
         )}
@@ -877,12 +882,17 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
                   <DatePicker
                     selected={getDateForPicker(editableFirearm.last_fired)}
                     onChange={(date: Date | null) => handleInputChange('last_fired', date)}
-                    dateFormat="yyyy-MM-dd"
+                    dateFormat='yyyy-MM-dd'
                     placeholderText='YYYY-MM-DD'
-                    customInput={<Input style={styles.inputField} onChangeText={(text: string) => handleInputChange('last_fired', text)} />}
-                    portalId="datepicker-portal"
-                    calendarClassName="dark-theme-datepicker"
-                    popperClassName="dark-theme-datepicker-popper"
+                    customInput={
+                      <Input
+                        style={styles.inputField}
+                        onChangeText={(text: string) => handleInputChange('last_fired', text)}
+                      />
+                    }
+                    portalId='datepicker-portal'
+                    calendarClassName='dark-theme-datepicker'
+                    popperClassName='dark-theme-datepicker-popper'
                   />
                 </View>
               ) : (
@@ -917,12 +927,17 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
                   <DatePicker
                     selected={getDateForPicker(editableFirearm.last_cleaned)}
                     onChange={(date: Date | null) => handleInputChange('last_cleaned', date)}
-                    dateFormat="yyyy-MM-dd"
+                    dateFormat='yyyy-MM-dd'
                     placeholderText='YYYY-MM-DD'
-                    customInput={<Input style={styles.inputField} onChangeText={(text: string) => handleInputChange('last_cleaned', text)} />}
-                    portalId="datepicker-portal"
-                    calendarClassName="dark-theme-datepicker"
-                    popperClassName="dark-theme-datepicker-popper"
+                    customInput={
+                      <Input
+                        style={styles.inputField}
+                        onChangeText={(text: string) => handleInputChange('last_cleaned', text)}
+                      />
+                    }
+                    portalId='datepicker-portal'
+                    calendarClassName='dark-theme-datepicker'
+                    popperClassName='dark-theme-datepicker-popper'
                   />
                 </View>
               ) : (

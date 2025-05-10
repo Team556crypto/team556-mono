@@ -6,7 +6,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   useWindowDimensions,
-  FlatList
+  FlatList,
+  Alert
 } from 'react-native'
 import { useFirearmStore } from '@/store/firearmStore'
 import { useAuthStore } from '@/store/authStore'
@@ -24,6 +25,8 @@ const CARD_GAP = 16
 const LARGE_SCREEN_BREAKPOINT = 768
 const DESKTOP_BREAKPOINT = 1200
 
+const betaMaxFirearmsMessage = 'You can add a maximum of 2 firearms during the beta.'
+
 const AllItemsView = () => {
   const { colors } = useTheme()
   const token = useAuthStore(state => state.token)
@@ -35,6 +38,8 @@ const AllItemsView = () => {
   const fetchInitialFirearms = useFirearmStore(state => state.fetchInitialFirearms)
   const hasAttemptedInitialFetch = useFirearmStore(state => state.hasAttemptedInitialFetch)
   const { openDrawer } = useDrawerStore()
+
+  const canAddFirearm = firearms.length < 2
 
   // Calculate responsive dimensions
   const getCardDimensions = () => {
@@ -158,6 +163,10 @@ const AllItemsView = () => {
     <TouchableOpacity
       style={styles.addFirearmCard}
       onPress={() => {
+        if (!canAddFirearm) {
+          Alert.alert('Limit Reached', betaMaxFirearmsMessage)
+          return
+        }
         openDrawer(<AddFirearmDrawerContent />)
       }}
     >
@@ -184,7 +193,17 @@ const AllItemsView = () => {
       return (
         <View style={styles.emptyMessage}>
           <Text preset='label'>No firearms found</Text>
-          <Button variant='secondary' title='Add firearm' onPress={() => openDrawer(<AddFirearmDrawerContent />)} />
+          <Button
+            variant='secondary'
+            title='Add firearm'
+            onPress={() => {
+              if (!canAddFirearm) {
+                Alert.alert('Limit Reached', betaMaxFirearmsMessage)
+                return
+              }
+              openDrawer(<AddFirearmDrawerContent />)
+            }}
+          />
         </View>
       )
     }

@@ -10,24 +10,24 @@ interface HowItWorksSectionProps {
 
 const steps = [
   {
-    icon: 'shield',
-    title: 'Create Your Account',
-    description: 'Quickly set up your secure digital vault with military-grade encryption.'
+    icon: 'folder',
+    title: 'Create Your Secure Wallet',
+    description: 'Generate an advanced security encrypted wallet on Solana blockchain with a simple setup process. Your keys, your control.'
   },
   {
-    icon: 'key',
-    title: 'Secure Your Assets',
-    description: 'Add firearms, documents, and digital assets with blockchain protection.'
+    icon: 'plus-circle',
+    title: 'Add Your Collection',
+    description: 'Catalog firearms, ammunition, and accessories in your private Digital Armory. Track serial numbers, maintenance, and more—all encrypted and stored locally on your device.'
   },
   {
-    icon: 'smartphone',
-    title: 'Access Anywhere',
-    description: 'Manage your inventory securely from any device with your credentials.'
+    icon: 'file-text',
+    title: 'Secure Your Documents',
+    description: 'Store licenses, certificates, and purchase records in your encrypted vault, accessible only by you. Nothing is shared or stored in the cloud.'
   },
   {
-    icon: 'refresh',
-    title: 'Stay Up-to-Date',
-    description: 'Get real-time updates and alerts for your digital and physical assets.'
+    icon: 'lock',
+    title: 'Access Anywhere Securely',
+    description: 'Your data is available across all your devices, always encrypted and protected with biometric authentication.'
   }
 ];
 
@@ -37,9 +37,12 @@ const HowItWorksSection: React.FC<HowItWorksSectionProps> = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>How It Works</Text>
+        <View style={styles.tagContainer}>
+          <Text style={styles.tag}>Simple & Intuitive</Text>
+        </View>
+        <Text style={styles.title}>How Team556 Works</Text>
         <Text style={styles.subtitle}>
-          Our platform provides a seamless way to secure and manage your assets
+          From setup to daily use, your journey with Team556 is straightforward, secure, and designed for an exceptional user experience
         </Text>
       </View>
 
@@ -48,8 +51,11 @@ const HowItWorksSection: React.FC<HowItWorksSectionProps> = () => {
         <View style={styles.stepsContainer}>
           {steps.map((step, index) => (
             <View key={index} style={styles.stepCard}>
+              <View style={styles.stepNumberContainer}>
+                <Text style={styles.stepNumber}>STEP {index + 1}</Text>
+              </View>
               <View style={styles.stepIconContainer}>
-                <Feather name={step.icon as any} size={24} color={Colors.primary} />
+                <Feather name={step.icon as any} size={24} color={Colors.secondary} />
               </View>
               <Text style={styles.stepTitle}>{step.title}</Text>
               <Text style={styles.stepDescription}>{step.description}</Text>
@@ -65,8 +71,11 @@ const HowItWorksSection: React.FC<HowItWorksSectionProps> = () => {
           <View style={styles.stepsRow}>
             {steps.map((step, index) => (
               <View key={index} style={styles.stepCircle}>
+                <View style={styles.stepNumberContainer}>
+                  <Text style={styles.stepNumber}>STEP {index + 1}</Text>
+                </View>
                 <View style={styles.innerCircle}>
-                  <Feather name={step.icon as any} size={24} color={Colors.primary} />
+                  <Feather name={step.icon as any} size={24} color={Colors.secondary} />
                 </View>
                 <Text style={styles.circleTitle}>{step.title}</Text>
                 <Text style={styles.circleDescription}>{step.description}</Text>
@@ -81,8 +90,11 @@ const HowItWorksSection: React.FC<HowItWorksSectionProps> = () => {
         <View style={styles.tabletStepsContainer}>
           {steps.map((step, index) => (
             <View key={index} style={styles.tabletStepCard}>
+              <View style={styles.stepNumberContainer}>
+                <Text style={styles.stepNumber}>STEP {index + 1}</Text>
+              </View>
               <View style={styles.tabletStepIconContainer}>
-                <Feather name={step.icon as any} size={24} color={Colors.primary} />
+                <Feather name={step.icon as any} size={24} color={Colors.secondary} />
               </View>
               <View style={styles.tabletStepContent}>
                 <Text style={styles.stepTitle}>{step.title}</Text>
@@ -105,6 +117,18 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     alignItems: 'center',
     textAlign: 'center' as any
+  },
+  tagContainer: {
+    backgroundColor: 'rgba(91, 192, 248, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+    marginBottom: 16
+  },
+  tag: {
+    color: Colors.secondary,
+    fontSize: 14,
+    fontWeight: '500'
   },
   title: {
     fontSize: 36,
@@ -136,8 +160,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     textAlign: 'center' as any
   },
+  stepNumberContainer: {
+    marginBottom: 10
+  },
+  stepNumber: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.secondary,
+    letterSpacing: 1
+  },
   stepIconContainer: {
-    backgroundColor: Colors.primarySubtle,
+    backgroundColor: Colors.secondarySubtle,
     width: 60,
     height: 60,
     borderRadius: 30,
@@ -172,7 +205,7 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   tabletStepIconContainer: {
-    backgroundColor: Colors.primarySubtle,
+    backgroundColor: Colors.secondarySubtle,
     width: 50,
     height: 50,
     borderRadius: 25,
@@ -205,7 +238,7 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: Colors.primarySubtle,
+    backgroundColor: Colors.secondarySubtle,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16
@@ -228,7 +261,7 @@ const styles = StyleSheet.create({
     left: '15%',
     right: '15%',
     height: 2,
-    backgroundColor: Colors.primarySubtle,
+    backgroundColor: Colors.secondarySubtle,
     zIndex: -1
   }
 });

@@ -322,10 +322,10 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   featureCardContent: {
-    backgroundColor: 'rgba(30, 30, 40, 0.9)',
+    backgroundColor: 'rgba(17, 24, 39, 0.7)',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(128, 128, 128, 0.2)',
+    borderColor: 'rgba(55, 65, 81, 0.5)',
     padding: 24,
     height: '100%',
     overflow: 'hidden',

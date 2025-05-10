@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
   },
   // --- BEGIN: Added Styles for Portfolio Section ---
   portfolioSectionContainer: {
-    backgroundColor: Colors.backgroundCard,
+    backgroundColor: Colors.background,
     borderWidth: 1,
     borderColor: Colors.backgroundLight,
     padding: 20,

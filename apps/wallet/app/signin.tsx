@@ -348,7 +348,9 @@ const styles = StyleSheet.create({
   },
   infoSide: {
     flex: 1,
-    backgroundColor: Colors.backgroundDarkest,
+    backgroundColor: Colors.backgroundDark,
+    borderRightWidth: 1,
+    borderRightColor: Colors.backgroundLight,
     padding: 40,
     justifyContent: 'space-between'
   },
@@ -461,7 +463,7 @@ const styles = StyleSheet.create({
   featureCard: {
     flex: 1,
     minWidth: '45%',
-    backgroundColor: Colors.backgroundDarker,
+    backgroundColor: Colors.background,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.05)',
@@ -506,13 +508,15 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.backgroundDark,
+    backgroundColor: Colors.background,
     padding: Platform.OS === 'web' ? 40 : 20
   },
   formCard: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: Colors.backgroundDarker,
+    backgroundColor: Colors.backgroundDark,
+    borderWidth: 1,
+    borderColor: Colors.backgroundLight,
     borderRadius: 12,
     padding: 30,
     shadowColor: '#000',
@@ -539,7 +543,7 @@ const styles = StyleSheet.create({
     fontWeight: '500'
   },
   input: {
-    backgroundColor: Colors.backgroundDark,
+    backgroundColor: Colors.backgroundLight,
     borderRadius: 8,
     color: Colors.text,
     height: 50

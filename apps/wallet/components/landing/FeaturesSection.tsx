@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundDark,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(55, 65, 81, 0.5)',
+    borderColor: Colors.backgroundLight,
     padding: 24,
     height: '100%',
     overflow: 'hidden',
@@ -349,10 +349,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#44b0ff'
   },
   primaryIndicator: {
-    backgroundColor: Colors.primary || '#9945FF'
+    backgroundColor: Colors.primary
   },
   secondaryIndicator: {
-    backgroundColor: Colors.secondary || '#14F195'
+    backgroundColor: Colors.secondary
   },
   defaultIndicator: {
     backgroundColor: '#888888'
@@ -496,13 +496,13 @@ const styles = StyleSheet.create({
     color: Colors.text
   },
   nistBadgeDot: {
-    backgroundColor: '#4ADE80' // Green dot for NIST
+    backgroundColor: Colors.secondary // Green dot for NIST
   },
   zkBadgeDot: {
     backgroundColor: Colors.primary // Blue dot for Zero-Knowledge
   },
   militaryBadgeDot: {
-    backgroundColor: '#C084FC' // Purple dot for Military-Grade
+    backgroundColor: Colors.primary // Purple dot for Military-Grade
   }
 })
 

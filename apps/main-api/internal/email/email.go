@@ -7,7 +7,7 @@ import (
 	"github.com/resend/resend-go/v2"
 )
 
-const senderAddress = "support@support.openworth.io" // Replace with your verified Resend sender
+const senderAddress = "support@team556.com" // Replace with your verified Resend sender
 
 type Client struct {
 	resendClient *resend.Client

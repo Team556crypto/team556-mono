@@ -83,6 +83,13 @@
     "typescript": "^5.3.3"
   },
   "private": true,
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "listUnknownPackages": false
+      }
+    }
+  },
   "react-native": {
     "crypto": "react-native-crypto",
     "_stream_transform": "readable-stream/transform",

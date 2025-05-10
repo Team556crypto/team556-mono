@@ -10,14 +10,14 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.team556.digital-armory"
+      "bundleIdentifier": "com.team.digitalarmory"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.team556.digital-armory"
+      "package": "com.team.digitalarmory"
     },
     "web": {
       "bundler": "metro",
@@ -39,6 +39,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "a1be1306-5e66-4470-8c17-3b8e6faedb59"
+      }
     }
   }
 }

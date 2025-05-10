@@ -13,7 +13,7 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
   const { isTabletOrLarger } = useBreakpoint()
 
   const tabBarHeight = 60
-  const bottomInset = Platform.OS === 'ios' && !isTabletOrLarger ? insets.bottom - 12 : 0
+  const bottomInset = Platform.OS === 'ios' ? (insets.bottom > 8 ? insets.bottom - 8 : insets.bottom) : insets.bottom
 
   return (
     <View

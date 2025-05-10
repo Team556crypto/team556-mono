@@ -1,11 +1,12 @@
-import React, { useEffect, useCallback, useState, useMemo } from 'react'
-import { StyleSheet, View, TouchableOpacity, Platform, ScrollView, Animated } from 'react-native'
-import { Text, Button } from '@team556/ui'
+import React, { useEffect, useCallback } from 'react'
+import { StyleSheet, View, TouchableOpacity, Platform, ScrollView } from 'react-native'
+import { Text } from '@team556/ui'
 import { Colors } from '@/constants/Colors'
 import { useAuthStore } from '@/store/authStore'
 import { useToastStore } from '@/store/toastStore'
 import { useWalletStore } from '@/store/walletStore'
 import { Ionicons } from '@expo/vector-icons'
+import Feather from '@expo/vector-icons/Feather'
 import { useWalletClipboard } from '@/hooks/useWalletClipboard'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useDrawerStore } from '@/store/drawerStore'
@@ -14,11 +15,9 @@ import ReceiveDrawerContent from '@/components/drawers/ReceiveDrawerContent'
 import SwapDrawerContent from '@/components/drawers/SwapDrawerContent'
 import SolanaIcon from '@/assets/images/solana.svg'
 import TeamIcon from '@/assets/images/team.svg'
-import { formatWalletAddress, formatBalance, formatPrice } from '@/utils/formatters'
+import { formatWalletAddress, formatPrice } from '@/utils/formatters'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ScreenLayout } from '@/components/layout/ScreenLayout'
-import AssetDetailsHeader from '@/components/assets/AssetDetailsHeader'
-import AssetInfoDisplay from '@/components/assets/AssetInfoDisplay'
 import AssetDetailsDrawerContent from '@/components/drawers/AssetDetailsDrawerContent'
 import AssetCard from '@/components/assets/AssetCard'
 
@@ -187,6 +186,18 @@ export default function HomeScreen() {
     )
   }
 
+  // --- BEGIN: Added User Info and Portfolio Data Logic ---
+  const userEmail = user?.email || 'bobjoe@example.com' // Fallback for display
+  const userNamePart = userEmail.split('@')[0]
+  const userInitial = (userNamePart.charAt(0) || '').toUpperCase()
+  const displayName = `${userNamePart}'s Safe`
+
+  // Placeholder for daily change data - replace with actual data when available
+  const dailyChangeValue = 2.4
+  const dailyChangePositive = dailyChangeValue >= 0
+  const dailyChangeText = `${dailyChangePositive ? '+' : ''}${dailyChangeValue}% today`
+  // --- END: Added User Info and Portfolio Data Logic ---
+
   return (
     <ScreenLayout
       title='Wallet'
@@ -198,14 +209,32 @@ export default function HomeScreen() {
           styles.scrollContentContainer,
           { paddingBottom: insets.bottom > 0 ? insets.bottom : 20 }
         ]}
-        showsVerticalScrollIndicator={false}
       >
-        {/* Portfolio Value Section */}
-        <View style={styles.portfolioContainer}>
-          <Text style={styles.portfolioLabelText}>Portfolio Value</Text>
-          <Text style={styles.portfolioValueAmount}>{formatPrice(totalPortfolioValue)}</Text>
-          <Text style={styles.portfolioChangeText}>↑ 0.0% today</Text>
+        {/* --- BEGIN: New Portfolio Section --- */}
+        <View style={styles.portfolioSectionContainer}>
+          <View style={styles.userInfoContainer}>
+            <View style={styles.avatarContainer}>
+              <Text style={styles.avatarInitial}>{userInitial}</Text>
+            </View>
+            <Text style={styles.userNameText}>{displayName}</Text>
+          </View>
+
+          <View style={styles.portfolioDetailsContainer}>
+            <Text style={styles.portfolioLabel}>Portfolio Value</Text>
+            <Text style={styles.portfolioValueText}>{formatPrice(totalPortfolioValue)}</Text>
+            <View style={styles.dailyChangeContainer}>
+              <Feather
+                name={dailyChangePositive ? 'arrow-up-right' : 'arrow-down-right'}
+                size={16}
+                color={dailyChangePositive ? Colors.success : Colors.error}
+              />
+              <Text style={[styles.dailyChangeText, { color: dailyChangePositive ? Colors.success : Colors.error }]}>
+                {dailyChangeText}
+              </Text>
+            </View>
+          </View>
         </View>
+        {/* --- END: New Portfolio Section --- */}
 
         {/* Assets Section */}
         <View style={styles.sectionHeader}>
@@ -261,6 +290,63 @@ const styles = StyleSheet.create({
   scrollContentContainer: {
     paddingTop: 8 // Keep top padding within scroll content if needed
   },
+  // --- BEGIN: Added Styles for Portfolio Section ---
+  portfolioSectionContainer: {
+    backgroundColor: Colors.backgroundCard,
+    borderWidth: 1,
+    borderColor: Colors.backgroundLight,
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 20 // Spacing before the asset cards
+  },
+  userInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24
+  },
+  avatarContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12
+  },
+  avatarInitial: {
+    color: Colors.text,
+    fontSize: 20,
+    fontWeight: '600'
+  },
+  userNameText: {
+    color: Colors.text,
+    fontSize: 18,
+    fontWeight: 'bold'
+  },
+  portfolioDetailsContainer: {
+    // alignItems: 'flex-start', // Default, but good to be explicit if needed
+  },
+  portfolioLabel: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    marginBottom: 8
+  },
+  portfolioValueText: {
+    color: Colors.text,
+    fontSize: 36,
+    fontWeight: 'bold',
+    marginBottom: 8
+  },
+  dailyChangeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  dailyChangeText: {
+    fontSize: 16,
+    marginLeft: 6,
+    fontWeight: '500'
+  },
+  // --- END: Added Styles for Portfolio Section ---
   addressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -299,7 +385,7 @@ const styles = StyleSheet.create({
   emptyActivity: {
     height: 120,
     backgroundColor: Colors.backgroundDark, // Use defined subtle card background
-    borderColor: Colors.backgroundSubtle,
+    borderColor: Colors.backgroundLight,
     borderWidth: 1,
     borderRadius: 12,
     alignItems: 'center',
@@ -308,27 +394,5 @@ const styles = StyleSheet.create({
   emptyActivityText: {
     color: Colors.textTertiary, // Use tertiary text color
     marginTop: 8
-  },
-  portfolioContainer: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    marginBottom: 16,
-    backgroundColor: Colors.backgroundDark,
-    borderRadius: 12
-  },
-  portfolioLabelText: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    marginBottom: 8
-  },
-  portfolioValueAmount: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    color: Colors.text,
-    marginBottom: 8
-  },
-  portfolioChangeText: {
-    fontSize: 16,
-    color: Colors.success // Assuming you have a 'success' color, otherwise use a green like '#28a745'
   }
 })

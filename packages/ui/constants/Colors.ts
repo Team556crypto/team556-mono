@@ -3,6 +3,7 @@ export type ThemeColors = {
   secondary: string
   textSecondary: string
   textTertiary: string
+  backgroundLight: string
   backgroundDarker: string
   backgroundDarkest: string
   errorBackground: string
@@ -34,6 +35,7 @@ export const DefaultColors: ThemeColors = {
   text: '#ECEDEE',
   textSecondary: '#9BA1A6',
   textTertiary: '#657786',
+  backgroundLight: '#373B47',
   background: '#23242A',
   backgroundDark: '#1a1a1a',
   backgroundDarker: '#121212',

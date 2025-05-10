@@ -10,7 +10,7 @@ import { logoutUser, requestPasswordReset } from '@/services/api'
 import { ScreenLayout } from '@/components/layout/ScreenLayout'
 import { Colors } from '@/constants/Colors'
 import { useDrawerStore } from '@/store/drawerStore'
-import { Alert } from 'react-native';
+import { Alert } from 'react-native'
 
 // Import moved drawer components
 import ComingSoonDrawerContent from '@/components/drawers/ComingSoonDrawerContent'
@@ -50,20 +50,21 @@ export default function SettingsScreen() {
 
   const handleInitiatePasswordReset = async () => {
     if (!user?.email) {
-      Alert.alert('Error', 'Could not find your email address.');
-      return;
+      Alert.alert('Error', 'Could not find your email address.')
+      return
     }
     try {
       // Consider adding a loading state if this takes time
-      const response = await requestPasswordReset(user.email);
-      Alert.alert('Check Your Email', response.message);
-      router.push({ pathname: '/auth/ResetPasswordScreen', params: { email: user.email } });
+      const response = await requestPasswordReset(user.email)
+      Alert.alert('Check Your Email', response.message)
+      router.push({ pathname: '/auth/ResetPasswordScreen', params: { email: user.email } })
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || error.message || 'Failed to initiate password reset. Please try again.';
-      Alert.alert('Error', errorMessage);
-      console.error('Initiate Password Reset Error:', error.response?.data || error);
+      const errorMessage =
+        error?.response?.data?.message || error.message || 'Failed to initiate password reset. Please try again.'
+      Alert.alert('Error', errorMessage)
+      console.error('Initiate Password Reset Error:', error.response?.data || error)
     }
-  };
+  }
 
   const handleViewRecoveryPhrasePress = () => {
     openDrawer(<ViewRecoveryPhraseDrawerContent onClose={closeDrawer} />)
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
     paddingBottom: 50
   },
   card: {
-    backgroundColor: Colors.backgroundDark,
+    backgroundColor: Colors.background,
     borderRadius: 12,
     marginBottom: 16,
     overflow: 'hidden'

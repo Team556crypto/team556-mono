@@ -4,7 +4,7 @@ import { Text } from '@repo/ui'
 import { Colors } from '@/constants/Colors'
 import { Feather, FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useTheme } from '@react-navigation/native'
-import LogoSvg from '@/assets/images/logo.svg'
+import LogoSvg from '@/assets/images/logo-wide.svg'
 import SolanaSvg from '@/assets/images/solana.svg'
 import { useBreakpoint } from '../../hooks/useBreakpoint'
 
@@ -97,7 +97,7 @@ const FooterSection: React.FC = () => {
           <View style={[styles.ctaSection, isTabletOrLarger ? styles.ctaSectionLarge : {}]}>
             <View style={styles.logoContainer}>
               {Platform.OS === 'web' ? (
-                <LogoSvg width={36} height={36} />
+                <LogoSvg width={150} height={36} />
               ) : (
                 <Image
                   source={require('@/assets/images/logo.svg')}
@@ -171,17 +171,6 @@ const FooterSection: React.FC = () => {
             {/* Platform/Token links */}
             <View style={[styles.platformSection, isTabletOrLarger ? styles.linksGroupLarge : {}]}>
               <Text style={styles.linksHeader}>Platform</Text>
-              <View style={styles.solanaContainer}>
-                {Platform.OS === 'web' ? (
-                  <SolanaSvg width={100} height={24} />
-                ) : (
-                  <Image
-                    source={require('@/assets/images/solana.svg')}
-                    style={{ width: 100, height: 24 }}
-                    resizeMode='contain'
-                  />
-                )}
-              </View>
 
               <View style={styles.tokenInfo}>
                 <View style={styles.tokenHeader}>

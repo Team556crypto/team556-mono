@@ -93,6 +93,78 @@ export const FirearmsView = () => {
     openDrawer(<AddFirearmDrawerContent />)
   }
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 12
+    },
+    flatListContainer: {
+      flex: 1,
+      overflow: 'visible' // Allow content to flow naturally
+    },
+    gridContent: {
+      paddingBottom: 40
+    },
+    columnWrapper: {
+      gap: COLUMN_GAP,
+      justifyContent: 'flex-start', // Change to flex-start for more natural alignment
+      marginBottom: COLUMN_GAP * 1.5 // Increased vertical spacing
+    },
+    gridItem: {
+      // Width will be applied dynamically in renderItem
+    },
+    cardWrapper: {
+      width: '100%',
+      alignItems: 'center',
+      justifyContent: 'center'
+    },
+    centerMessage: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20
+    },
+    errorText: {
+      color: 'red',
+      textAlign: 'center'
+    },
+    emptyMessage: {
+      flex: 1,
+      width: '100%',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: 12,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: colors.backgroundLight,
+      backgroundColor: 'rgba(0,0,0,0.2)',
+      gap: 12,
+      paddingVertical: 48
+    },
+    addButton: {
+      padding: 8,
+      borderRadius: 8
+    },
+    addButtonLarge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: 'rgba(128, 90, 213, 0.1)',
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+      gap: 8
+    },
+    addButtonText: {
+      color: '#805AD5', // Using a purple color that matches the UI
+      fontWeight: '600'
+    }
+  })
+
   const renderItem = ({ item }: { item: Firearm }) => {
     return (
       <View style={[styles.gridItem, { width: dimensions.cardWidth }]}>
@@ -169,75 +241,3 @@ export const FirearmsView = () => {
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 24
-  },
-  flatListContainer: {
-    flex: 1,
-    overflow: 'visible' // Allow content to flow naturally
-  },
-  gridContent: {
-    paddingBottom: 40
-  },
-  columnWrapper: {
-    gap: COLUMN_GAP,
-    justifyContent: 'flex-start', // Change to flex-start for more natural alignment
-    marginBottom: COLUMN_GAP * 1.5 // Increased vertical spacing
-  },
-  gridItem: {
-    // Width will be applied dynamically in renderItem
-  },
-  cardWrapper: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  centerMessage: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20
-  },
-  errorText: {
-    color: 'red',
-    textAlign: 'center'
-  },
-  emptyMessage: {
-    flex: 1,
-    width: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#444',
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    gap: 12,
-    paddingVertical: 48
-  },
-  addButton: {
-    padding: 8,
-    borderRadius: 8
-  },
-  addButtonLarge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(128, 90, 213, 0.1)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 8
-  },
-  addButtonText: {
-    color: '#805AD5', // Using a purple color that matches the UI
-    fontWeight: '600'
-  }
-})

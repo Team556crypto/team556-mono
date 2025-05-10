@@ -8,7 +8,7 @@ import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
 import 'react-native-reanimated'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
-import { StyleSheet, View, ActivityIndicator } from 'react-native'
+import { StyleSheet, View, ActivityIndicator, Platform } from 'react-native'
 import { setAppTheme } from '@team556/ui'
 import { Colors } from '../constants/Colors'
 import { useAuthStore } from '@/store/authStore'
@@ -18,6 +18,20 @@ import { useDrawerStore } from '@/store/drawerStore'
 
 // Configure shared UI components to use the app's colors
 setAppTheme(Colors)
+
+// --- BEGIN: Web Overscroll Prevention --- 
+const preventWebOverscroll = () => {
+  if (Platform.OS === 'web') {
+    const style = document.createElement('style');
+    style.textContent = `
+      html, body {
+        overscroll-behavior: none !important;
+      }
+    `;
+    document.head.append(style);
+  }
+};
+// --- END: Web Overscroll Prevention --- 
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync()
@@ -112,6 +126,12 @@ export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf')
   })
+
+  // --- BEGIN: Call Web Overscroll Prevention --- 
+  useEffect(() => {
+    preventWebOverscroll();
+  }, []); // Empty dependency array ensures this runs only once on mount
+  // --- END: Call Web Overscroll Prevention --- 
 
   // Drawer state - Now managed by Zustand
   const {

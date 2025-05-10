@@ -12,6 +12,7 @@ export const Colors = {
   text: '#FFFFFF', // Pure white for better contrast
   textSecondary: '#B8C0D9', // Slightly bluer shade for secondary text
   textTertiary: '#657786',
+  backgroundLight: '#262838',
   background: '#1D1F2B', // More neutral dark background with less blue
   backgroundDark: '#191B25', // More neutral dark shade with less blue
   backgroundDarker: '#14161E', // Darker neutral shade with minimal blue

@@ -156,7 +156,7 @@ export const AddFirearmDrawerContent = () => {
       marginVertical: 24,
       overflow: 'hidden',
       borderWidth: 1,
-      borderColor: colors.primarySubtle,
+      borderColor: colors.backgroundLight,
       position: 'relative',
       padding: 1
     },
@@ -191,7 +191,7 @@ export const AddFirearmDrawerContent = () => {
     progressStepInactive: {
       backgroundColor: 'rgba(255,255,255,0.2)',
       borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.3)'
+      borderColor: colors.backgroundLight
     },
     stepsContainer: {
       flexDirection: 'row',
@@ -413,8 +413,8 @@ export const AddFirearmDrawerContent = () => {
     datePickerWeb: {
       // Add any specific wrapper styles for DatePicker on web if needed
       // For example, to ensure it aligns with other inputs
-      width: '100%',
-    },
+      width: '100%'
+    }
   })
 
   const handleInputChange = (field: keyof FirearmFormState, value: any) => {
@@ -698,46 +698,53 @@ export const AddFirearmDrawerContent = () => {
   }
 
   const formatDateForWebInput = (dateValue: Date | string | undefined): string => {
-    if (!dateValue) return '';
-    let date: Date;
+    if (!dateValue) return ''
+    let date: Date
     if (typeof dateValue === 'string') {
       // Try to parse if it's a full date string, otherwise check if it's already YYYY-MM-DD
-      const d = new Date(dateValue);
+      const d = new Date(dateValue)
       if (!isNaN(d.getTime())) {
-        date = d;
+        date = d
       } else {
         // Check if it's already in YYYY-MM-DD format
-        const parts = dateValue.split('-');
-        if (parts.length === 3 && parts[0].length === 4 && parts[1].length === 2 && parts[2].length === 2 &&
-            !isNaN(parseInt(parts[0])) && !isNaN(parseInt(parts[1])) && !isNaN(parseInt(parts[2]))) {
-          return dateValue; // Already in correct format
+        const parts = dateValue.split('-')
+        if (
+          parts.length === 3 &&
+          parts[0].length === 4 &&
+          parts[1].length === 2 &&
+          parts[2].length === 2 &&
+          !isNaN(parseInt(parts[0])) &&
+          !isNaN(parseInt(parts[1])) &&
+          !isNaN(parseInt(parts[2]))
+        ) {
+          return dateValue // Already in correct format
         }
-        return ''; // Invalid or not in YYYY-MM-DD format
+        return '' // Invalid or not in YYYY-MM-DD format
       }
     } else {
-      date = dateValue; // It's a Date object
+      date = dateValue // It's a Date object
     }
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
+    const year = date.getFullYear()
+    const month = (date.getMonth() + 1).toString().padStart(2, '0')
+    const day = date.getDate().toString().padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
 
   const getDateForPicker = (value: string | Date | undefined): Date | null => {
     if (value instanceof Date) {
-      return value;
+      return value
     }
     if (typeof value === 'string') {
       // Attempt to parse common date string formats, including YYYY-MM-DD
-      const d = new Date(value);
+      const d = new Date(value)
       if (!isNaN(d.getTime())) {
         // If the string was just a year like "2023", new Date("2023") might interpret it as Jan 1st, 2023 UTC.
         // For YYYY-MM-DD, it's generally fine. For robustness, ensure the input string matches expected format if needed.
-        return d;
+        return d
       }
     }
-    return null;
-  };
+    return null
+  }
 
   const renderDetailRow = (
     label: string,
@@ -757,16 +764,22 @@ export const AddFirearmDrawerContent = () => {
     if (inputType === 'date') {
       if (Platform.OS === 'web') {
         inputComponent = (
-          <View style={styles.datePickerWeb}> 
+          <View style={styles.datePickerWeb}>
             <DatePicker
               selected={getDateForPicker(fieldValue as Date | string | undefined)}
               onChange={(date: Date | null) => handleInputChange(field, date)}
-              dateFormat="yyyy-MM-dd"
+              dateFormat='yyyy-MM-dd'
               placeholderText='YYYY-MM-DD'
-              customInput={<TextInput style={styles.inputStyle} onChangeText={(text: string) => handleInputChange(field, text)} placeholderTextColor={colors.textTertiary} />}
-              portalId="datepicker-portal"
-              calendarClassName="dark-theme-datepicker"
-              popperClassName="dark-theme-datepicker-popper"
+              customInput={
+                <TextInput
+                  style={styles.inputStyle}
+                  onChangeText={(text: string) => handleInputChange(field, text)}
+                  placeholderTextColor={colors.textTertiary}
+                />
+              }
+              portalId='datepicker-portal'
+              calendarClassName='dark-theme-datepicker'
+              popperClassName='dark-theme-datepicker-popper'
             />
           </View>
         )

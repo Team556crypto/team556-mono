@@ -93,6 +93,16 @@ func CreateFirearmHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 			return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized: missing user ID"})
 		}
 
+		// Beta Test: Limit firearms to 2 per user
+		var count int64
+		if err := db.Model(&models.Firearm{}).Where("user_id = ?", userID).Count(&count).Error; err != nil {
+			log.Printf("Error counting firearms for user %d: %v", userID, err)
+			// Allow creation if count fails, to not block users due to a potential DB issue during beta.
+			// Consider stricter error handling in production.
+		} else if count >= 2 {
+			return c.Status(http.StatusForbidden).JSON(fiber.Map{"error": "Firearm limit reached (max 2 for beta test)"})
+		}
+
 		// Parse the request body into CreateFirearmRequest
 		requestPayload := new(CreateFirearmRequest)
 		if err := c.BodyParser(requestPayload); err != nil {

@@ -1,9 +1,13 @@
 import { Link, Stack } from 'expo-router'
 import { StyleSheet, Text, View } from 'react-native'
+import Head from 'expo-router/head';
 
 export default function NotFoundScreen() {
   return (
     <View>
+      <Head>
+        <title>Page Not Found | Team556 Wallet</title>
+      </Head>
       <Stack.Screen options={{ title: 'Oops!' }} />
       <View style={styles.container}>
         <Text>This screen doesn't exist.</Text>

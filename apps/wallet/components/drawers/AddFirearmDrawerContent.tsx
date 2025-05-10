@@ -697,39 +697,6 @@ export const AddFirearmDrawerContent = () => {
     )
   }
 
-  const formatDateForWebInput = (dateValue: Date | string | undefined): string => {
-    if (!dateValue) return ''
-    let date: Date
-    if (typeof dateValue === 'string') {
-      // Try to parse if it's a full date string, otherwise check if it's already YYYY-MM-DD
-      const d = new Date(dateValue)
-      if (!isNaN(d.getTime())) {
-        date = d
-      } else {
-        // Check if it's already in YYYY-MM-DD format
-        const parts = dateValue.split('-')
-        if (
-          parts.length === 3 &&
-          parts[0].length === 4 &&
-          parts[1].length === 2 &&
-          parts[2].length === 2 &&
-          !isNaN(parseInt(parts[0])) &&
-          !isNaN(parseInt(parts[1])) &&
-          !isNaN(parseInt(parts[2]))
-        ) {
-          return dateValue // Already in correct format
-        }
-        return '' // Invalid or not in YYYY-MM-DD format
-      }
-    } else {
-      date = dateValue // It's a Date object
-    }
-    const year = date.getFullYear()
-    const month = (date.getMonth() + 1).toString().padStart(2, '0')
-    const day = date.getDate().toString().padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
-
   const getDateForPicker = (value: string | Date | undefined): Date | null => {
     if (value instanceof Date) {
       return value
@@ -981,7 +948,6 @@ export const AddFirearmDrawerContent = () => {
             <View style={styles.sectionContent}>
               {renderDetailRow('Acquisition Date', 'acquisition_date', 'Select date', 'date')}
               {renderDetailRow('Purchase Price', 'purchase_price', 'e.g., 500.00', 'text', undefined, 'numeric')}
-              {renderDetailRow('Current Value', 'value', 'e.g., 450.00', 'text', undefined, 'numeric')}
             </View>
           </View>
         )}

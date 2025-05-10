@@ -190,7 +190,7 @@ export default function HomeScreen() {
   const userEmail = user?.email || 'bobjoe@example.com' // Fallback for display
   const userNamePart = userEmail.split('@')[0]
   const userInitial = (userNamePart.charAt(0) || '').toUpperCase()
-  const displayName = `${userNamePart}'s Safe`
+  const displayName = `${userNamePart}'s Wallet`
 
   // Placeholder for daily change data - replace with actual data when available
   const dailyChangeValue = 2.4

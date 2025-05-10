@@ -1,6 +1,7 @@
 import React from 'react'
 import { StyleSheet } from 'react-native'
 import { useRouter } from 'expo-router'
+import Head from 'expo-router/head';
 import { Colors } from '@/constants/Colors'
 import { ScreenLayout } from '@/components/layout/ScreenLayout'
 import { Ionicons } from '@expo/vector-icons'
@@ -19,6 +20,9 @@ export default function TermsScreen() {
       headerRightElement={headerElement}
       headerIcon={<Ionicons name='document' size={24} color={Colors.tint} />}
     >
+      <Head>
+        <title>Terms of Service | Team556 Wallet</title>
+      </Head>
       <></>
     </ScreenLayout>
   )

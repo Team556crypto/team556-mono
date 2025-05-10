@@ -1,6 +1,7 @@
 import React from 'react'
 import { View, StyleSheet, SafeAreaView, TouchableOpacity, Platform, ScrollView } from 'react-native'
 import { useRouter } from 'expo-router'
+import Head from 'expo-router/head';
 import { Button, Text } from '@team556/ui'
 import LogoSvg from '@/assets/images/logo.svg'
 import { Colors } from '@/constants/Colors'
@@ -59,6 +60,9 @@ const WebLandingPage = () => {
 
   return (
     <View style={styles.webContainer}>
+      <Head>
+        <title>Login | Team556 Wallet</title>
+      </Head>
       <BackgroundEffects />
       {/* Header is now outside the ScrollView */}
       {/* <View style={styles.headerWrapper}>

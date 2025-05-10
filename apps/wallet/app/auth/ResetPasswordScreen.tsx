@@ -154,8 +154,6 @@ const styles = StyleSheet.create({
   input: {
     height: 50,
     backgroundColor: Colors.backgroundSubtle,
-    borderColor: Colors.primarySubtle,
-    borderWidth: 1,
     borderRadius: 5,
     color: Colors.text,
     width: '100%'

@@ -92,8 +92,7 @@ const AllItemsView = () => {
     header: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 16
+      justifyContent: 'space-between'
     },
     centerMessage: {
       flex: 1,
@@ -113,7 +112,7 @@ const AllItemsView = () => {
       alignItems: 'center',
       borderRadius: 12,
       borderWidth: 1,
-      borderColor: colors.background,
+      borderColor: colors.backgroundLight,
       backgroundColor: colors.backgroundDark,
       gap: 12,
       paddingVertical: screenWidth >= LARGE_SCREEN_BREAKPOINT ? 48 : 24,
@@ -136,8 +135,8 @@ const AllItemsView = () => {
       height: dimensions.cardHeight,
       borderRadius: 16,
       borderWidth: 1,
-      borderColor: colors.background,
-      backgroundColor: colors.backgroundSubtle,
+      borderColor: colors.backgroundLight,
+      backgroundColor: colors.backgroundDark,
       justifyContent: 'center',
       alignItems: 'center',
       padding: 16,

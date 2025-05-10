@@ -18,7 +18,12 @@ interface FirearmCardProps {
 export const DEFAULT_CARD_WIDTH = 180
 export const DEFAULT_CARD_HEIGHT = DEFAULT_CARD_WIDTH * 1.4
 
-export default function FirearmCard({ firearm, onPress, width = DEFAULT_CARD_WIDTH, height = DEFAULT_CARD_HEIGHT }: FirearmCardProps) {
+export default function FirearmCard({
+  firearm,
+  onPress,
+  width = DEFAULT_CARD_WIDTH,
+  height = DEFAULT_CARD_HEIGHT
+}: FirearmCardProps) {
   const { colors } = useTheme()
   const handlePress = () => {
     if (onPress) {
@@ -33,7 +38,7 @@ export default function FirearmCard({ firearm, onPress, width = DEFAULT_CARD_WID
       borderRadius: 16,
       overflow: 'hidden',
       borderWidth: 1,
-      borderColor: colors.backgroundSubtle
+      borderColor: colors.backgroundLight
     },
     cardGradient: {
       width: '100%',
@@ -68,7 +73,7 @@ export default function FirearmCard({ firearm, onPress, width = DEFAULT_CARD_WID
       borderRadius: 8,
       backgroundColor: colors.backgroundDarker,
       borderWidth: 1,
-      borderColor: colors.backgroundCard
+      borderColor: colors.backgroundLight
     },
     categoryText: {
       fontSize: 12,

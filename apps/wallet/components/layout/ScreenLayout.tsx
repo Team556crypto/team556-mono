@@ -38,7 +38,7 @@ export const ScreenLayout: React.FC<ScreenLayoutProps> = ({
         <View style={[styles.headerRow, Platform.OS === 'android' && { paddingTop: 40 }]}>
           <View style={styles.titleContainer}>
             {headerIcon && <View style={styles.iconContainer}>{headerIcon}</View>}
-            <Text preset='h3' color={titleColor}>
+            <Text preset='h4' color={titleColor}>
               {title}
             </Text>
           </View>

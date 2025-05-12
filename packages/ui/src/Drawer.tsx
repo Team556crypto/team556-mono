@@ -334,41 +334,41 @@ export default function Drawer({
           style={[styles.backdrop, { backgroundColor: themeColors.backgroundDarker }, backdropAnimatedStyle]}
         />
       </TouchableWithoutFeedback>
-      <GestureDetector gesture={panGesture}>
-        <Animated.View
-          style={[
-            isLargeScreen ? styles.dialogContainer : styles.drawerContainer,
-            { backgroundColor: themeColors.background, shadowColor: themeColors.backgroundDarkest },
-            containerStyle,
-            style,
-            animatedStyle
-          ]}
-        >
-          {/* Only show handle bar in drawer mode, not dialog mode */}
-          {!isLargeScreen && (
+      <Animated.View
+        style={[
+          isLargeScreen ? styles.dialogContainer : styles.drawerContainer,
+          { backgroundColor: themeColors.background, shadowColor: themeColors.backgroundDarkest },
+          containerStyle,
+          style,
+          animatedStyle
+        ]}
+      >
+        {/* Only show handle bar in drawer mode, not dialog mode */}
+        {!isLargeScreen && (
+          <GestureDetector gesture={panGesture}>
             <View style={[styles.handleBarContainer, handleBarStyle]}>
               <View style={[styles.handleBar, { backgroundColor: themeColors.textSecondary }]} />
             </View>
-          )}
-          {title && <Text style={[styles.titleText, { color: themeColors.text }]}>{title}</Text>}
-          {isContentLoaded ? (
-            <ScrollView
-              style={styles.contentContainer}
-              contentContainerStyle={[styles.scrollContent, isLargeScreen && styles.scrollContentLarge]}
-              showsVerticalScrollIndicator={false}
-              scrollEventThrottle={16}
-            >
-              <View onLayout={handleContentLayout}>
-                <Fragment>{children}</Fragment>
-              </View>
-            </ScrollView>
-          ) : (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size='large' color={themeColors.primary} />
+          </GestureDetector>
+        )}
+        {title && <Text style={[styles.titleText, { color: themeColors.text }]}>{title}</Text>}
+        {isContentLoaded ? (
+          <ScrollView
+            style={styles.contentContainer}
+            contentContainerStyle={[styles.scrollContent, isLargeScreen && styles.scrollContentLarge]}
+            showsVerticalScrollIndicator={false}
+            scrollEventThrottle={16}
+          >
+            <View onLayout={handleContentLayout}>
+              <Fragment>{children}</Fragment>
             </View>
-          )}
-        </Animated.View>
-      </GestureDetector>
+          </ScrollView>
+        ) : (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size='large' color={themeColors.primary} />
+          </View>
+        )}
+      </Animated.View>
     </Fragment>
   )
 }

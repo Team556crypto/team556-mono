@@ -222,7 +222,7 @@ export default function HomeScreen() {
           <View style={styles.portfolioDetailsContainer}>
             <Text style={styles.portfolioLabel}>Portfolio Value</Text>
             <Text style={styles.portfolioValueText}>{formatPrice(totalPortfolioValue)}</Text>
-            <View style={styles.dailyChangeContainer}>
+            {/* <View style={styles.dailyChangeContainer}>
               <Feather
                 name={dailyChangePositive ? 'arrow-up-right' : 'arrow-down-right'}
                 size={16}
@@ -231,7 +231,7 @@ export default function HomeScreen() {
               <Text style={[styles.dailyChangeText, { color: dailyChangePositive ? Colors.success : Colors.error }]}>
                 {dailyChangeText}
               </Text>
-            </View>
+            </View> */}
           </View>
         </View>
         {/* --- END: New Portfolio Section --- */}

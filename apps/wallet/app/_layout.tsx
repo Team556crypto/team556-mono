@@ -106,18 +106,18 @@ function InitialLayout() {
   // Once loading is complete, render the main stack navigator
   return (
     <Stack>
-      <Stack.Screen name='login' options={{ headerShown: false }} />
-      <Stack.Screen name='(tabs)' options={{ headerShown: false }} />
-      <Stack.Screen name='onboarding' options={{ headerShown: false }} />
-      <Stack.Screen name='privacy' options={{ headerShown: false }} />
-      <Stack.Screen name='terms' options={{ headerShown: false }} />
+      <Stack.Screen name='login' options={{ headerShown: false, title: 'Login - Team556 Wallet' }} />
+      <Stack.Screen name='(tabs)' options={{ headerShown: false, title: 'Team556 Wallet' }} />
+      <Stack.Screen name='onboarding' options={{ headerShown: false, title: 'Onboarding - Team556 Wallet' }} />
+      <Stack.Screen name='privacy' options={{ headerShown: false, title: 'Privacy Policy - Team556 Wallet' }} />
+      <Stack.Screen name='terms' options={{ headerShown: false, title: 'Terms of Service - Team556 Wallet' }} />
       {/* <Stack.Screen name='auth' options={{ headerShown: false }} /> */}
       {/* Explicitly define screens from the auth group if the group setting doesn't take effect */}
-      <Stack.Screen name='auth/ForgotPasswordScreen' options={{ headerShown: false }} />
-      <Stack.Screen name='auth/ResetPasswordScreen' options={{ headerShown: false }} />
-      <Stack.Screen name='+not-found' />
-      <Stack.Screen name='signin' options={{ headerShown: false }} />
-      <Stack.Screen name='signup' options={{ headerShown: false }} />
+      <Stack.Screen name='auth/ForgotPasswordScreen' options={{ headerShown: false, title: 'Forgot Password - Team556 Wallet' }} />
+      <Stack.Screen name='auth/ResetPasswordScreen' options={{ headerShown: false, title: 'Reset Password - Team556 Wallet' }} />
+      <Stack.Screen name='+not-found' options={{ title: 'Page Not Found - Team556 Wallet' }} />
+      <Stack.Screen name='signin' options={{ headerShown: false, title: 'Sign In - Team556 Wallet' }} />
+      <Stack.Screen name='signup' options={{ headerShown: false, title: 'Sign Up - Team556 Wallet' }} />
     </Stack>
   )
 }

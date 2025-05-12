@@ -1,5 +1,5 @@
 import React from 'react'
-import { SafeAreaView, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native'
+import { SafeAreaView, ScrollView, StyleSheet, View, type ViewStyle, Platform } from 'react-native'
 import { Text } from '@repo/ui' // Assuming Text comes from shared UI
 import { Colors } from '@/constants/Colors'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
@@ -35,7 +35,7 @@ export const ScreenLayout: React.FC<ScreenLayoutProps> = ({
         showsVerticalScrollIndicator={false}
       >
         {/* Header Row */}
-        <View style={styles.headerRow}>
+        <View style={[styles.headerRow, Platform.OS === 'android' && { paddingTop: 40 }]}>
           <View style={styles.titleContainer}>
             {headerIcon && <View style={styles.iconContainer}>{headerIcon}</View>}
             <Text preset='h3' color={titleColor}>
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingTop: 16
+    paddingTop: Platform.OS === 'android' ? 4 : 16
   },
   containerTablet: {
     marginLeft: 240, // Standard sidebar width adjustment for tablet

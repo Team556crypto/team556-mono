@@ -12,6 +12,7 @@ import {
 import { Text, StepForm, Input } from '@team556/ui'
 import { createWallet, verifyEmail, resendVerificationEmail } from '@/services/api'
 import { router } from 'expo-router'
+import Head from 'expo-router/head'
 import * as Clipboard from 'expo-clipboard'
 import { Ionicons } from '@expo/vector-icons'
 import { useAuthStore } from '@/store/authStore'
@@ -282,6 +283,9 @@ export default function OnboardingScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
     >
+      <Head>
+        <title>Onboarding | Team556 Wallet</title>
+      </Head>
       <StepForm
         steps={steps}
         currentStep={currentStep}

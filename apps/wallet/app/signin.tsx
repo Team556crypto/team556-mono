@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { View, StyleSheet, SafeAreaView, Platform, TouchableOpacity, ScrollView, Switch, Animated } from 'react-native'
 import { Button, Input, Text } from '@repo/ui'
 import { useRouter, Link } from 'expo-router'
+import Head from 'expo-router/head'
 import { genericStyles } from '@/constants/GenericStyles'
 import { Colors } from '@/constants/Colors'
 import { Ionicons, Feather } from '@expo/vector-icons'
@@ -230,6 +231,9 @@ const SignInScreen = () => {
 
   const renderFormSide = () => (
     <ScrollView contentContainerStyle={styles.formScrollContainer} keyboardShouldPersistTaps='handled'>
+      <Head>
+        <title>Sign In | Team556 Wallet</title>
+      </Head>
       <View style={styles.formContainer}>
         <View style={styles.formCard}>
           <Text preset='h2' style={styles.formTitle}>

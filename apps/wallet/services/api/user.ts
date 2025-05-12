@@ -41,7 +41,7 @@ export const verifyEmail = async (
   const payload: VerifyEmailRequest = { verification_code: code };
   return apiClient<VerifyEmailResponse>({
     method: 'POST',
-    endpoint: '/user/verify-email',
+    endpoint: '/auth/verify-email',
     token,
     body: payload,
   });
@@ -62,7 +62,7 @@ export const resendVerificationEmail = async (
   }
   return apiClient<ResendVerificationResponse>({
     method: 'POST',
-    endpoint: '/user/resend-verification',
+    endpoint: '/auth/resend-verification',
     token,
   });
 };

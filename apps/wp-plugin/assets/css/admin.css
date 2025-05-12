@@ -1,0 +1,270 @@
+/**
+ * Team556 Solana Pay Admin CSS
+ * This CSS file is scoped to the Team556 Solana Pay admin pages only.
+ */
+
+/* Admin Settings Form */
+.team556-settings-page .team556-solana-pay-admin-form {
+    max-width: 800px;
+    margin: 20px 0;
+}
+
+.team556-settings-page h2 {
+    color: #23282d;
+    margin-bottom: 15px;
+}
+
+.team556-settings-page .team556-solana-pay-admin-section {
+    background: #fff;
+    border: 1px solid #e2e4e7;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.team556-settings-page .team556-solana-pay-admin-section h3 {
+    margin-top: 0;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+/* Do not modify WordPress admin form fields */
+/* Let WordPress handle the styling of standard form elements */
+
+/* Color Picker Wrapper specific to our plugin */
+.team556-settings-page .team556-color-picker-wrapper {
+    position: relative;
+    max-width: 400px;
+}
+
+.team556-color-picker {
+    padding-right: 40px !important;
+}
+
+.team556-color-picker-preview {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 30px;
+    height: 30px;
+    border-radius: 3px;
+    border: 1px solid #ddd;
+}
+
+/* Admin Notice specific to our plugin */
+.team556-settings-page .team556-solana-pay-admin-notice {
+    background-color: rgba(153, 69, 255, 0.05);
+    border-left: 4px solid #9945FF;
+    padding: 10px 15px;
+    margin: 10px 0;
+}
+
+.team556-settings-page .team556-solana-pay-notice-error {
+    background-color: rgba(255, 92, 92, 0.05);
+    border-left: 4px solid #FF5C5C;
+}
+
+/* Settings Tabs */
+.team556-settings-tabs {
+    display: flex;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 20px;
+}
+
+.team556-settings-tab {
+    padding: 10px 15px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-bottom: none;
+    margin-bottom: -1px;
+    color: #555;
+    text-decoration: none;
+}
+
+.team556-settings-tab.active {
+    border-color: #ccc;
+    border-bottom-color: #fff;
+    background: #fff;
+    color: #9945FF;
+    font-weight: 600;
+}
+
+.team556-settings-tab:hover:not(.active) {
+    background: #f9f9f9;
+    color: #9945FF;
+}
+
+.team556-settings-content {
+    display: none;
+}
+
+.team556-settings-content.active {
+    display: block;
+}
+
+/* Solana Branding section */
+.team556-settings-page .team556-solana-branding {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.team556-settings-page .team556-solana-branding img {
+    height: 40px;
+    margin-right: 10px;
+}
+
+.team556-settings-page .team556-solana-branding h1 {
+    color: #23282d;
+    margin: 0;
+}
+
+/* Status Badge */
+.team556-status-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: 5px;
+}
+
+.team556-status-badge.live {
+    background-color: rgba(20, 241, 149, 0.1);
+    color: #14F195;
+    border: 1px solid rgba(20, 241, 149, 0.3);
+}
+
+.team556-status-badge.test {
+    background-color: rgba(0, 194, 255, 0.1);
+    color: #00C2FF;
+    border: 1px solid rgba(0, 194, 255, 0.3);
+}
+
+/* Network Switch */
+.team556-network-switch {
+    display: flex;
+    align-items: center;
+    margin: 10px 0;
+}
+
+.team556-network-switch label {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin-right: 10px;
+}
+
+.team556-network-switch input { 
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.team556-network-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.team556-network-slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .team556-network-slider {
+    background-color: #9945FF;
+}
+
+input:focus + .team556-network-slider {
+    box-shadow: 0 0 1px #9945FF;
+}
+
+input:checked + .team556-network-slider:before {
+    transform: translateX(26px);
+}
+
+.team556-network-label {
+    font-weight: 600;
+}
+
+/* Help Link */
+.team556-settings-page .team556-help-link {
+    display: inline-block;
+    margin-left: 5px;
+    text-decoration: none;
+    color: #0073aa;
+}
+
+.team556-settings-page .team556-help-link:hover {
+    color: #00a0d2;
+    text-decoration: underline;
+}
+
+/* Button with Solana styles */
+.team556-solana-button {
+    background-color: #9945FF;
+    border-color: #9945FF;
+    color: white;
+}
+
+.team556-solana-button:hover,
+.team556-solana-button:focus {
+    background-color: #7735CC;
+    border-color: #7735CC;
+    color: white;
+}
+
+/* Documentation Box */
+.team556-doc-box {
+    background-color: #f9f9f9;
+    border: 1px solid #e2e4e7;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 20px 0;
+}
+
+.team556-doc-box h3 {
+    margin-top: 0;
+    color: #9945FF;
+}
+
+.team556-doc-box code {
+    background: #fff;
+    padding: 2px 5px;
+    border-radius: 3px;
+    border: 1px solid #e2e4e7;
+}
+
+/* Media Queries */
+@media screen and (max-width: 782px) {
+    .team556-settings-tabs {
+        flex-direction: column;
+        border-bottom: none;
+    }
+    
+    .team556-settings-tab {
+        border: 1px solid #ccc;
+        margin-bottom: 5px;
+        border-radius: 3px;
+    }
+    
+    .team556-settings-tab.active {
+        border-bottom-color: #ccc;
+    }
+} 

@@ -1,0 +1,272 @@
+/**
+ * Team556 Solana Pay CSS
+ * Styles for Team556 Solana Pay elements - matches Team556 merchant app
+ */
+
+/* Variables */
+:root {
+    --solana-dark: #14151A;
+    --solana-dark-lighter: #1C1D24;
+    --solana-purple: #9945FF;
+    --solana-blue: #14F195;
+    --solana-green: #00FFA3;
+    --solana-magenta: #FF5C5C;
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-bg: rgba(20, 21, 26, 0.7);
+    --text-white: #FFFFFF;
+    --text-gray: #A3A3A3;
+    
+    /* Adaptive variables - will be set by JS */
+    --team556-bg-color: transparent;
+    --team556-text-color: inherit;
+    --team556-border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Container */
+.team556-solana-pay-container {
+    margin: 20px 0;
+    padding: 20px;
+    border: 1px solid var(--team556-border-color);
+    border-radius: 8px;
+    background-color: var(--team556-bg-color);
+    color: var(--team556-text-color);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Button styles */
+.team556-solana-pay-button {
+    display: inline-block;
+    padding: 12px 24px;
+    background-color: var(--solana-purple);
+    color: var(--text-white);
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 0 15px rgba(153, 69, 255, 0.3);
+}
+
+.team556-solana-pay-button:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.team556-solana-pay-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(153, 69, 255, 0.5), 0 0 15px rgba(153, 69, 255, 0.4);
+}
+
+/* Secondary button style */
+.team556-solana-pay-button.secondary {
+    background-color: var(--solana-green);
+    color: var(--solana-dark);
+    box-shadow: 0 0 15px rgba(0, 255, 163, 0.3);
+}
+
+.team556-solana-pay-button.secondary:focus {
+    box-shadow: 0 0 0 2px rgba(0, 255, 163, 0.5), 0 0 15px rgba(0, 255, 163, 0.4);
+}
+
+/* Outline button style */
+.team556-solana-pay-button.outline {
+    background-color: transparent;
+    border: 1px solid var(--team556-border-color);
+    color: var(--team556-text-color);
+    box-shadow: none;
+}
+
+.team556-solana-pay-button.outline:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Status indicator */
+.team556-solana-pay-status {
+    margin-top: 15px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    background-color: rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--team556-border-color);
+    color: var(--team556-text-color);
+}
+
+.team556-solana-pay-status[data-status="loading"] {
+    border-left: 4px solid var(--solana-blue);
+    color: var(--solana-blue);
+}
+
+.team556-solana-pay-status[data-status="success"] {
+    border-left: 4px solid var(--solana-green);
+    color: var(--solana-green);
+}
+
+.team556-solana-pay-status[data-status="error"] {
+    border-left: 4px solid var(--solana-magenta);
+    color: var(--solana-magenta);
+}
+
+/* Card style */
+.team556-card {
+    background-color: var(--team556-bg-color);
+    border: 1px solid var(--team556-border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    padding: 20px;
+    color: var(--team556-text-color);
+}
+
+.team556-card-glass {
+    background-color: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+/* Input styles */
+.team556-input {
+    background-color: rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--team556-border-color);
+    border-radius: 8px;
+    padding: 12px;
+    color: var(--team556-text-color);
+    outline: none;
+    transition: all 0.2s ease;
+    width: 100%;
+    font-size: 14px;
+}
+
+.team556-input:focus {
+    border-color: var(--solana-blue);
+}
+
+.team556-input-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.team556-input-group {
+    margin-bottom: 16px;
+}
+
+/* Wallet display */
+.team556-wallet-display {
+    background-color: rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--team556-border-color);
+    border-radius: 8px;
+    padding: 12px;
+    font-family: monospace;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.team556-clipboard-copy {
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.team556-clipboard-copy:hover {
+    color: var(--solana-purple);
+}
+
+/* Responsive styles */
+@media screen and (max-width: 600px) {
+    .team556-solana-pay-button {
+        display: block;
+        width: 100%;
+    }
+}
+
+/* WooCommerce integration - adaptive styling */
+#payment .payment_method_team556_solana_pay label {
+    /* Use default colors from the theme */
+}
+
+#payment .payment_method_team556_solana_pay .payment_box {
+    /* Allow WooCommerce theme to determine the background color */
+    background-color: transparent;
+    color: inherit;
+}
+
+#payment .payment_method_team556_solana_pay .payment_box:before {
+    /* Allow WooCommerce theme to determine the arrow color */
+}
+
+#team556-solana-pay-form {
+    /* Inherits theme colors */
+}
+
+/* Error message for checkout */
+#team556-solana-pay-form .woocommerce-error {
+    color: #b22222 !important; /* Use a standard red color that's visible on both light and dark backgrounds */
+    background-color: rgba(178, 34, 34, 0.1);
+    border: 1px solid rgba(178, 34, 34, 0.3);
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+/* Admin styles */
+.signature-ellipsis {
+    font-family: monospace;
+    background-color: #f0f0f0;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Tailwind-inspired utility classes for compatibility */
+.team556-flex {
+    display: flex;
+}
+
+.team556-items-center {
+    align-items: center;
+}
+
+.team556-justify-between {
+    justify-content: space-between;
+}
+
+.team556-rounded {
+    border-radius: 0.25rem;
+}
+
+.team556-shadow {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.team556-bg-purple-500 {
+    background-color: #9945FF;
+}
+
+.team556-text-white {
+    color: #ffffff;
+}
+
+.team556-font-medium {
+    font-weight: 500;
+}
+
+.team556-p-4 {
+    padding: 1rem;
+}
+
+.team556-m-2 {
+    margin: 0.5rem;
+}
+
+.team556-mt-4 {
+    margin-top: 1rem;
+}
+
+.team556-mb-2 {
+    margin-bottom: 0.5rem;
+} 

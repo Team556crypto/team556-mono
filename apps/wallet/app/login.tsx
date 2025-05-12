@@ -1,7 +1,7 @@
 import React from 'react'
 import { View, StyleSheet, SafeAreaView, TouchableOpacity, Platform, ScrollView } from 'react-native'
 import { useRouter } from 'expo-router'
-import Head from 'expo-router/head';
+import Head from 'expo-router/head'
 import { Button, Text } from '@team556/ui'
 import LogoSvg from '@/assets/images/logo.svg'
 import { Colors } from '@/constants/Colors'
@@ -23,11 +23,13 @@ const MobileLandingScreen = () => {
   const { isTabletOrLarger } = useBreakpoint()
 
   const handleSignInPress = () => {
-    router.push('/signin')
+    // router.push('/signin')
+    router.replace('/signin')
   }
 
   const handleSignUpPress = () => {
-    router.push('/signup')
+    // router.push('/signup')
+    router.replace('/signup')
   }
 
   return (

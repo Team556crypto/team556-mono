@@ -39,7 +39,7 @@ func (c *Client) SendVerificationEmail(toEmail, verificationCode string) error {
         padding: 0;
       }
       .container {
-        max-width: 600px;
+        max-width: 400px;
         margin: 20px auto;
         background-color: #ffffff;
         border-radius: 8px;
@@ -49,9 +49,10 @@ func (c *Client) SendVerificationEmail(toEmail, verificationCode string) error {
       .header img {
         width: 100%;
         display: block;
+				margin-top: -50px;
+				margin-bottom: -50px;
       }
       .content {
-				padding: 10px 30px;
         text-align: center;
       }
       .content h1 {
@@ -86,7 +87,7 @@ func (c *Client) SendVerificationEmail(toEmail, verificationCode string) error {
   <body>
     <div class="container">
       <div class="header">
-        <img src="https://mj79u8lfav.ufs.sh/f/8MBjWI2gDtAyzVewADhovVu30Ry4FeXrHTwtcbZQsgEkzSJm" alt="Team556 Banner" />
+        <img src="https://mj79u8lfav.ufs.sh/f/8MBjWI2gDtAygGoCewu1Xnd154OlVWfFohxpCLmE0vzDGkNT" alt="Team556 Banner" />
       </div>
       <div class="content">
         <h1>Verify Your Email</h1>

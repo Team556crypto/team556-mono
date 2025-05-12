@@ -11,7 +11,7 @@ export default function PrivacyScreen() {
   const router = useRouter()
 
   return (
-    <ScreenLayout title='Pay with TEAM' headerIcon={<Ionicons name='card' size={24} color={Colors.tint} />}>
+    <ScreenLayout title='Pay with TEAM' headerIcon={<Ionicons name='card' size={24} color={Colors.primary} />}>
       <Head>
         <title>Pay with TEAM | Team556 Wallet</title>
       </Head>

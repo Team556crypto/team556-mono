@@ -35,7 +35,7 @@ export const ScreenLayout: React.FC<ScreenLayoutProps> = ({
         showsVerticalScrollIndicator={false}
       >
         {/* Header Row */}
-        <View style={[styles.headerRow, Platform.OS === 'android' && { paddingTop: 40 }]}>
+        <View style={[styles.headerRow, Platform.OS === 'android' && { paddingTop: 50 }]}>
           <View style={styles.titleContainer}>
             {headerIcon && <View style={styles.iconContainer}>{headerIcon}</View>}
             <Text preset='h4' color={titleColor}>
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'android' ? 4 : 16
+    paddingTop: Platform.OS === 'android' ? 6 : 16
   },
   containerTablet: {
     marginLeft: 240, // Standard sidebar width adjustment for tablet

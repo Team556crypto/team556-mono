@@ -109,6 +109,13 @@ const AllItemsView = () => {
       color: colors.error,
       textAlign: 'center'
     },
+    limitReachedText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: 16,
+      paddingHorizontal: 16
+    },
     emptyMessage: {
       flexGrow: 1,
       width: '100%',
@@ -185,68 +192,93 @@ const AllItemsView = () => {
   const renderContent = () => {
     // Show loading state
     if (isLoading && firearms.length === 0) {
-      return <ActivityIndicator size='large' color={colors.primary} />
-    }
-
-    // Show empty state
-    if (!isLoading && firearms.length === 0) {
-      return (
-        <View style={styles.emptyMessage}>
-          <Text preset='label'>No firearms found</Text>
-          <Button
-            variant='secondary'
-            title='Add firearm'
-            onPress={() => {
-              if (!canAddFirearm) {
-                Alert.alert('Limit Reached', betaMaxFirearmsMessage)
-                return
-              }
-              openDrawer(<AddFirearmDrawerContent />)
-            }}
-          />
-        </View>
-      )
+      return <ActivityIndicator style={styles.centerMessage} size='large' color={colors.primary} />
     }
 
     // Show error state
-    if (error) {
-      return <Text style={styles.errorText}>Error loading firearms: {error}</Text>
-    }
-
-    // Show content based on screen size
-    if (screenWidth >= LARGE_SCREEN_BREAKPOINT) {
-      // Grid layout for large screens
+    if (error && firearms.length === 0) {
       return (
-        <View style={styles.cardsGrid}>
-          {firearms.map(firearm => (
-            <FirearmCard
-              key={`grid-${firearm.id}`}
-              firearm={firearm}
-              onPress={() => handleFirearmPress(firearm)}
-              width={dimensions.cardWidth}
-              height={dimensions.cardHeight}
-            />
-          ))}
-          {renderAddButton()}
+        <View style={styles.centerMessage}>
+          <Text style={styles.errorText}>{error}</Text>
+          <Button title="Retry" onPress={() => token && fetchInitialFirearms(token)} />
         </View>
       )
-    } else {
-      // Horizontal scroll for small screens
+    }
+
+    // Display the message if the limit of 2 firearms is reached, before other content
+    // This message should appear even if there are firearms, as long as the count is 2.
+    const limitMessage = firearms.length === 2 ? (
+      <Text style={styles.limitReachedText}>
+        {betaMaxFirearmsMessage}
+      </Text>
+    ) : null;
+
+    // Show empty state (if no firearms and limit not yet reached for the message above)
+    if (!isLoading && firearms.length === 0) {
       return (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollViewContent}>
-          {firearms.map(firearm => (
-            <FirearmCard
-              key={`scroll-${firearm.id}`}
-              firearm={firearm}
-              onPress={() => handleFirearmPress(firearm)}
-              width={dimensions.cardWidth}
-              height={dimensions.cardHeight}
+        <View style={{ flex:1 }}>
+          {limitMessage} {/* This will be null here as firearms.length is 0 */}
+          <View style={styles.emptyMessage}>
+            <Text preset='label'>No firearms found</Text>
+            <Button
+              variant='secondary'
+              title='Add firearm'
+              onPress={() => {
+                // The canAddFirearm check and Alert for adding is handled by renderAddButton
+                openDrawer(<AddFirearmDrawerContent />)
+              }}
             />
-          ))}
-          {renderAddButton()}
-        </ScrollView>
+            <Text preset='caption' style={{ color: colors.textSecondary, marginTop: 8 }}>
+              Get started by adding your first firearm.
+            </Text>
+          </View>
+        </View>
       )
     }
+
+    // Show firearm cards
+    const actualFirearmsContent = screenWidth < LARGE_SCREEN_BREAKPOINT ? (
+      // Horizontal ScrollView for firearms
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollViewContent}
+      >
+        {firearms.map(firearm => (
+          <FirearmCard
+            key={`scroll-${firearm.id}`}
+            firearm={firearm}
+            onPress={() => handleFirearmPress(firearm)}
+            width={dimensions.cardWidth}
+            height={dimensions.cardHeight}
+          />
+        ))}
+        {renderAddButton()}
+      </ScrollView>
+    ) : (
+      // Grid layout for large screens
+      <View style={styles.cardsGrid}>
+        {firearms.map(firearm => (
+          <FirearmCard
+            key={`grid-${firearm.id}`}
+            firearm={firearm}
+            onPress={() => handleFirearmPress(firearm)}
+            width={dimensions.cardWidth}
+            height={dimensions.cardHeight}
+          />
+        ))}
+        {renderAddButton()}
+      </View>
+    );
+
+    return (
+      <View style={{ flex: 1 }}>
+        {limitMessage} {/* Display the message if the limit of 2 firearms is reached */}
+        {/* Loading indicator if still loading more, shown above the list */}
+        {isLoading && firearms.length > 0 && <ActivityIndicator style={{ marginVertical: 20 }} size="large" color={colors.primary} />}
+        {actualFirearmsContent}
+      </View>
+    )
   }
 
   return (

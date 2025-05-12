@@ -6,7 +6,6 @@ import { excludedRoutes } from '@/constants/Global'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 import { Colors } from '@/constants/Colors'
-const { width } = Dimensions.get('window')
 
 export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets()
@@ -15,6 +14,9 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
   const tabBarHeight = 60
   const bottomInset = Platform.OS === 'ios' ? (insets.bottom > 8 ? insets.bottom - 8 : insets.bottom) : insets.bottom
 
+  // Add horizontal padding on web platform to prevent edge touch issues
+  const horizontalPadding = Platform.OS === 'web' ? 30 : 0
+
   return (
     <View
       style={[
@@ -22,6 +24,7 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
         {
           height: tabBarHeight + bottomInset,
           paddingBottom: bottomInset,
+          paddingHorizontal: horizontalPadding,
           backgroundColor: Colors.backgroundDarkest,
           borderTopWidth: 1,
           borderTopColor: Colors.background
@@ -57,6 +60,9 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
             })
           }
 
+          // Determine if this is the rightmost visible tab
+          const isRightmostTab = index === state.routes.filter(r => !excludedRoutes.includes(r.name)).length - 1
+
           return (
             <TouchableOpacity
               key={index}
@@ -66,14 +72,20 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
               testID={options.tabBarAccessibilityLabel}
               onPress={onPress}
               onLongPress={onLongPress}
-              style={styles.tabButton}
+              style={[styles.tabButton, isRightmostTab && Platform.OS === 'web' && styles.rightmostTabButton]}
+              activeOpacity={0.7}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              {options.tabBarIcon &&
-                options.tabBarIcon({
-                  focused: isFocused,
-                  color: isFocused ? Colors.primary : Colors.tabIconDefault,
-                  size: 24
-                })}
+              {/* Icon with extra padding to ensure touch area */}
+              <View style={[styles.iconContainer, Platform.OS === 'web' && styles.webIconContainer]}>
+                {options.tabBarIcon &&
+                  options.tabBarIcon({
+                    focused: isFocused,
+                    color: isFocused ? Colors.primary : Colors.tabIconDefault,
+                    size: 28 // Slightly larger icons for better visibility
+                  })}
+              </View>
+
               <Text
                 style={[
                   styles.tabText,
@@ -99,7 +111,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    width
+    width: '100%'
   },
   tabBarInner: {
     flexDirection: 'row',
@@ -112,9 +124,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8
   },
+  rightmostTabButton: {
+    zIndex: 10 // Higher z-index for the rightmost tab on web
+  },
+  iconContainer: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  webIconContainer: {
+    position: 'relative',
+    zIndex: 20, // Ensure icon is above any potential overlays
+    cursor: 'pointer' // Add pointer cursor for web
+  },
   tabText: {
     fontSize: 12,
     marginTop: 4,
+    marginBottom: 6,
     fontWeight: '500'
   }
 })

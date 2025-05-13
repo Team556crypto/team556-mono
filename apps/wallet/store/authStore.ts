@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import * as SecureStoreUtils from '@/utils/secureStore'
+import { saveToken, getToken, deleteToken } from '@/utils/secureStore'
 import { loginUser, signupUser, getUserProfile, UserCredentials, User } from '@/services/api' // Assuming api service exports these
 
 interface AuthState {
@@ -31,7 +31,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     console.log('[AuthStore] initializeAuth: Starting...');
     set({ isLoading: true, error: null }); 
     try {
-      const storedToken = await SecureStoreUtils.getToken();
+      const storedToken = await getToken();
       console.log('[AuthStore] initializeAuth: Stored token retrieved:', storedToken ? `Token found (length: ${storedToken.length})` : 'No token found');
 
       if (storedToken) {
@@ -58,7 +58,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           // A 401, 403 (permissions) or 404 (user for this token not found) from /user/profile indicates the token is effectively invalid for this action.
           if (status === 401 || status === 403 || status === 404) { 
             console.log(`[AuthStore] initializeAuth: Profile fetch failed with status ${status}. Logging out.`);
-            await SecureStoreUtils.deleteToken();
+            await deleteToken();
             set({ user: null, token: null, isAuthenticated: false, error: 'Session invalid or expired. Please login.' });
           } else {
             console.log('[AuthStore] initializeAuth: Profile fetch failed with other error (e.g., network issue). Keeping auth state for now.');
@@ -104,7 +104,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true, error: null })
     try {
       const { token, user } = await loginUser(credentials) // Call API service
-      await SecureStoreUtils.saveToken(token)
+      await saveToken(token)
       set({ token, user, isAuthenticated: true, isLoading: false, error: null })
 
       // === REMOVED Navigation Logic ===
@@ -113,7 +113,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || error.message || 'Login failed'
       set({ token: null, user: null, isAuthenticated: false, isLoading: false, error: errorMessage })
-      await SecureStoreUtils.deleteToken() // Clear any potentially invalid token
+      await deleteToken() // Clear any potentially invalid token
       // Re-throw the error if you want calling components to handle it further
       // throw error;
     }
@@ -137,12 +137,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isLoading: false,
           error: 'Signup failed: Invalid response from server.'
         })
-        await SecureStoreUtils.deleteToken()
+        await deleteToken()
         throw new Error('Signup failed: Invalid response from server.')
       }
 
       // Automatically log in the user after successful signup
-      await SecureStoreUtils.saveToken(token)
+      await saveToken(token)
 
       set({ token, user, isAuthenticated: true, isLoading: false, error: null })
 
@@ -159,7 +159,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           // Handle other errors
           const errorMessage = error.response?.data?.error || error.message || 'Signup failed'
           set({ token: null, user: null, isAuthenticated: false, isLoading: false, error: errorMessage })
-          await SecureStoreUtils.deleteToken()
+          await deleteToken()
         }
       }
       // Re-throw error to be caught by the component
@@ -172,7 +172,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       // TODO: Call backend logout endpoint if necessary
       // Example if logoutUser API needed calling: await logoutUser(get().token);
-      await SecureStoreUtils.deleteToken()
+      await deleteToken()
       set({ token: null, user: null, isAuthenticated: false, error: null })
     } catch (error) {
       // Catches errors from SecureStore or potential API call

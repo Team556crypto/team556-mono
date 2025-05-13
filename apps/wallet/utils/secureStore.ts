@@ -7,7 +7,11 @@ const MNEMONIC_KEY = 'wallet_mnemonic' // Key for secure storage
 
 export async function saveToken(token: string): Promise<void> {
   try {
-    await AsyncStorage.setItem(TOKEN_KEY, token)
+    if (Platform.OS === 'web') {
+      localStorage.setItem(TOKEN_KEY, token)
+    } else {
+      await AsyncStorage.setItem(TOKEN_KEY, token)
+    }
   } catch (error) {
     console.error('Error saving auth token:', error)
     // Handle saving error appropriately
@@ -16,7 +20,11 @@ export async function saveToken(token: string): Promise<void> {
 
 export async function getToken(): Promise<string | null> {
   try {
-    return await AsyncStorage.getItem(TOKEN_KEY)
+    if (Platform.OS === 'web') {
+      return localStorage.getItem(TOKEN_KEY)
+    } else {
+      return await AsyncStorage.getItem(TOKEN_KEY)
+    }
   } catch (error) {
     console.error('Error getting auth token:', error)
     // Handle retrieval error appropriately
@@ -26,7 +34,11 @@ export async function getToken(): Promise<string | null> {
 
 export async function deleteToken(): Promise<void> {
   try {
-    await AsyncStorage.removeItem(TOKEN_KEY)
+    if (Platform.OS === 'web') {
+      localStorage.removeItem(TOKEN_KEY)
+    } else {
+      await AsyncStorage.removeItem(TOKEN_KEY)
+    }
   } catch (error) {
     console.error('Error deleting auth token:', error)
     // Handle deletion error appropriately

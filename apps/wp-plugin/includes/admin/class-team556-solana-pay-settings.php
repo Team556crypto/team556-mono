@@ -22,6 +22,22 @@ class Team556_Solana_Pay_Settings {
         
         // Enqueue admin scripts and styles
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
+        
+        // Add settings page to menu
+        add_action('admin_menu', array($this, 'add_settings_page_menu'));
+    }
+
+    /**
+     * Add settings page to the admin menu
+     */
+    public function add_settings_page_menu() {
+        add_options_page(
+            __('Team556 Solana Pay Settings', 'team556-solana-pay'),
+            __('Team556 Solana Pay', 'team556-solana-pay'), // Menu title under Settings
+            'manage_options',
+            'team556-solana-settings', // Page slug
+            array($this, 'render_settings_page') // Callback to render the page
+        );
     }
 
     /**
@@ -29,23 +45,7 @@ class Team556_Solana_Pay_Settings {
      */
     public function register_settings() {
         // Main settings
-        register_setting('team556_solana_pay_settings', 'team556_solana_pay_wallet_address');
-        // Token mint is hardcoded and cannot be changed
-        register_setting('team556_solana_pay_settings', 'team556_solana_pay_network', array(
-            'type' => 'string',
-            'default' => 'mainnet',
-            'sanitize_callback' => array($this, 'sanitize_network')
-        ));
-        
-        // Display settings
-        register_setting('team556_solana_pay_settings', 'team556_solana_pay_button_text');
-        register_setting('team556_solana_pay_settings', 'team556_solana_pay_button_color');
-        register_setting('team556_solana_pay_settings', 'team556_solana_pay_success_message');
-        register_setting('team556_solana_pay_settings', 'team556_solana_pay_error_message');
-        
-        // Advanced settings
-        register_setting('team556_solana_pay_settings', 'team556_solana_pay_debug_mode');
-        register_setting('team556_solana_pay_settings', 'team556_solana_pay_confirmation_blocks');
+        register_setting('team556_solana_pay_settings', 'team556_solana_pay_settings', array($this, 'sanitize_settings'));
         
         // Setting sections
         add_settings_section(
@@ -68,83 +68,40 @@ class Team556_Solana_Pay_Settings {
             array($this, 'render_advanced_section'),
             'team556-solana-settings'
         );
-        
-        // General fields
-        add_settings_field(
-            'team556_solana_pay_wallet_address',
-            __('Merchant Wallet Address', 'team556-solana-pay'),
-            array($this, 'render_wallet_address_field'),
-            'team556-solana-settings',
-            'team556_solana_pay_general'
-        );
-        
-        // Removed token mint field as it's now hardcoded
-        
-        add_settings_field(
-            'team556_solana_pay_network',
-            __('Solana Network', 'team556-solana-pay'),
-            array($this, 'render_network_field'),
-            'team556-solana-settings',
-            'team556_solana_pay_general'
-        );
-        
-        // Display fields
-        add_settings_field(
-            'team556_solana_pay_button_text',
-            __('Button Text', 'team556-solana-pay'),
-            array($this, 'render_button_text_field'),
-            'team556-solana-settings',
-            'team556_solana_pay_display'
-        );
-        
-        add_settings_field(
-            'team556_solana_pay_button_color',
-            __('Button Color', 'team556-solana-pay'),
-            array($this, 'render_button_color_field'),
-            'team556-solana-settings',
-            'team556_solana_pay_display'
-        );
-        
-        add_settings_field(
-            'team556_solana_pay_success_message',
-            __('Success Message', 'team556-solana-pay'),
-            array($this, 'render_success_message_field'),
-            'team556-solana-settings',
-            'team556_solana_pay_display'
-        );
-        
-        add_settings_field(
-            'team556_solana_pay_error_message',
-            __('Error Message', 'team556-solana-pay'),
-            array($this, 'render_error_message_field'),
-            'team556-solana-settings',
-            'team556_solana_pay_display'
-        );
-        
-        // Advanced fields
-        add_settings_field(
-            'team556_solana_pay_debug_mode',
-            __('Debug Mode', 'team556-solana-pay'),
-            array($this, 'render_debug_mode_field'),
-            'team556-solana-settings',
-            'team556_solana_pay_advanced'
-        );
-        
-        add_settings_field(
-            'team556_solana_pay_confirmation_blocks',
-            __('Confirmation Blocks', 'team556-solana-pay'),
-            array($this, 'render_confirmation_blocks_field'),
-            'team556-solana-settings',
-            'team556_solana_pay_advanced'
-        );
     }
 
     /**
-     * Sanitize network
+     * Sanitize settings
      */
-    public function sanitize_network($value) {
+    public function sanitize_settings($input) {
+        $sanitized_input = array();
+        
+        // Merchant wallet address
+        $sanitized_input['merchant_wallet_address'] = sanitize_text_field($input['merchant_wallet_address']);
+        
+        // Solana network
         $allowed_networks = array('mainnet', 'devnet', 'testnet');
-        return in_array($value, $allowed_networks) ? $value : 'mainnet';
+        $sanitized_input['solana_network'] = in_array($input['solana_network'], $allowed_networks) ? $input['solana_network'] : 'mainnet';
+        
+        // Button text
+        $sanitized_input['button_text'] = sanitize_text_field($input['button_text']);
+        
+        // Button color
+        $sanitized_input['button_color'] = sanitize_text_field($input['button_color']);
+        
+        // Success message
+        $sanitized_input['success_message'] = sanitize_textarea_field($input['success_message']);
+        
+        // Error message
+        $sanitized_input['error_message'] = sanitize_textarea_field($input['error_message']);
+        
+        // Debug mode
+        $sanitized_input['debug_mode'] = isset($input['debug_mode']) ? 1 : 0;
+        
+        // Confirmation blocks
+        $sanitized_input['confirmation_blocks'] = absint($input['confirmation_blocks']);
+        
+        return $sanitized_input;
     }
 
     /**
@@ -169,135 +126,115 @@ class Team556_Solana_Pay_Settings {
     }
 
     /**
-     * Render wallet address field
-     */
-    public function render_wallet_address_field() {
-        $value = get_option('team556_solana_pay_wallet_address', '');
-        ?>
-        <input type="text" name="team556_solana_pay_wallet_address" value="<?php echo esc_attr($value); ?>" class="regular-text team556-input" style="background-color: #1C1D24; color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.08);" />
-        <p class="description"><?php _e('Enter your Solana wallet address where you will receive Team556 token payments.', 'team556-solana-pay'); ?></p>
-        <?php
-    }
-
-    /**
-     * Render network field
-     */
-    public function render_network_field() {
-        $value = get_option('team556_solana_pay_network', 'mainnet');
-        ?>
-        <select name="team556_solana_pay_network" class="team556-select" style="background-color: #1C1D24; color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.08);">
-            <option value="mainnet" <?php selected($value, 'mainnet'); ?>><?php _e('Mainnet', 'team556-solana-pay'); ?></option>
-            <option value="devnet" <?php selected($value, 'devnet'); ?>><?php _e('Devnet', 'team556-solana-pay'); ?></option>
-            <option value="testnet" <?php selected($value, 'testnet'); ?>><?php _e('Testnet', 'team556-solana-pay'); ?></option>
-        </select>
-        <p class="description"><?php _e('Select the Solana network to use for transactions.', 'team556-solana-pay'); ?></p>
-        <?php
-    }
-
-    /**
-     * Render button text field
-     */
-    public function render_button_text_field() {
-        $value = get_option('team556_solana_pay_button_text', __('Pay with Team556 Token', 'team556-solana-pay'));
-        ?>
-        <input type="text" name="team556_solana_pay_button_text" value="<?php echo esc_attr($value); ?>" class="regular-text team556-input" style="background-color: #1C1D24; color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.08);" />
-        <p class="description"><?php _e('Customize the text displayed on the payment button.', 'team556-solana-pay'); ?></p>
-        <?php
-    }
-
-    /**
-     * Render button color field
-     */
-    public function render_button_color_field() {
-        $value = get_option('team556_solana_pay_button_color', '#9945FF');
-        ?>
-        <input type="color" name="team556_solana_pay_button_color" value="<?php echo esc_attr($value); ?>" class="team556-color-picker" />
-        <p class="description"><?php _e('Choose a color for the payment button.', 'team556-solana-pay'); ?></p>
-        <?php
-    }
-
-    /**
-     * Render success message field
-     */
-    public function render_success_message_field() {
-        $value = get_option('team556_solana_pay_success_message', __('Payment successful! Thank you for your purchase.', 'team556-solana-pay'));
-        ?>
-        <textarea name="team556_solana_pay_success_message" rows="3" class="large-text team556-textarea" style="background-color: #1C1D24; color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.08);"><?php echo esc_textarea($value); ?></textarea>
-        <p class="description"><?php _e('Message displayed to customers after a successful payment.', 'team556-solana-pay'); ?></p>
-        <?php
-    }
-
-    /**
-     * Render error message field
-     */
-    public function render_error_message_field() {
-        $value = get_option('team556_solana_pay_error_message', __('Payment failed. Please try again or contact support.', 'team556-solana-pay'));
-        ?>
-        <textarea name="team556_solana_pay_error_message" rows="3" class="large-text team556-textarea" style="background-color: #1C1D24; color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.08);"><?php echo esc_textarea($value); ?></textarea>
-        <p class="description"><?php _e('Message displayed to customers if payment fails.', 'team556-solana-pay'); ?></p>
-        <?php
-    }
-
-    /**
-     * Render debug mode field
-     */
-    public function render_debug_mode_field() {
-        $value = get_option('team556_solana_pay_debug_mode', '0');
-        ?>
-        <label>
-            <input type="checkbox" name="team556_solana_pay_debug_mode" value="1" <?php checked($value, '1'); ?> class="team556-checkbox" />
-            <?php _e('Enable debug logging', 'team556-solana-pay'); ?>
-        </label>
-        <p class="description"><?php _e('Logs additional debugging information to the WordPress error log.', 'team556-solana-pay'); ?></p>
-        <?php
-    }
-
-    /**
-     * Render confirmation blocks field
-     */
-    public function render_confirmation_blocks_field() {
-        $value = get_option('team556_solana_pay_confirmation_blocks', '1');
-        ?>
-        <input type="number" name="team556_solana_pay_confirmation_blocks" value="<?php echo esc_attr($value); ?>" min="1" max="32" class="small-text team556-input" style="background-color: #1C1D24; color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.08);" />
-        <p class="description"><?php _e('Number of block confirmations required before considering a transaction complete.', 'team556-solana-pay'); ?></p>
-        <?php
-    }
-
-    /**
      * Render settings page
      */
     public function render_settings_page() {
+        // Check user capabilities
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+        
+        // Get saved options
+        $options = get_option('team556_solana_pay_settings');
+        
         ?>
-        <div class="wrap team556-admin-settings">
-            <h1><?php _e('Team556 Solana Pay Settings', 'team556-solana-pay'); ?></h1>
-            
-            <?php settings_errors(); ?>
-            
-            <div class="team556-card team556-settings-form-card">
+        <div class="team556-dark-theme-wrapper">
+            <div class="wrap team556-admin-settings">
+                <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+                
+                <?php settings_errors(); // Still show WordPress settings errors ?>
+                
                 <form method="post" action="options.php" class="team556-settings-form">
-                    <?php
-                    settings_fields('team556_solana_pay_settings');
-                    do_settings_sections('team556-solana-settings');
-                    submit_button(__('Save Changes', 'team556-solana-pay'), 'team556-button primary'); 
-                    ?>
+                    <?php settings_fields('team556_solana_pay_settings'); // Nonces etc. ?>
+                    
+                    <div class="team556-card team556-settings-form-card">
+                        <h2><?php _e('General Settings', 'team556-solana-pay'); ?></h2>
+                        <p class="description"><?php _e('Configure your Team556 Solana Pay merchant settings.', 'team556-solana-pay'); ?></p>
+                        
+                        <div class="form-group">
+                            <label for="merchant_wallet_address"><?php _e('Merchant Wallet Address', 'team556-solana-pay'); ?></label>
+                            <input type="text" id="merchant_wallet_address" name="team556_solana_pay_settings[merchant_wallet_address]" value="<?php echo esc_attr($options['merchant_wallet_address'] ?? ''); ?>" class="regular-text">
+                            <p class="description"><?php _e('Enter your Solana wallet address where you will receive Team556 token payments.', 'team556-solana-pay'); ?></p>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="solana_network"><?php _e('Solana Network', 'team556-solana-pay'); ?></label>
+                            <select id="solana_network" name="team556_solana_pay_settings[solana_network]">
+                                <option value="mainnet" <?php selected($options['solana_network'] ?? 'mainnet', 'mainnet'); ?>><?php _e('Mainnet', 'team556-solana-pay'); ?></option>
+                                <option value="devnet" <?php selected($options['solana_network'] ?? '', 'devnet'); ?>><?php _e('Devnet', 'team556-solana-pay'); ?></option>
+                                <option value="testnet" <?php selected($options['solana_network'] ?? '', 'testnet'); ?>><?php _e('Testnet', 'team556-solana-pay'); ?></option>
+                            </select>
+                            <p class="description"><?php _e('Select the Solana network to use for transactions.', 'team556-solana-pay'); ?></p>
+                        </div>
+
+                        <hr>
+
+                        <h2><?php _e('Display Settings', 'team556-solana-pay'); ?></h2>
+                        <p class="description"><?php _e('Customize how the payment buttons and messages appear to customers.', 'team556-solana-pay'); ?></p>
+
+                        <div class="form-group">
+                            <label for="button_text"><?php _e('Button Text', 'team556-solana-pay'); ?></label>
+                            <input type="text" id="button_text" name="team556_solana_pay_settings[button_text]" value="<?php echo esc_attr($options['button_text'] ?? __('Pay with Team556 Token', 'team556-solana-pay')); ?>" class="regular-text">
+                            <p class="description"><?php _e('Customize the text displayed on the payment button.', 'team556-solana-pay'); ?></p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="button_color"><?php _e('Button Color', 'team556-solana-pay'); ?></label>
+                            <input type="color" id="button_color" name="team556_solana_pay_settings[button_color]" value="<?php echo esc_attr($options['button_color'] ?? '#6a0dad'); ?>" class="team556-color-picker">
+                            <p class="description"><?php _e('Choose a color for the payment button.', 'team556-solana-pay'); ?></p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="success_message"><?php _e('Success Message', 'team556-solana-pay'); ?></label>
+                            <textarea id="success_message" name="team556_solana_pay_settings[success_message]" rows="3" class="large-text"><?php echo esc_textarea($options['success_message'] ?? __('Payment successful! Thank you for your purchase.', 'team556-solana-pay')); ?></textarea>
+                            <p class="description"><?php _e('Message displayed to customers after a successful payment.', 'team556-solana-pay'); ?></p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="error_message"><?php _e('Error Message', 'team556-solana-pay'); ?></label>
+                            <textarea id="error_message" name="team556_solana_pay_settings[error_message]" rows="3" class="large-text"><?php echo esc_textarea($options['error_message'] ?? __('Payment failed. Please try again or contact support.', 'team556-solana-pay')); ?></textarea>
+                            <p class="description"><?php _e('Message displayed to customers if payment fails.', 'team556-solana-pay'); ?></p>
+                        </div>
+
+                        <hr>
+
+                        <h2><?php _e('Advanced Settings', 'team556-solana-pay'); ?></h2>
+                        <p class="description"><?php _e('Advanced settings for developers and troubleshooting.', 'team556-solana-pay'); ?></p>
+
+                        <div class="form-group form-group-checkbox">
+                            <label for="debug_mode">
+                                <input type="checkbox" id="debug_mode" name="team556_solana_pay_settings[debug_mode]" value="1" <?php checked($options['debug_mode'] ?? 0, 1); ?>>
+                                <?php _e('Enable Debug Mode', 'team556-solana-pay'); ?>
+                            </label>
+                            <p class="description"><?php _e('Logs additional debugging information to the WordPress error log.', 'team556-solana-pay'); ?></p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="confirmation_blocks"><?php _e('Confirmation Blocks', 'team556-solana-pay'); ?></label>
+                            <input type="number" id="confirmation_blocks" name="team556_solana_pay_settings[confirmation_blocks]" value="<?php echo esc_attr($options['confirmation_blocks'] ?? 1); ?>" min="1" max="30" class="small-text">
+                            <p class="description"><?php _e('Number of block confirmations required before considering a transaction complete.', 'team556-solana-pay'); ?></p>
+                        </div>
+                        
+                        <?php submit_button(__('Save Changes', 'team556-solana-pay'), 'team556-button primary'); ?>
+                    </div> <!-- /team556-settings-form-card -->
                 </form>
-            </div>
-            
-            <div class="team556-card team556-settings-help-card">
-                <h2><?php _e('Need Help?', 'team556-solana-pay'); ?></h2>
-                <div class="team556-help-content">
-                    <h3><?php _e('Wallet Address', 'team556-solana-pay'); ?></h3>
-                    <p><?php _e('Your wallet address is where Team556 token payments will be sent. Make sure to use a Solana wallet address that supports SPL tokens.', 'team556-solana-pay'); ?></p>
-                    
-                    <h3><?php _e('Network Selection', 'team556-solana-pay'); ?></h3>
-                    <p><?php _e('Choose Mainnet for real transactions. Devnet and Testnet are for testing purposes only and use test tokens.', 'team556-solana-pay'); ?></p>
-                    
-                    <h3><?php _e('Shortcode Usage', 'team556-solana-pay'); ?></h3>
-                    <p><?php _e('Add a payment button to any page or post using this shortcode:', 'team556-solana-pay'); ?></p>
-                    <code>[team556_solana_pay amount="10" description="Product Name" button_text="Pay Now"]</code>
+                
+                <div class="team556-card team556-settings-help-card">
+                    <h2><?php _e('Need Help?', 'team556-solana-pay'); ?></h2>
+                    <div class="team556-help-content">
+                        <h3><?php _e('Wallet Address', 'team556-solana-pay'); ?></h3>
+                        <p><?php _e('Your wallet address is where Team556 token payments will be sent. Make sure to use a Solana wallet address that supports SPL tokens.', 'team556-solana-pay'); ?></p>
+                        
+                        <h3><?php _e('Network Selection', 'team556-solana-pay'); ?></h3>
+                        <p><?php _e('Choose Mainnet for real transactions. Devnet and Testnet are for testing purposes only and use test tokens.', 'team556-solana-pay'); ?></p>
+                        
+                        <h3><?php _e('Shortcode Usage', 'team556-solana-pay'); ?></h3>
+                        <p><?php _e('Add a payment button to any page or post using this shortcode:', 'team556-solana-pay'); ?></p>
+                        <code>[team556_solana_pay amount="10" description="Product Name" button_text="Pay Now"]</code>
+                    </div>
                 </div>
             </div>
-        </div>
+        </div> <!-- /team556-dark-theme-wrapper -->
         <?php
     }
 

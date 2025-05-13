@@ -4,6 +4,7 @@ import cors from 'cors'
 import helmet from 'helmet'
 import dotenv from 'dotenv'
 import routes from './routes'
+import paymentRoutes from './routes/paymentRoutes'
 
 // Load environment variables from root
 import path from 'path'
@@ -46,6 +47,7 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api', routes)
+app.use('/api/v1', paymentRoutes)
 
 // Health check endpoint
 app.get('/health', (req: express.Request, res: express.Response) => {

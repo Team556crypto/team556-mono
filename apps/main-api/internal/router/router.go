@@ -33,6 +33,7 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	wallet := api.Group("/wallet")
 	swap := api.Group("/swap", middleware.AuthMiddleware(cfg.JWTSecret))
 	firearms := api.Group("/firearms", middleware.AuthMiddleware(cfg.JWTSecret))
+	v1 := api.Group("/v1")
 
 	// Auth Routes
 	auth.Post("/register", authHandler.Register)
@@ -69,4 +70,5 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	firearms.Delete("/:id", handlers.DeleteFirearmHandler(db, cfg)) 
 
 	// --- Add other route groups here ---
+	v1.Post("/solana/payment-request", handlers.HandleCreateSolanaPaymentRequest)
 }

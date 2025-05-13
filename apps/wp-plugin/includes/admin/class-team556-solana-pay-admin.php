@@ -30,12 +30,25 @@ class Team556_Solana_Pay_Admin {
      * Add admin menu item
      */
     public function add_menu_item() {
-        add_options_page(
-            __('Team556 Solana Pay Settings', 'team556-solana-pay'),
+        // Add main dashboard page
+        add_menu_page(
             __('Team556 Solana Pay', 'team556-solana-pay'),
+            __('Team556 Pay', 'team556-solana-pay'),
             'manage_options',
-            'team556-solana-settings',
-            array($this, 'render_settings_page')
+            'team556-solana-pay', // Main slug
+            array($this, 'render_dashboard_page'),
+            'dashicons-superhero', // TODO: Replace with Team556 logo SVG
+            56 // Position
+        );
+
+        // Add Transactions submenu page
+        add_submenu_page(
+            'team556-solana-pay', // Parent slug
+            __('Transactions', 'team556-solana-pay'),
+            __('Transactions', 'team556-solana-pay'),
+            'manage_options',
+            'team556-solana-transactions', // Submenu slug
+            array($this, 'render_transactions_page')
         );
     }
 
@@ -48,16 +61,11 @@ class Team556_Solana_Pay_Admin {
     }
 
     /**
-     * Render settings page
+     * Render dashboard page
      */
-    public function render_settings_page() {
-        // Use the settings class to render the settings page with proper dark theme
-        $settings = new Team556_Solana_Pay_Settings();
-        ?>
-        <div class="team556-dark-theme-wrapper">
-            <?php $settings->render_settings_page(); ?>
-        </div>
-        <?php
+    public function render_dashboard_page() {
+        $dashboard = new Team556_Solana_Pay_Dashboard();
+        $dashboard->render_dashboard_page();
     }
 
     /**
@@ -110,6 +118,13 @@ class Team556_Solana_Pay_Admin {
         <p class="signature-ellipsis"><?php echo esc_html(substr($signature, 0, 10) . '...' . substr($signature, -10)); ?></p>
         <p><a href="<?php echo esc_url($explorer_url); ?>" target="_blank"><?php _e('View on Solana Explorer', 'team556-solana-pay'); ?></a></p>
         <?php
+    }
+
+    /**
+     * Render transactions page
+     */
+    public function render_transactions_page() {
+        // TODO: Implement transactions page rendering
     }
 }
 

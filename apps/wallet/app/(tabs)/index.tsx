@@ -5,6 +5,7 @@ import { Colors } from '@/constants/Colors'
 import { useAuthStore } from '@/store/authStore'
 import { useToastStore } from '@/store/toastStore'
 import { useWalletStore } from '@/store/walletStore'
+import { useStakingStore, UserStakedPosition } from '@/store/stakingStore' // Import UserStakedPosition
 import { Ionicons } from '@expo/vector-icons'
 import Feather from '@expo/vector-icons/Feather'
 import { useWalletClipboard } from '@/hooks/useWalletClipboard'
@@ -13,6 +14,7 @@ import { useDrawerStore } from '@/store/drawerStore'
 import SendDrawerContent from '@/components/drawers/SendDrawerContent'
 import ReceiveDrawerContent from '@/components/drawers/ReceiveDrawerContent'
 import SwapDrawerContent from '@/components/drawers/SwapDrawerContent'
+import { StakingDrawerContent } from '@/components/drawers/StakingDrawerContent' // Changed to named import
 import SolanaIcon from '@/assets/images/solana.svg'
 import TeamIcon from '@/assets/images/team.svg'
 import { formatWalletAddress, formatPrice } from '@/utils/formatters'
@@ -44,11 +46,26 @@ export default function HomeScreen() {
     stopPolling
   } = useWalletStore()
 
+  // Use state and actions from the staking store
+  const {
+    userStakedPositions,
+    fetchUserStakedPositions,
+    fetchAvailableStakingOptions,
+    isLoading: stakingIsLoading
+  } = useStakingStore()
+
   const loadData = useCallback(async () => {
     if (token) {
-      await Promise.all([fetchSolBalance(), fetchTeamBalance()])
+      const currentWalletAddress = user?.wallets?.[0]?.address;
+      if (currentWalletAddress) {
+        await Promise.all([fetchSolBalance(), fetchTeamBalance(), fetchUserStakedPositions(currentWalletAddress), fetchAvailableStakingOptions()])
+      } else {
+        // Handle case where wallet address isn't available yet, or fetch only non-staking data
+        await Promise.all([fetchSolBalance(), fetchTeamBalance()])
+        console.warn('Wallet address not available, cannot fetch staking info yet.');
+      }
     }
-  }, [token, fetchSolBalance, fetchTeamBalance])
+  }, [token, user, fetchSolBalance, fetchTeamBalance, fetchUserStakedPositions, fetchAvailableStakingOptions])
 
   // Start/Stop polling based on component mount/unmount and token presence
   useEffect(() => {
@@ -74,6 +91,9 @@ export default function HomeScreen() {
 
   // Calculate total portfolio value
   const totalPortfolioValue = (solValue || 0) + (teamValue || 0)
+
+  // Calculate total staked TEAM balance from positions
+  const totalStakedTeam = userStakedPositions.reduce((acc: number, position: UserStakedPosition) => acc + position.amountStaked, 0);
 
   useEffect(() => {
     if (solError) {
@@ -247,9 +267,9 @@ export default function HomeScreen() {
           <AssetCard
             name='Solana'
             ticker='SOL'
-            balance={solBalance}
-            price={solPrice}
-            value={solValue}
+            balance={solBalance} // number
+            price={solPrice || 0}  // number (price per token)
+            value={solValue || 0}    // number (total value)
             Icon={SolanaIcon}
             accent={Colors.primary}
             onPress={() => handleAssetPress('Solana', solBalance, 'SOL', solValue, solPrice, SolanaIcon)}
@@ -259,12 +279,26 @@ export default function HomeScreen() {
           <AssetCard
             name='Team556'
             ticker='TEAM'
-            balance={teamBalance}
-            price={teamPrice}
-            value={teamValue}
+            balance={teamBalance} // number
+            price={teamPrice || 0}   // number (price per token)
+            value={teamValue || 0}     // number (total value)
             Icon={TeamIcon}
             accent={Colors.secondary}
             onPress={() => handleAssetPress('Team', teamBalance, 'TEAM', teamValue, teamPrice, TeamIcon)}
+          />
+
+          {/* Team556 Staking Card */}
+          <AssetCard
+            name='Team556 Staking'
+            ticker='Staked Team'
+            balance={totalStakedTeam} // number
+            price={teamPrice || 0}       // number (price per token)
+            value={totalStakedTeam * (teamPrice || 0)} // number (total value)
+            Icon={TeamIcon} // Use the same icon as Team556 token
+            accent={Colors.tint} // Use tint color for staking card accent
+            onPress={() => {
+              openDrawer(<StakingDrawerContent />);
+            }}
           />
         </View>
 

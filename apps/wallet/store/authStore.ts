@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { saveToken, getToken, deleteToken } from '@/utils/secureStore'
 import { loginUser, signupUser, getUserProfile, UserCredentials, User } from '@/services/api' // Assuming api service exports these
 import { useFirearmStore } from './firearmStore' // Import firearmStore
+import { router } from 'expo-router'; // Added for navigation
 
 interface AuthState {
   token: string | null
@@ -62,22 +63,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           console.log('[AuthStore] initializeAuth: State AFTER setting user profile:', JSON.stringify(get()))
         } catch (profileError: any) {
           console.error('[AuthStore] initializeAuth: Failed to fetch profile:', JSON.stringify(profileError))
-          const status = profileError?.response?.status
-          // A 401, 403 (permissions) or 404 (user for this token not found) from /user/profile indicates the token is effectively invalid for this action.
-          if (status === 401 || status === 403 || status === 404) {
-            console.log(`[AuthStore] initializeAuth: Profile fetch failed with status ${status}. Logging out.`)
-            await deleteToken()
-            set({ user: null, token: null, isAuthenticated: false, error: 'Session invalid or expired. Please login.' })
-          } else {
-            console.log(
-              '[AuthStore] initializeAuth: Profile fetch failed with other error (e.g., network issue). Keeping auth state for now.'
-            )
-            set({ error: 'Could not update user profile. Functionality may be limited.' })
-          }
-          console.log('[AuthStore] initializeAuth: State AFTER profile fetch error:', JSON.stringify(get()))
+          // Any failure to fetch profile with a stored token means the session is likely invalid.
+          console.log(`[AuthStore] initializeAuth: Profile fetch failed. Logging out.`)
+          get().logout(); // This will clear state and redirect
+          set({ error: 'Session invalid or expired. Please login.' }); // Error message for login page
+          console.log('[AuthStore] initializeAuth: State AFTER profile fetch error and logout:', JSON.stringify(get()))
         }
       } else {
         console.log('[AuthStore] initializeAuth: No token in SecureStore. Setting unauthenticated state.')
+        // If no token, ensure state is clean. UI should redirect based on isAuthenticated: false.
         set({ user: null, token: null, isAuthenticated: false, error: null })
         console.log('[AuthStore] initializeAuth: State AFTER no token found:', JSON.stringify(get()))
       }
@@ -94,19 +88,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   fetchAndUpdateUser: async () => {
     const token = get().token
     if (!token) {
-      return // No token, cannot fetch profile
+      console.log('[AuthStore] fetchAndUpdateUser: No token found. Logging out.');
+      get().logout(); // If no token, logout and redirect
+      return
     }
     try {
+      console.log('[AuthStore] fetchAndUpdateUser: Attempting to fetch user profile with token:', token);
       const updatedUser = await getUserProfile(token)
-      set({ user: updatedUser })
+      console.log('[AuthStore] fetchAndUpdateUser: User profile updated successfully:', JSON.stringify(updatedUser));
+      set({ user: updatedUser, error: null })
     } catch (error: any) {
-      // Handle specific errors: logout if token is invalid (401) or user not found (404)
-      if (error?.response?.status === 401 || error?.response?.status === 404) {
-        get().logout() // Call logout if token is invalid or user not found
-      } else {
-        // Keep existing error state or set a new one? Depends on desired behavior.
-        set({ error: 'Failed to update user profile' })
-      }
+      console.error('[AuthStore] fetchAndUpdateUser: Failed to update profile:', JSON.stringify(error));
+      // Any failure to update user profile when a token exists should lead to logout.
+      get().logout();
+      set({ error: 'Failed to update user profile. Please login again.' });
     }
   },
 
@@ -183,13 +178,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // TODO: Call backend logout endpoint if necessary
       // Example if logoutUser API needed calling: await logoutUser(get().token);
       await deleteToken()
-      set({ token: null, user: null, isAuthenticated: false, error: null })
+      set({ token: null, user: null, isAuthenticated: false, error: null, isLoading: false })
+      router.replace('/'); // Redirect to landing/login page
     } catch (error) {
       // Catches errors from SecureStore or potential API call
-      set({ error: 'Logout failed' })
-    } finally {
-      set({ isLoading: false })
-    }
+      console.error('[AuthStore] logout: Failed to logout:', error);
+      set({ error: 'Logout failed', isLoading: false })
+      // Still attempt to redirect even if part of logout failed
+      router.replace('/');
+    } 
   },
 
   isP1PresaleUser: () => {

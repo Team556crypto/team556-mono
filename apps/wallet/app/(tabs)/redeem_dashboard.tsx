@@ -122,7 +122,7 @@ export default function RedeemDashboard() {
           <>
             <VestingCard
               vestedPercent={50}
-              vestedDate={vestingDate4Weeks}
+              vestedDate={new Date('May 27, 2025')}
               tokenAmount={500000}
               isEnabled={true}
               onClaim={() => handleClaimTokens(1)}
@@ -131,7 +131,7 @@ export default function RedeemDashboard() {
 
             <VestingCard
               vestedPercent={50}
-              vestedDate={vestingDate8Weeks}
+              vestedDate={new Date('Jun 24, 2025')}
               tokenAmount={500000}
               isEnabled={true}
               onClaim={() => handleClaimTokens(2)}
@@ -142,7 +142,7 @@ export default function RedeemDashboard() {
           // Presale Type 2: One period (100%)
           <VestingCard
             vestedPercent={100}
-            vestedDate={vestingDate12Weeks}
+            vestedDate={new Date('Jul 22, 2025')}
             tokenAmount={500000}
             isEnabled={true}
             onClaim={() => handleClaimTokens(1)}

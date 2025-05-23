@@ -19,27 +19,28 @@ import { FirearmDetailsDrawerContent } from '@/components/drawers/FirearmDetails
 import { AddFirearmDrawerContent } from '@/components/drawers/AddFirearmDrawerContent'
 import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect } from '@react-navigation/native'
+import { useRouter } from 'expo-router'
 
 // Responsive layout constants
 const CARD_GAP = 16
 const LARGE_SCREEN_BREAKPOINT = 768
 const DESKTOP_BREAKPOINT = 1200
 
-const betaMaxFirearmsMessage = 'You can add a maximum of 2 firearms during the beta.'
-
 const AllItemsView = () => {
   const { colors } = useTheme()
   const token = useAuthStore(state => state.token)
+  const canAddItem = useAuthStore(state => state.canAddItem())
+  const isP1User = useAuthStore(state => state.isP1PresaleUser())
   const { width: screenWidth } = useWindowDimensions()
+  const router = useRouter()
 
   const firearms = useFirearmStore(state => state.firearms)
   const isLoading = useFirearmStore(state => state.isLoading)
-  const error = useFirearmStore(state => state.error)
+  const firearmStoreError = useFirearmStore(state => state.error)
   const fetchInitialFirearms = useFirearmStore(state => state.fetchInitialFirearms)
   const hasAttemptedInitialFetch = useFirearmStore(state => state.hasAttemptedInitialFetch)
   const { openDrawer } = useDrawerStore()
-
-  const canAddFirearm = firearms.length < 2
+  const clearFirearmError = useFirearmStore(state => state.setError)
 
   // Calculate responsive dimensions
   const getCardDimensions = () => {
@@ -107,7 +108,8 @@ const AllItemsView = () => {
     },
     errorText: {
       color: colors.error,
-      textAlign: 'center'
+      textAlign: 'center',
+      marginTop: 8
     },
     limitReachedText: {
       fontSize: 14,
@@ -170,19 +172,16 @@ const AllItemsView = () => {
     <TouchableOpacity
       style={styles.addFirearmCard}
       onPress={() => {
-        if (!canAddFirearm) {
-          Alert.alert('Limit Reached', betaMaxFirearmsMessage)
-          return
-        }
         openDrawer(<AddFirearmDrawerContent />)
       }}
+      disabled={!canAddItem}
     >
       <Ionicons
         name='add-circle-outline'
         size={screenWidth >= LARGE_SCREEN_BREAKPOINT ? 32 : 48}
-        color={colors.primary}
+        color={!canAddItem ? colors.textSecondary : colors.primary}
       />
-      <Text preset='label' style={styles.addFirearmText}>
+      <Text preset='label' style={[styles.addFirearmText, !canAddItem && { color: colors.textSecondary }]}>
         Add Firearm
       </Text>
     </TouchableOpacity>
@@ -191,40 +190,31 @@ const AllItemsView = () => {
   // Content based on screen size
   const renderContent = () => {
     // Show loading state
-    if (isLoading && firearms.length === 0) {
+    if (isLoading && firearms.length === 0 && !firearmStoreError) {
       return <ActivityIndicator style={styles.centerMessage} size='large' color={colors.primary} />
     }
 
-    // Show error state
-    if (error && firearms.length === 0) {
+    // Show firearm store error state (e.g., from addFirearm failure or initial fetch)
+    // This will also catch the limit reached error from the firearmStore
+    if (firearmStoreError) {
       return (
         <View style={styles.centerMessage}>
-          <Text style={styles.errorText}>{error}</Text>
-          <Button title="Retry" onPress={() => token && fetchInitialFirearms(token)} />
+          <Text style={styles.errorText}>{firearmStoreError}</Text>
+          <Button title='Try Again or Dismiss' onPress={() => clearFirearmError(null)} style={{ marginTop: 16 }} />
         </View>
       )
     }
 
-    // Display the message if the limit of 2 firearms is reached, before other content
-    // This message should appear even if there are firearms, as long as the count is 2.
-    const limitMessage = firearms.length === 2 ? (
-      <Text style={styles.limitReachedText}>
-        {betaMaxFirearmsMessage}
-      </Text>
-    ) : null;
-
     // Show empty state (if no firearms and limit not yet reached for the message above)
     if (!isLoading && firearms.length === 0) {
       return (
-        <View style={{ flex:1 }}>
-          {limitMessage} {/* This will be null here as firearms.length is 0 */}
+        <View style={{ flex: 1 }}>
           <View style={styles.emptyMessage}>
             <Text preset='label'>No firearms found</Text>
             <Button
               variant='secondary'
               title='Add firearm'
               onPress={() => {
-                // The canAddFirearm check and Alert for adding is handled by renderAddButton
                 openDrawer(<AddFirearmDrawerContent />)
               }}
             />
@@ -237,45 +227,48 @@ const AllItemsView = () => {
     }
 
     // Show firearm cards
-    const actualFirearmsContent = screenWidth < LARGE_SCREEN_BREAKPOINT ? (
-      // Horizontal ScrollView for firearms
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollViewContent}
-      >
-        {firearms.map(firearm => (
-          <FirearmCard
-            key={`scroll-${firearm.id}`}
-            firearm={firearm}
-            onPress={() => handleFirearmPress(firearm)}
-            width={dimensions.cardWidth}
-            height={dimensions.cardHeight}
-          />
-        ))}
-        {renderAddButton()}
-      </ScrollView>
-    ) : (
-      // Grid layout for large screens
-      <View style={styles.cardsGrid}>
-        {firearms.map(firearm => (
-          <FirearmCard
-            key={`grid-${firearm.id}`}
-            firearm={firearm}
-            onPress={() => handleFirearmPress(firearm)}
-            width={dimensions.cardWidth}
-            height={dimensions.cardHeight}
-          />
-        ))}
-        {renderAddButton()}
-      </View>
-    );
+    const actualFirearmsContent =
+      screenWidth < LARGE_SCREEN_BREAKPOINT ? (
+        // Horizontal ScrollView for firearms
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollViewContent}>
+          {firearms.map(firearm => (
+            <FirearmCard
+              key={`scroll-${firearm.id}`}
+              firearm={firearm}
+              onPress={() => handleFirearmPress(firearm)}
+              width={dimensions.cardWidth}
+              height={dimensions.cardHeight}
+            />
+          ))}
+          {renderAddButton()}
+        </ScrollView>
+      ) : (
+        // Grid layout for large screens
+        <View style={styles.cardsGrid}>
+          {firearms.map(firearm => (
+            <FirearmCard
+              key={`grid-${firearm.id}`}
+              firearm={firearm}
+              onPress={() => handleFirearmPress(firearm)}
+              width={dimensions.cardWidth}
+              height={dimensions.cardHeight}
+            />
+          ))}
+          {renderAddButton()}
+        </View>
+      )
 
     return (
       <View style={{ flex: 1 }}>
-        {limitMessage} {/* Display the message if the limit of 2 firearms is reached */}
+        {!isP1User && !canAddItem && firearms.length >= 2 && (
+          <Text style={styles.limitReachedText}>
+            You have reached the maximum of 2 items. P1 presale members have unlimited additions.
+          </Text>
+        )}
         {/* Loading indicator if still loading more, shown above the list */}
-        {isLoading && firearms.length > 0 && <ActivityIndicator style={{ marginVertical: 20 }} size="large" color={colors.primary} />}
+        {isLoading && firearms.length > 0 && (
+          <ActivityIndicator style={{ marginVertical: 20 }} size='large' color={colors.primary} />
+        )}
         {actualFirearmsContent}
       </View>
     )
@@ -286,7 +279,7 @@ const AllItemsView = () => {
       <View>
         <View style={styles.header}>
           <Text preset='h4'>Firearms</Text>
-          <Button variant='ghost' style={{ marginLeft: 'auto' }} title='See All' onPress={() => {}} />
+          {/* <Buttoxn variant='ghost' style={{ marginLeft: 'auto' }} title='See All' onPress={() => router.push('/armory/firearms')} /> */}
         </View>
 
         {renderContent()}

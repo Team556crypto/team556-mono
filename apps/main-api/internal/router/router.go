@@ -27,12 +27,14 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(db, cfg.JWTSecret, emailClient)
 	swapHandler := handlers.NewSwapHandler(db, cfg)
+	presaleHandler := handlers.NewPresaleHandler(db, cfg.JWTSecret, cfg.SolanaAPIURL)
 
 	// Groups Routes
 	auth := api.Group("/auth")
 	wallet := api.Group("/wallet")
 	swap := api.Group("/swap", middleware.AuthMiddleware(cfg.JWTSecret))
 	firearms := api.Group("/firearms", middleware.AuthMiddleware(cfg.JWTSecret))
+	presale := api.Group("/presale", middleware.AuthMiddleware(cfg.JWTSecret))
 
 	// Auth Routes
 	auth.Post("/register", authHandler.Register)
@@ -67,6 +69,10 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	firearms.Get("/:id", handlers.GetFirearmByIDHandler(db, cfg))
 	firearms.Patch("/:id", handlers.UpdateFirearmHandler(db, cfg))
 	firearms.Delete("/:id", handlers.DeleteFirearmHandler(db, cfg)) 
+
+	// --- Presale Routes ---
+	presale.Get("/claim-status", presaleHandler.GetPresaleClaimStatus)
+	presale.Post("/claim/p1p1", presaleHandler.ClaimPresaleP1P1)
 
 	// --- Add other route groups here ---
 }

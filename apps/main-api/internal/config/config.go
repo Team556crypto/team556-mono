@@ -12,7 +12,7 @@ import (
 type Config struct {
 	DatabaseURL       string
 	JWTSecret         string
-	SolanaAPIURL      string
+	SolanaAPIURL      string `env:"MAIN_API__SOLANA_API_URL,required"`
 	ResendAPIKey      string
 	ArmorySecret      string
 	UploadthingSecret string // For GLOBAL__UPLOADTHING_SECRET
@@ -49,10 +49,13 @@ func LoadConfig() (*Config, error) {
 		log.Fatal("Error: MAIN_API__DB_DIRECT environment variable not set.")
 	}
 	if cfg.JWTSecret == "" {
-		log.Fatal("Error: MAIN_API_JWT_SECRET environment variable not set.")
+		log.Fatal("Error: MAIN_API__JWT_SECRET environment variable not set.")
 	}
 	if cfg.SolanaAPIURL == "" {
 		log.Fatal("Error: MAIN_API__SOLANA_API_URL environment variable not set.")
+	}
+	if cfg.ResendAPIKey == "" {
+		log.Fatal("Error: GLOBAL__RESEND_API_KEY environment variable not set.")
 	}
 	if cfg.ArmorySecret == "" {
 		log.Println("CRITICAL WARNING: MAIN_API__ARMORY_SECRET environment variable not set. Firearm data encryption/decryption will fail.")

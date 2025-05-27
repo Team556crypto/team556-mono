@@ -130,24 +130,13 @@ export default function SettingsScreen() {
           </View>
 
           <View style={styles.cardContent}>
-            <TouchableOpacity style={styles.menuItem} onPress={handleChangePasswordPress}>
-              <View style={styles.menuItemIcon}>
-                <Ionicons name='lock-closed-outline' size={22} color={Colors.primary} />
-              </View>
-              <View style={styles.menuItemContent}>
-                <Text preset='label'>Change Password</Text>
-                <Text preset='caption'>Update your account password</Text>
-              </View>
-              <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
-            </TouchableOpacity>
-
             <TouchableOpacity style={styles.menuItem} onPress={handleInitiatePasswordReset}>
               <View style={styles.menuItemIcon}>
                 <Ionicons name='key-outline' size={22} color={Colors.primary} />
               </View>
               <View style={styles.menuItemContent}>
-                <Text preset='label'>Reset Password (via Email)</Text>
-                <Text preset='caption'>Send a reset code to your email</Text>
+                <Text preset='label'>Change Password</Text>
+                <Text preset='caption'>Update your account password</Text>
               </View>
               <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
             </TouchableOpacity>

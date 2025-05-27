@@ -501,7 +501,6 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
               placeholder={`Amount of ${fromToken} to swap`}
               value={amount}
               onChangeText={setAmount}
-              keyboardType='numeric'
               style={[styles.amountInput, genericStyles.input]}
             />
           </View>
@@ -528,9 +527,7 @@ export const SwapDrawerContent: React.FC<SwapDrawerProps> = ({
           </View>
 
           {/* DexScreener Chart - Conditional Rendering */}
-          {Platform.OS === 'web' && fromToken === 'SOL' && toToken === 'TEAM' && (
-            <DexScreenerChart />
-          )}
+          {Platform.OS === 'web' && fromToken === 'SOL' && toToken === 'TEAM' && <DexScreenerChart />}
 
           {/* Error Message - Show only if not loading */}
           {error && !isQuoteLoading && <Text style={styles.errorText}>{error}</Text>}

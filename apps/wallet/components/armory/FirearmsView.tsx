@@ -32,6 +32,8 @@ const XLARGE_SCREEN_BREAKPOINT = 1366
 export const FirearmsView = () => {
   const { colors } = useTheme()
   const token = useAuthStore(state => state.token)
+  const canAddItem = useAuthStore(state => state.canAddItem())
+  const isP1User = useAuthStore(state => state.isP1PresaleUser())
   const { width: screenWidth } = useWindowDimensions()
 
   // Responsive sizing based on screen width
@@ -75,13 +77,11 @@ export const FirearmsView = () => {
 
   const firearms = useFirearmStore(state => state.firearms)
   const isLoading = useFirearmStore(state => state.isLoading)
-  const error = useFirearmStore(state => state.error)
+  const firearmStoreError = useFirearmStore(state => state.error)
   const fetchInitialFirearms = useFirearmStore(state => state.fetchInitialFirearms)
   const hasAttemptedInitialFetch = useFirearmStore(state => state.hasAttemptedInitialFetch)
+  const clearFirearmError = useFirearmStore(state => state.setError)
   const { openDrawer } = useDrawerStore()
-
-  const canAddFirearm = firearms.length < 2
-  const betaMaxFirearmsMessage = 'Max 2 firearms (beta test limit)'
 
   useEffect(() => {
     if (token && !hasAttemptedInitialFetch && !isLoading) {
@@ -94,10 +94,6 @@ export const FirearmsView = () => {
   }
 
   const handleAddFirearm = () => {
-    if (!canAddFirearm) {
-      Alert.alert('Limit Reached', betaMaxFirearmsMessage)
-      return
-    }
     openDrawer(<AddFirearmDrawerContent />)
   }
 
@@ -141,13 +137,16 @@ export const FirearmsView = () => {
       padding: 20
     },
     errorText: {
-      color: 'red',
-      textAlign: 'center'
+      color: colors.error,
+      textAlign: 'center',
+      marginTop: 8
     },
     limitReachedText: {
-      fontSize: 12,
-      marginLeft: 8,
-      color: colors.textSecondary
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginVertical: 8,
+      paddingHorizontal: 16
     },
     emptyMessage: {
       flex: 1,
@@ -163,6 +162,10 @@ export const FirearmsView = () => {
       paddingVertical: 48
     },
     addButton: {
+      borderRadius: 8
+    },
+    addButtonHeaderSmall: {
+      padding: 8,
       borderRadius: 8
     },
     addButtonLarge: {
@@ -203,66 +206,74 @@ export const FirearmsView = () => {
         <ActivityIndicator size='large' color={colors.primary} />
       </View>
     )
-  } else if (!isLoading && firearms.length === 0) {
-    content = (
-      <View style={styles.emptyMessage}>
-        <Text preset='label'>No firearms found</Text>
-        <Button variant='secondary' title='Add firearm' onPress={handleAddFirearm} disabled={!canAddFirearm} />
-        {!canAddFirearm && <Text style={styles.limitReachedText}>{betaMaxFirearmsMessage}</Text>}
-      </View>
-    )
-  } else if (error) {
+  } else if (firearmStoreError) {
     content = (
       <View style={styles.centerMessage}>
-        <Text style={styles.errorText}>Error loading firearms: {error}</Text>
+        <Text style={styles.errorText}>{firearmStoreError}</Text>
+        <Button variant='outline' title='Dismiss' onPress={() => clearFirearmError(null)} style={{ marginTop: 16 }} />
+      </View>
+    )
+  } else if (firearms.length === 0) {
+    content = (
+      <View style={styles.emptyMessage}>
+        <Ionicons name='file-tray-stacked-outline' size={48} color={colors.textSecondary} />
+        <Text style={{ color: colors.textSecondary }}>No Firearms Yet</Text>
+        <Text style={{ color: colors.textSecondary, textAlign: 'center', marginBottom: 16 }}>
+          Get started by adding your first firearm to your armory.
+        </Text>
+        <Button variant='secondary' title='+ Add Firearm' onPress={handleAddFirearm} disabled={!canAddItem} />
+        {!isP1User && !canAddItem && (
+          <Text style={styles.limitReachedText}>Item limit reached. P1 presale members have unlimited additions.</Text>
+        )}
       </View>
     )
   } else {
     content = (
-      <View style={styles.flatListContainer}>
-        <FlatList
-          data={firearms}
-          renderItem={renderItem}
-          keyExtractor={item => `firearm-${item.id}`}
-          numColumns={dimensions.numColumns}
-          columnWrapperStyle={styles.columnWrapper}
-          showsVerticalScrollIndicator={false}
-          scrollEnabled={true}
-          contentContainerStyle={styles.gridContent}
-        />
-      </View>
+      <FlatList
+        key={dimensions.numColumns}
+        data={firearms}
+        renderItem={renderItem}
+        keyExtractor={item => item.id.toString()}
+        numColumns={dimensions.numColumns}
+        style={styles.flatListContainer}
+        contentContainerStyle={styles.gridContent}
+        columnWrapperStyle={dimensions.numColumns > 1 ? styles.columnWrapper : undefined}
+        ListHeaderComponent={
+          isLoading && firearms.length > 0 ? (
+            <ActivityIndicator style={{ marginVertical: 20 }} size='large' color={colors.primary} />
+          ) : null
+        }
+      />
     )
   }
-
-  const renderAddButton = () => (
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <TouchableOpacity
-        style={[styles.addButton, screenWidth >= MEDIUM_SCREEN_BREAKPOINT && styles.addButtonLarge]}
-        onPress={handleAddFirearm}
-        disabled={!canAddFirearm}
-      >
-        <Ionicons
-          name='add'
-          size={screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? 24 : 32}
-          color={!canAddFirearm ? colors.backgroundDark : colors.primary}
-        />
-        {screenWidth >= MEDIUM_SCREEN_BREAKPOINT && (
-          <Text style={[styles.addButtonText, !canAddFirearm && { color: colors.backgroundDark }]}>Add Firearm</Text>
-        )}
-      </TouchableOpacity>
-    </View>
-  )
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTitleContainer}>
-          <Text preset='h4'>Firearms</Text>
-          {!canAddFirearm && (
-            <Text style={[styles.limitReachedText, { marginTop: 0, marginLeft: 0 }]}>({betaMaxFirearmsMessage})</Text>
+          <Text preset='h3' accessibilityRole='header'>
+            My Armory
+          </Text>
+          <Text style={{ fontSize: 18, color: colors.textSecondary }}>{`(${firearms.length})`}</Text>
+          {!isP1User && !canAddItem && firearms.length >= 2 && (
+            <Text style={styles.limitReachedText}>(Max 2 items)</Text>
           )}
         </View>
-        {renderAddButton()}
+        {canAddItem && (
+          <TouchableOpacity 
+            onPress={handleAddFirearm} 
+            style={screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? styles.addButtonLarge : styles.addButtonHeaderSmall} 
+          >
+            <Ionicons 
+              name='add' 
+              size={screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? 20 : 24} 
+              color={colors.primary} 
+            />
+            {screenWidth >= MEDIUM_SCREEN_BREAKPOINT && (
+              <Text style={styles.addButtonText}>Add Firearm</Text>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
       {content}
     </View>

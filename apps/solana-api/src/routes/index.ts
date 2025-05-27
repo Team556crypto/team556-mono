@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express'
 import walletRoutes from './walletRoutes'
 import swapRoutes from './swap.routes'
+import tokenRoutes from './token.routes'
 
 const router = Router()
 
@@ -17,5 +18,8 @@ router.use('/wallet', walletRoutes)
 
 // Swap routes
 router.use('/swap', swapRoutes)
+
+// Token routes
+router.use('/token', tokenRoutes)
 
 export default router

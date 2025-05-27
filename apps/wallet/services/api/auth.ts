@@ -47,7 +47,7 @@ export const signupUser = async (
 ): Promise<LoginResponse> => {
   return apiClient<LoginResponse>({
     method: 'POST',
-    endpoint: '/auth/signup',
+    endpoint: '/auth/register',
     body: credentials,
   });
 };

@@ -1,0 +1,198 @@
+/**
+ * Team556 Solana Pay Frontend CSS
+ */
+
+/* Solana Colors */
+:root {
+    --team556-purple: #9945FF;
+    --team556-green: #14F195;
+    --team556-blue: #00C2FF;
+    --team556-magenta: #F067FF;
+    --team556-red: #FF5C5C;
+    --team556-orange: #FF8F00;
+    --team556-dark: #14151A;
+    --team556-light: #F9FAFB;
+}
+
+/* Team556 Solana Pay Container */
+.team556-solana-pay-container {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    color: var(--team556-dark);
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    background: var(--team556-light);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Payment Form */
+#team556-solana-pay-form {
+    color: var(--team556-dark);
+}
+
+#team556-solana-pay-form p {
+    color: var(--team556-dark);
+    margin-bottom: 15px;
+}
+
+#team556-solana-pay-form h3 {
+    color: var(--team556-purple);
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+
+/* Payment Summary */
+.team556-payment-summary {
+    background-color: rgba(153, 69, 255, 0.05);
+    border: 1px solid rgba(153, 69, 255, 0.2);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.team556-payment-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(153, 69, 255, 0.1);
+}
+
+.team556-payment-row:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.team556-token-amount {
+    font-size: 1.1em;
+}
+
+.team556-token-amount strong {
+    color: var(--team556-purple);
+}
+
+.team556-conversion-rate {
+    font-size: 0.9em;
+}
+
+#team556-refresh-rate {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin-left: 10px;
+    cursor: pointer;
+    color: var(--team556-purple);
+}
+
+#team556-refresh-rate .dashicons {
+    width: 18px;
+    height: 18px;
+    font-size: 18px;
+    vertical-align: middle;
+    color: var(--team556-purple);
+}
+
+.team556-refresh-spin {
+    animation: team556-spin 1s linear infinite;
+}
+
+/* Wallet Instructions */
+.team556-wallet-instructions {
+    background-color: rgba(153, 69, 255, 0.05);
+    border-left: 3px solid var(--team556-purple);
+    padding: 8px 15px;
+    margin: 8px 0;
+    font-weight: normal;
+    color: var(--team556-dark);
+}
+
+.team556-wallet-instructions strong {
+    color: var(--team556-purple);
+}
+
+/* QR Code Container */
+.team556-qrcode-container {
+    text-align: center;
+    margin: 20px auto;
+    padding: 20px;
+    background: white;
+    border-radius: 10px;
+    max-width: 300px;
+    position: relative;
+    border: 1px solid rgba(153, 69, 255, 0.2);
+    box-shadow: 0 4px 6px rgba(153, 69, 255, 0.1);
+}
+
+#team556-solana-pay-qrcode {
+    display: inline-block;
+    min-height: 200px;
+}
+
+.team556-qrcode-spinner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+}
+
+.team556-qrcode-spinner .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(153, 69, 255, 0.3);
+    border-top: 4px solid var(--team556-purple);
+    border-radius: 50%;
+    animation: team556-spin 1s linear infinite;
+}
+
+/* Status Messages */
+.team556-solana-pay-status {
+    margin-top: 15px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.team556-solana-pay-status[data-status="error"] {
+    background-color: rgba(255, 92, 92, 0.1);
+    border: 1px solid rgba(255, 92, 92, 0.3);
+    color: var(--team556-red);
+}
+
+.team556-solana-pay-status[data-status="success"] {
+    background-color: rgba(20, 241, 149, 0.1);
+    border: 1px solid rgba(20, 241, 149, 0.3);
+    color: var(--team556-green);
+}
+
+.team556-solana-pay-status[data-status="processing"] {
+    background-color: rgba(0, 194, 255, 0.1);
+    border: 1px solid rgba(0, 194, 255, 0.3);
+    color: var(--team556-blue);
+}
+
+/* Animations */
+@keyframes team556-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive Styles */
+@media screen and (max-width: 480px) {
+    .team556-solana-pay-container {
+        padding: 15px;
+    }
+    
+    .team556-qrcode-container {
+        max-width: 100%;
+    }
+} 

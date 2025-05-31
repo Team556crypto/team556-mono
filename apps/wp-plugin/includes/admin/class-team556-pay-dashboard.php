@@ -333,7 +333,7 @@ class Team556_Pay_Dashboard {
                     <?php else : ?>
                         <div class="team556-wallet-not-configured">
                             <p><?php _e('Your wallet is not configured yet.', 'team556-pay'); ?></p>
-                            <a href="<?php echo esc_url(admin_url('options-general.php?page=team556-solana-settings')); ?>" class="team556-button">
+                            <a href="<?php echo esc_url(admin_url('options-general.php?page=team556-pay-settings')); ?>" class="team556-button">
                                 <?php _e('Configure Now', 'team556-pay'); ?>
                             </a>
                         </div>
@@ -345,7 +345,7 @@ class Team556_Pay_Dashboard {
                         <span class="dashicons dashicons-list-view"></span>
                         <?php _e('View All Transactions', 'team556-pay'); ?>
                     </a>
-                    <a href="<?php echo esc_url(admin_url('options-general.php?page=team556-solana-settings')); ?>" class="team556-button outline">
+                    <a href="<?php echo esc_url(admin_url('options-general.php?page=team556-pay-settings')); ?>" class="team556-button outline">
                         <span class="dashicons dashicons-admin-settings"></span>
                         <?php _e('Settings', 'team556-pay'); ?>
                     </a>
@@ -423,7 +423,7 @@ class Team556_Pay_Dashboard {
                         <div class="team556-step-content">
                             <h3><?php _e('Configure Settings', 'team556-pay'); ?></h3>
                             <p><?php _e('Enter your Solana wallet address and Team556 token details in the plugin settings.', 'team556-pay'); ?></p>
-                            <a href="<?php echo esc_url(admin_url('options-general.php?page=team556-solana-settings')); ?>" class="team556-button">
+                            <a href="<?php echo esc_url(admin_url('options-general.php?page=team556-pay-settings')); ?>" class="team556-button">
                                 <?php _e('Go to Settings', 'team556-pay'); ?>
                             </a>
                         </div>
@@ -656,7 +656,7 @@ class Team556_Pay_Dashboard {
     public function render_settings_redirect() {
         ?>
         <script type="text/javascript">
-            window.location.href = "<?php echo esc_url(admin_url('options-general.php?page=team556-solana-settings')); ?>";
+            window.location.href = "<?php echo esc_url(admin_url('options-general.php?page=team556-pay-settings')); ?>";
         </script>
         <?php
         _e('Redirecting to settings page...', 'team556-pay');

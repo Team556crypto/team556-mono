@@ -230,7 +230,7 @@ class Team556_Pay_Settings {
                         
                         <h3><?php _e('Shortcode Usage', 'team556-pay'); ?></h3>
                         <p><?php _e('Add a payment button to any page or post using this shortcode:', 'team556-pay'); ?></p>
-                        <code>[team556_pay_button amount="10" description="Product Name" button_text="Pay Now"]</code>
+                        <code>[team556_pay_button amount="10" label="Product Name"]</code>
                     </div>
                 </div>
             </div>

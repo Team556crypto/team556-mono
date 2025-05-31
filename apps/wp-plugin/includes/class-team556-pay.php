@@ -25,7 +25,7 @@ class Team556_Pay {
     public function init() {
         // Add hooks
         add_action('init', array($this, 'register_scripts'));
-        add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_scripts'));
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_scripts'), 90); // Run a bit later
         add_action('rest_api_init', array($this, 'register_rest_routes'));
         
         // Add WooCommerce payment gateway if WooCommerce is active
@@ -50,6 +50,7 @@ class Team556_Pay {
      * Register scripts
      */
     public function register_scripts() {
+        error_log('[Team556_Pay] register_scripts called.');
         // Register Solana Pay scripts
         wp_register_script(
             'team556-solana-web3',
@@ -99,44 +100,93 @@ class Team556_Pay {
      * Enqueue frontend scripts
      */
     public function enqueue_frontend_scripts() {
+	    $is_checkout = function_exists('is_checkout') && is_checkout();
+	    $is_order_pay_page = function_exists('is_wc_endpoint_url') && is_wc_endpoint_url('order-pay');
+	    $is_shortcode_present = $this->is_team556_pay_shortcode_present();
+	    $is_cart = function_exists('is_cart') && is_cart();
+	    $checkout_page_id = function_exists('wc_get_page_id') ? wc_get_page_id('checkout') : 0;
+	    $current_page_id = get_queried_object_id(); // More reliable inside wp_enqueue_scripts
+	    $is_checkout_page_by_id = ($checkout_page_id && $current_page_id && $current_page_id == $checkout_page_id);
+	    // $is_checkout_page_by_is_page = function_exists('wc_get_page_id') && is_page(wc_get_page_id('checkout')); // Alternative, often less reliable during AJAX
+
+	    error_log('[Team556_Pay] enqueue_frontend_scripts called. Priority 90.');
+	    error_log('[Team556_Pay] Current Page ID (get_queried_object_id): ' . $current_page_id);
+	    error_log('[Team556_Pay] Checkout Page ID (wc_get_page_id): ' . $checkout_page_id);
+	    error_log('[Team556_Pay] is_checkout_page_by_id (current_page_id == checkout_page_id): ' . ($is_checkout_page_by_id ? 'true' : 'false'));
+	    error_log('[Team556_Pay] is_checkout(): ' . ($is_checkout ? 'true' : 'false'));
+	    error_log('[Team556_Pay] is_wc_endpoint_url(\'order-pay\'): ' . ($is_order_pay_page ? 'true' : 'false'));
+	    error_log('[Team556_Pay] is_team556_pay_shortcode_present(): ' . ($is_shortcode_present ? 'true' : 'false'));
+	    error_log('[Team556_Pay] is_cart(): ' . ($is_cart ? 'true' : 'false'));
+	    // error_log('[Team556_Pay] is_page(wc_get_page_id(\'checkout\')) (is_page_check): ' . (function_exists('wc_get_page_id') && is_page(wc_get_page_id('checkout')) ? 'true' : 'false'));
+
+	    $should_enqueue = false;
+
+	    if ($is_checkout_page_by_id) {
+	        $should_enqueue = true;
+	        error_log('[Team556_Pay] Matched by current_page_id == checkout_page_id.');
+	    } elseif ($is_shortcode_present) {
+	        $should_enqueue = true;
+	        error_log('[Team556_Pay] Matched by shortcode_present.');
+	    } elseif ($is_checkout) { // Fallback to is_checkout
+	        $should_enqueue = true;
+	        error_log('[Team556_Pay] Matched by is_checkout (fallback).');
+	    } elseif ($is_order_pay_page) { // Fallback to order-pay page
+	        $should_enqueue = true;
+	        error_log('[Team556_Pay] Matched by is_order_pay_page (fallback).');
+	    }
+	    // Not including $is_cart as it's usually too broad for payment gateway specific scripts.
+
+	    if ($should_enqueue) {
+	        error_log('[Team556_Pay] Conditions met, enqueuing scripts in enqueue_frontend_scripts...');
+	        wp_enqueue_script('team556-buffer');
+	        wp_enqueue_script('team556-solana-web3');
+	        wp_enqueue_script('team556-qrcode'); // Added qrcode
+	        wp_enqueue_script('team556-pay');
+	        wp_enqueue_style('team556-pay-style');
+	        
+	        wp_localize_script('team556-pay', 'team556PayGlobal', array(
+	            'ajaxUrl' => admin_url('admin-ajax.php'),
+	            'restUrl' => rest_url('team556-pay/v1'),
+	            'merchantWallet' => get_option('team556_pay_wallet_address', ''),
+	            'tokenMint' => get_option('team556_pay_token_mint', 'H7MeLVHPZcmcMzKRYUdtTJ4Bh3FahpfcmNhduJ7KvERg'),
+	            'network' => get_option('team556_pay_network', 'mainnet'),
+	            'nonce' => wp_create_nonce('team556-pay-nonce'),
+	            'i18n' => array(
+	                'paymentSuccess' => get_option('team556_pay_success_message', __('Payment successful!', 'team556-pay')),
+	                'paymentFailed' => get_option('team556_pay_error_message', __('Payment failed. Please try again.', 'team556-pay')),
+	                'connecting' => __('Connecting to wallet...', 'team556-pay'),
+	                'connected' => __('Connected to wallet', 'team556-pay'),
+	                'connectionFailed' => __('Connection failed', 'team556-pay'),
+	                'payNow' => get_option('team556_pay_button_text', __('Pay with Team556 Token', 'team556-pay')),
+	            ),
+	        ));
+	        
+	        wp_add_inline_script('team556-buffer', 'window.Buffer = buffer.Buffer;', 'after');
+	    } else {
+	        error_log('[Team556_Pay] Exiting enqueue_frontend_scripts - no relevant page or shortcode identified.');
+	    }
+	}
+
+    /**
+     * Check if the [team556_pay] shortcode is present on the current page/post.
+     *
+     * @return bool True if the shortcode is found, false otherwise.
+     */
+    private function is_team556_pay_shortcode_present() {
         global $post;
-        
-        // Only enqueue on checkout or if our shortcode is present
-        if (
-            (function_exists('is_checkout') && is_checkout()) ||
-            (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'team556_pay'))
-        ) {
-            // First add Buffer
-            wp_enqueue_script('team556-buffer');
-            
-            // Add Solana Web3
-            wp_enqueue_script('team556-solana-web3');
-            
-            // Add our script and styles
-            wp_enqueue_script('team556-pay');
-            wp_enqueue_style('team556-pay-style');
-            
-            // Localize script with necessary data
-            wp_localize_script('team556-pay', 'team556Pay', array(
-                'ajaxUrl' => admin_url('admin-ajax.php'),
-                'restUrl' => rest_url('team556-pay/v1'),
-                'merchantWallet' => get_option('team556_pay_wallet_address', ''),
-                'tokenMint' => get_option('team556_pay_token_mint', 'H7MeLVHPZcmcMzKRYUdtTJ4Bh3FahpfcmNhduJ7KvERg'),
-                'network' => get_option('team556_pay_network', 'mainnet'),
-                'nonce' => wp_create_nonce('team556-pay-nonce'),
-                'i18n' => array(
-                    'paymentSuccess' => get_option('team556_pay_success_message', __('Payment successful!', 'team556-pay')),
-                    'paymentFailed' => get_option('team556_pay_error_message', __('Payment failed. Please try again.', 'team556-pay')),
-                    'connecting' => __('Connecting to wallet...', 'team556-pay'),
-                    'connected' => __('Connected to wallet', 'team556-pay'),
-                    'connectionFailed' => __('Connection failed', 'team556-pay'),
-                    'payNow' => get_option('team556_pay_button_text', __('Pay with Team556 Token', 'team556-pay')),
-                ),
-            ));
-            
-            // Add inline script to set up Buffer global
-            wp_add_inline_script('team556-buffer', 'window.Buffer = buffer.Buffer;', 'after');
+        if (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'team556_pay')) {
+            return true;
         }
+        // Fallback for situations where $post might not be fully populated yet,
+        // or if used in contexts like widgets or theme parts not directly tied to a single post object.
+        // This is a broader check and might be less performant if used excessively.
+        if (function_exists('get_the_content')) {
+            $content = get_the_content();
+            if (has_shortcode($content, 'team556_pay')) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

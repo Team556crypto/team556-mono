@@ -30,6 +30,22 @@ require_once TEAM556_PAY_PLUGIN_DIR . 'includes/admin/class-team556-pay-welcome.
 require_once TEAM556_PAY_PLUGIN_DIR . 'includes/class-team556-pay-verifier.php';
 require_once TEAM556_PAY_PLUGIN_DIR . 'includes/class-team556-pay-shortcode.php';
 
+// Temporary debugging function
+if (!function_exists('team556_debug_payment_gateways')) {
+    function team556_debug_payment_gateways($gateways) {
+        error_log('Available gateways: ' . print_r(array_map(function($gw) { return is_object($gw) ? get_class($gw) : $gw; }, $gateways), true));
+        foreach ($gateways as $gateway) {
+            if (is_string($gateway) && $gateway === 'Team556_Pay_Gateway') {
+                error_log('Team556_Pay_Gateway string found in gateways list.');
+            } elseif (is_object($gateway) && get_class($gateway) === 'Team556_Pay_Gateway') {
+                error_log('Team556_Pay_Gateway object found. Enabled: ' . $gateway->enabled . ', Wallet: ' . $gateway->wallet_address);
+            }
+        }
+        return $gateways;
+    }
+    add_filter('woocommerce_payment_gateways', 'team556_debug_payment_gateways', 20);
+}
+
 // Initialize the plugin
 function team556_pay_init() {
     // Start the plugin

@@ -16,6 +16,11 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
      * Constructor
      */
     public function __construct() {
+        if (class_exists('WC_Logger')) {
+            $logger = wc_get_logger();
+            $logger->debug('Team556_Pay_Gateway __construct: Gateway class constructed.', array('source' => 'team556-pay'));
+        }
+
         $this->id                 = 'team556_pay';
         $this->icon               = TEAM556_PAY_PLUGIN_URL . 'assets/images/logo-round-dark.png';
         $this->has_fields         = true;
@@ -34,6 +39,9 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         $this->wallet_address     = $this->get_option('wallet_address');
         $this->debug_mode         = $this->get_option('debug_mode', 'no');
         $this->network            = $this->get_option('network', 'mainnet');
+
+        error_log('[Team556_Pay_Gateway __construct] Loaded title: ' . ($this->title ? $this->title : 'EMPTY_OR_NULL'));
+        error_log('[Team556_Pay_Gateway __construct] Loaded description: ' . ($this->description ? $this->description : 'EMPTY_OR_NULL'));
 
         // If no wallet address is set, use the global plugin setting
         if (empty($this->wallet_address)) {
@@ -54,7 +62,8 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         
         // Actions
         add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
-        add_action('woocommerce_api_team556_pay_callback', array($this, 'check_payment'));
+        add_action( 'woocommerce_receipt_' . $this->id, array( $this, 'receipt_page' ) );
+        add_action( 'wp_footer', array( $this, 'team556_test_footer_checkout_status' ) );
         add_action('woocommerce_admin_order_data_after_billing_address', array($this, 'display_transaction_data_in_admin'));
         add_action('wp_ajax_team556_pay_complete_payment', array($this, 'ajax_complete_payment'));
         add_action('wp_ajax_nopriv_team556_pay_complete_payment', array($this, 'ajax_complete_payment'));
@@ -67,7 +76,51 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         }
         
         // Enqueue payment scripts
-        add_action('wp_enqueue_scripts', array($this, 'payment_scripts'));
+        add_action( 'wp_enqueue_scripts', array( $this, 'payment_scripts' ), 90 ); // Run a bit later
+
+        // Filter to log available payment gateways for debugging
+        add_filter('woocommerce_available_payment_gateways', array($this, 'log_available_gateways'), 100);
+    }
+
+    /**
+     * Log available payment gateways for debugging.
+     *
+     * @param array $gateways
+     * @return array
+     */
+    public function log_available_gateways($gateways) {
+        error_log('[Team556_Pay_Gateway] log_available_gateways filter CALLED. Reviewing gateways provided by WooCommerce.');
+        if (empty($gateways)) {
+            error_log('[Team556_Pay_Gateway] No gateways provided to log_available_gateways filter.');
+            return $gateways;
+        }
+
+        $found_our_gateway = false;
+        foreach ($gateways as $gateway_id => $gateway) {
+            $is_enabled = (isset($gateway->enabled) && $gateway->enabled === 'yes') ? 'Yes' : 'No';
+            $title = isset($gateway->title) ? $gateway->title : 'N/A';
+            error_log("[Team556_Pay_Gateway] Available Gateway: ID='{$gateway_id}', Title='{$title}', Enabled='{$is_enabled}'");
+            if ($gateway_id === $this->id) {
+                $found_our_gateway = true;
+                error_log("[Team556_Pay_Gateway] *** Our gateway '{$this->id}' FOUND. Current instance enabled status: {$this->enabled}. Gateway object enabled status in list: {$is_enabled} ***");
+            }
+        }
+
+        if (!$found_our_gateway) {
+            error_log("[Team556_Pay_Gateway] *** Our gateway '{$this->id}' NOT FOUND in the available gateways list. ***");
+        }
+        return $gateways; // Always return the gateways array
+    }
+
+    /**
+     * Test function to log checkout status in footer.
+     */
+    public function team556_test_footer_checkout_status() {
+        if (function_exists('is_checkout') && is_checkout()) {
+            error_log('[Team556_Pay_Gateway wp_footer] is_checkout() is TRUE');
+        } else {
+            error_log('[Team556_Pay_Gateway wp_footer] is_checkout() is FALSE. Page ID: ' . (get_the_ID() ? get_the_ID() : 'N/A') . ', WC Checkout Page ID: ' . (function_exists('wc_get_page_id') ? wc_get_page_id('checkout') : 'N/A'));
+        }
     }
 
     /**
@@ -132,31 +185,68 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
      * Enqueue payment scripts
      */
     public function payment_scripts() {
-        // Only on checkout page
-        if (!is_checkout()) {
+        if ('no' === $this->enabled) {
+            error_log('[Team556_Pay_Gateway] payment_scripts: Gateway not enabled. Exiting.');
             return;
         }
+
+        $is_checkout_wc = is_checkout(); // WooCommerce's own is_checkout()
+        $is_order_pay_page = function_exists('is_wc_endpoint_url') && is_wc_endpoint_url('order-pay');
+        $is_add_payment_method_page = function_exists('is_add_payment_method_page') && is_add_payment_method_page();
         
-        // If gateway is disabled, don't load scripts
-        if ($this->enabled !== 'yes') {
+        $checkout_page_id = function_exists('wc_get_page_id') ? wc_get_page_id('checkout') : 0;
+        $current_page_id = get_queried_object_id(); // More reliable inside wp_enqueue_scripts
+        $is_checkout_page_by_id_match = ($checkout_page_id && $current_page_id && $current_page_id == $checkout_page_id);
+
+        error_log('[Team556_Pay_Gateway] payment_scripts called (priority 90). Enabled: ' . $this->enabled);
+        error_log('[Team556_Pay_Gateway] Current Page ID (get_queried_object_id): ' . $current_page_id);
+        error_log('[Team556_Pay_Gateway] Checkout Page ID (wc_get_page_id): ' . $checkout_page_id);
+        error_log('[Team556_Pay_Gateway] is_checkout_page_by_id_match (current_page_id == checkout_page_id): ' . ($is_checkout_page_by_id_match ? 'true' : 'false'));
+        error_log('[Team556_Pay_Gateway] is_checkout() (WC function): ' . ($is_checkout_wc ? 'true' : 'false'));
+        error_log('[Team556_Pay_Gateway] is_wc_endpoint_url(\'order-pay\'): ' . ($is_order_pay_page ? 'true' : 'false'));
+        error_log('[Team556_Pay_Gateway] is_add_payment_method_page(): ' . ($is_add_payment_method_page ? 'true' : 'false'));
+
+        $should_enqueue = false;
+
+        if ($is_checkout_page_by_id_match) {
+            $should_enqueue = true;
+            error_log('[Team556_Pay_Gateway] Matched by current_page_id == checkout_page_id.');
+        } elseif ($is_checkout_wc) { // Fallback to WC's is_checkout()
+            $should_enqueue = true;
+            error_log('[Team556_Pay_Gateway] Matched by is_checkout() (WC function).');
+        } elseif ($is_order_pay_page) {
+            $should_enqueue = true;
+            error_log('[Team556_Pay_Gateway] Matched by is_order_pay_page.');
+        } elseif ($is_add_payment_method_page) {
+            $should_enqueue = true;
+            error_log('[Team556_Pay_Gateway] Matched by is_add_payment_method_page.');
+        }
+
+        if (!$should_enqueue) {
+            error_log('[Team556_Pay_Gateway] Exiting payment_scripts - not a relevant page.');
             return;
         }
-        
-        // Enqueue Solana Pay scripts
-        wp_enqueue_script('team556-solana-web3');
+
+        error_log('[Team556_Pay_Gateway] Conditions met, proceeding to enqueue scripts.');
+
         wp_enqueue_script('team556-buffer');
+        wp_enqueue_script('team556-solana-web3');
         wp_enqueue_script('team556-qrcode');
-        wp_enqueue_script('team556-pay');
+        wp_enqueue_script('team556-pay'); 
         wp_enqueue_style('team556-pay-style');
 
-            // Add gateway-specific data
-            wp_localize_script('team556-pay', 'team556PayGateway', array(
-                'ajaxUrl' => admin_url('admin-ajax.php'),
-                'completePaymentNonce' => wp_create_nonce('team556-pay-complete-payment'),
-                'merchantWallet' => $this->wallet_address,
-                'checkoutUrl' => $this->get_return_url(null), // We'll replace this with the actual order URL after payment
-                'debugMode' => $this->debug_mode === 'yes',
-            ));
+        wp_localize_script('team556-pay', 'team556PayGateway', array(
+            'ajaxUrl'                => admin_url('admin-ajax.php'),
+            'completePaymentNonce'   => wp_create_nonce('team556-pay-complete-payment'),
+            'merchantWallet'         => $this->wallet_address,
+            'checkoutUrl'            => $this->get_return_url(null),
+            'debugMode'              => $this->debug_mode === 'yes',
+            'i18n'                   => array(
+                'processingPayment' => __('Processing payment...', 'team556-pay'),
+                'paymentConfirmed'  => __('Payment confirmed.', 'team556-pay'),
+                'errorProcessing'   => __('Error processing payment.', 'team556-pay'),
+            )
+        ));
     }
 
     /**
@@ -292,7 +382,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         ));
         
         // Store transaction signature in order meta
-        $order->update_meta_data('_team556_solana_pay_signature', $signature);
+        $order->update_meta_data('_team556_pay_signature', $signature);
         $order->save();
         
         if ($this->debug_mode === 'yes') {
@@ -300,7 +390,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         }
         
         // Clear session data
-        WC()->session->__unset('team556_solana_pay_order_id');
+        WC()->session->__unset('team556_pay_order_id');
         
         // Return success and redirect URL
         wp_send_json_success(array(
@@ -353,7 +443,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         );
         
         // Store transaction signature in order meta
-        $order->update_meta_data('_team556_solana_pay_signature', $signature);
+        $order->update_meta_data('_team556_pay_signature', $signature);
         $order->save();
         
         // Empty cart
@@ -368,632 +458,29 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
      * Payment fields
      */
     public function payment_fields() {
-        // Get order total from cart or order
-        $order_total = 0;
-        if (is_checkout()) {
-            $order_total = WC()->cart->get_total('edit');
-        } elseif (is_wc_endpoint_url('order-pay')) {
-            $order_id = absint(get_query_var('order-pay'));
-            $order = wc_get_order($order_id);
-            if ($order) {
-                $order_total = $order->get_total();
-            }
+        error_log('[Team556_Pay_Gateway] SIMPLIFIED payment_fields() method CALLED.');
+
+        if ($this->description) {
+            echo '<p>' . esc_html($this->description) . '</p>';
         }
 
-        if ($order_total <= 0) {
-            echo '<p>' . __('Invalid order amount.', 'team556-pay') . '</p>';
-            return;
-        }
+        // Output a simple comment and a div for easy checking
+        echo '<!-- Team556 Pay Gateway SIMPLIFIED payment_fields() executed -->';
+        echo '<div id="team556-simplified-payment-fields" style="padding:10px; border:1px solid green; margin:10px 0;">';
+        echo 'Team556 Pay - Simplified Payment Fields. If you see this, the method was called.';
+        echo '</div>';
 
-        // Fetch real-time price data
-        $price_data = $this->fetch_team556_price_data();
+        // You can add any specific data you want to pass to JavaScript here if needed for other tests
+        // For example, if you still need to test JS interactions related to the gateway being chosen:
+        /*
+        wp_enqueue_script('team556-pay'); // Ensure your main JS is loaded if it handles gateway selection
+        wp_localize_script('team556-pay', 'team556PayGatewayData', array(
+            'isSimplified' => true,
+            'gatewayId' => $this->id
+        ));
+        */
 
-        if (false === $price_data || !isset($price_data['price']) || $price_data['price'] <= 0) {
-            $error_message = isset($price_data['error']) ? esc_html($price_data['error']) : __('Could not retrieve the current TEAM556 exchange rate. This payment method is temporarily unavailable. Please try refreshing or contact support.', 'team556-pay');
-            echo '<div class="woocommerce-error">' . $error_message . '</div>';
-            // Log the error if in debug mode
-            if (isset($price_data['error'])) {
-                $this->log('Price fetch error: ' . $price_data['error']);
-            } else {
-                $this->log('Price fetch error: Price data was false or price was not positive.');
-            }
-            return; // Do not render the rest of the payment form
-        }
-
-        $team556_price_usdc = $price_data['price']; // Price of 1 TEAM556 in USDC
-        $last_updated_timestamp = $price_data['last_updated'];
-
-        // Calculate Team556 token amount based on real-time price
-        // Ensure $team556_price_usdc is not zero to prevent division by zero
-        if ($team556_price_usdc <= 0) {
-             echo '<div class="woocommerce-error">' . __('Invalid exchange rate received. Cannot calculate payment amount.', 'team556-pay') . '</div>';
-            $this->log('Price fetch error: team556_price_usdc was not positive after fetch.');
-            return;
-        }
-        $team556_amount = $order_total / $team556_price_usdc;
-        
-        // Ensure we always have at least a minimal amount if calculation results in zero or less (e.g. very small order_total)
-        if ($team556_amount <= 0) {
-            // This case should ideally be handled by minimum order value, but as a failsafe:
-            $team556_amount = 0.000001; // A very small token amount
-            // $order_total would need recalculation if we were to enforce this minimum token amount back to fiat.
-            // For simplicity, we just ensure a tiny token amount to prevent issues with Solana Pay URL if order_total is extremely small.
-        }
-        
-        // Format for display (consider token's actual decimal precision)
-        // Solana SPL tokens can have up to 9 decimal places. Let's use a reasonable number like 6 for display and calculation.
-        $team556_amount_formatted = number_format($team556_amount, 6, '.', '');
-        
-        // Generate unique identifier for this potential order
-        $reference = preg_replace('/[^a-zA-Z0-9]/', '', uniqid());
-
-        // Create Solana Pay URL with the correct wallet address and calculated TOKEN amount
-        $solana_pay_url = $this->create_solana_pay_url($team556_amount, $reference); // Pass TOKEN amount
-        
-        // Display payment form with QR code
-        ?>
-        <div id="team556-pay-form" class="team556-adaptive">
-            <div class="team556-payment-summary">
-                <div class="team556-payment-row">
-                    <span><?php _e('Order Total:', 'team556-pay'); ?></span>
-                    <strong><?php echo wc_price($order_total); ?></strong>
-                </div>
-                <div class="team556-payment-row team556-token-amount">
-                    <span><?php _e('Team556 Amount:', 'team556-pay'); ?></span>
-                    <strong><span id="team556-token-amount"><?php echo esc_html($team556_amount_formatted); ?></span> TEAM556</strong>
-                </div>
-                <div class="team556-payment-row team556-conversion-rate">
-                    <span><?php _e('Conversion Rate:', 'team556-pay'); ?></span>
-                    <span>1 TEAM556 = <?php echo wc_price($team556_price_usdc); ?> (USDC)</span>
-                    <button type="button" id="team556-refresh-rate" class="team556-refresh-button" title="<?php esc_attr_e('Refresh conversion rate', 'team556-pay'); ?>">
-                        <span class="dashicons dashicons-update"></span>
-                    </button>
-                </div>
-                 <div class="team556-payment-row team556-rate-info">
-                    <small><?php printf(__('Rate as of: %s. Updated every 10 seconds.', 'team556-pay'), esc_html(wp_date(get_option('date_format') . ' ' . get_option('time_format'), $last_updated_timestamp))); ?></small>
-                </div>
-            </div>
-            
-            <p class="team556-scan-title"><?php _e('Scan this QR code with your Solana wallet app to pay with Team556 tokens:', 'team556-pay'); ?></p>
-            
-            <div id="team556-qr-code-container" class="team556-qr-code-container">
-                <!-- QR code will be generated here by JavaScript -->
-            </div>
-            <div id="team556-payment-link-container" class="team556-payment-link-container" style="margin-top: 15px; text-align: center;">
-                <p style="margin-bottom: 5px; font-size: 0.9em;"><?php _e('Or copy this link to pay:', 'team556-pay'); ?></p>
-                <input type="text" id="team556-payment-link" value="<?php echo esc_attr($solana_pay_url); ?>" readonly style="width: 80%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; text-align: center; background-color: #f9f9f9;">
-                <button type="button" id="team556-copy-link-button" class="button" style="padding: 8px 15px; font-size: 0.9em;">
-                    <?php _e('Copy Link', 'team556-pay'); ?>
-                </button>
-            </div>
-            
-            <ul class="team556-wallet-steps">
-                <li class="team556-wallet-step"><?php _e('1. Open your Solana wallet app', 'team556-pay'); ?></li>
-                <li class="team556-wallet-step"><?php _e('2. Scan the QR code above', 'team556-pay'); ?></li>
-                <li class="team556-wallet-step"><?php _e('3. Approve the payment of <strong id="team556-token-amount-instructions">' . esc_html($team556_amount_formatted) . '</strong> TEAM556 tokens', 'team556-pay'); ?></li>
-                <li class="team556-wallet-step"><?php _e('4. Wait for confirmation and proceed to complete your order', 'team556-pay'); ?></li>
-            </ul>
-            
-            <input type="hidden" name="team556_reference" id="team556_reference" value="<?php echo esc_attr($reference); ?>">
-            <input type="hidden" name="team556_signature" id="team556_signature" value="">
-            <input type="hidden" name="team556_wallet_address" id="team556_wallet_address" value="<?php echo esc_attr($this->wallet_address); ?>">
-            
-            <div class="team556-pay-status"></div>
-        </div>
-        
-        <style>
-            /* Team556 Merchant Styling - Based on team556-pay.css */
-            :root {
-                --solana-dark: #14151A;
-                --solana-dark-lighter: #1C1D24;
-                --solana-purple: #9945FF;
-                --solana-blue: #14F195;
-                --solana-green: #00FFA3;
-                --solana-magenta: #FF5C5C;
-                --glass-border: rgba(255, 255, 255, 0.08);
-                --glass-bg: rgba(20, 21, 26, 0.7);
-                --text-white: #FFFFFF;
-                --text-gray: #A3A3A3;
-            }
-            
-            /* Overall form styling */
-            #team556-pay-form {
-                background-color: var(--solana-dark);
-                border-radius: 12px;
-                padding: 20px;
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
-                color: var(--text-white);
-                max-width: 100%;
-                margin-bottom: 30px;
-                border: 1px solid var(--glass-border);
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            }
-            
-            /* Payment summary area */
-            .team556-payment-summary {
-                background-color: var(--solana-dark-lighter);
-                border-radius: 8px;
-                padding: 15px;
-                margin-bottom: 20px;
-                border: 1px solid var(--glass-border);
-            }
-            
-            .team556-payment-row {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 8px 0;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            }
-            
-            .team556-payment-row:last-child {
-                border-bottom: none;
-            }
-            
-            .team556-payment-row span {
-                color: var(--text-white);
-                font-weight: 500;
-            }
-            
-            .team556-payment-row strong {
-                color: var(--text-white);
-                font-weight: 600;
-            }
-            
-            .team556-token-amount strong {
-                color: var(--solana-green) !important;
-            }
-            
-            /* The refresh button */
-            .team556-refresh-button {
-                background-color: var(--solana-purple) !important;
-                border: none !important;
-                color: white !important;
-                width: 30px;
-                height: 30px;
-                border-radius: 50% !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                cursor: pointer !important;
-                padding: 0 !important;
-                margin-left: 10px !important;
-                transition: all 0.2s ease !important;
-                box-shadow: 0 0 15px rgba(153, 69, 255, 0.3) !important;
-            }
-            
-            .team556-refresh-button:hover {
-                opacity: 0.9 !important;
-                transform: translateY(-1px) !important;
-            }
-            
-            .team556-refresh-button .dashicons {
-                width: 16px;
-                height: 16px;
-                font-size: 16px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-            
-            .team556-refresh-spin {
-                animation: team556-spin 1s linear infinite;
-            }
-            
-            @keyframes team556-spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-            
-            /* Scan QR code title */
-            .team556-scan-title {
-                color: var(--text-white);
-                text-align: left;
-                font-weight: 500;
-                margin: 15px 0;
-            }
-            
-            /* QR code container */
-            .team556-qr-code-container {
-                background-color: white;
-                border-radius: 12px;
-                padding: 20px;
-                width: 100%;
-                max-width: 260px;
-                margin: 0 auto 20px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-                position: relative;
-            }
-            
-            #team556-qr-code-container canvas {
-                display: block;
-                margin: 0 auto;
-                max-width: 100%;
-                height: auto !important;
-            }
-            
-            /* Payment link container */
-            .team556-payment-link-container {
-                margin-top: 15px;
-                text-align: center;
-            }
-            
-            #team556-payment-link {
-                width: 80%;
-                padding: 8px;
-                margin-bottom: 10px;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                font-size: 0.9em;
-                text-align: center;
-                background-color: #f9f9f9;
-            }
-            
-            #team556-copy-link-button {
-                padding: 8px 15px;
-                font-size: 0.9em;
-            }
-            
-            /* Wallet steps */
-            .team556-wallet-steps {
-                list-style: none;
-                padding: 0;
-                margin: 20px 0 0;
-            }
-            
-            .team556-wallet-step {
-                position: relative;
-                padding-left: 36px;
-                margin-bottom: 12px;
-                line-height: 1.5;
-                font-size: 14px;
-                color: var(--text-white);
-            }
-            
-            .team556-wallet-step::before {
-                content: '';
-                position: absolute;
-                left: 0;
-                top: 0;
-                bottom: 0;
-                width: 3px;
-                background-color: var(--solana-purple);
-                border-radius: 1.5px;
-            }
-            
-            .team556-wallet-step strong {
-                color: var(--solana-green);
-                font-weight: 600;
-            }
-            
-            /* Status messages */
-            .team556-pay-status {
-                margin-top: 20px;
-                padding: 15px;
-                border-radius: 8px;
-                text-align: center;
-                font-weight: 500;
-                display: none;
-                background-color: var(--solana-dark-lighter);
-                border: 1px solid var(--glass-border);
-            }
-            
-            .team556-pay-status[data-status="error"] {
-                display: block;
-                border-left: 4px solid var(--solana-magenta);
-                color: var(--solana-magenta);
-            }
-            
-            .team556-pay-status[data-status="success"] {
-                display: block;
-                border-left: 4px solid var(--solana-green);
-                color: var(--solana-green);
-            }
-            
-            .team556-pay-status[data-status="processing"] {
-                display: block;
-                border-left: 4px solid var(--solana-blue);
-                color: var(--solana-blue);
-            }
-            
-            /* Responsive styles */
-            @media (max-width: 480px) {
-                .team556-qr-code-container {
-                    padding: 15px;
-                }
-                
-                #team556-qr-code-container canvas {
-                    height: 180px;
-                }
-                
-                .team556-payment-row span,
-                .team556-payment-row strong {
-                    font-size: 14px;
-                }
-            }
-        </style>
-        
-        <script type="text/javascript">
-            jQuery(function($) {
-                // Initialize amount in instructions
-                $('#team556-token-amount-instructions').text($('#team556-token-amount').text());
-                
-                // Generate QR code when page loads
-                var solanaPayUrl = '<?php echo esc_js($solana_pay_url); ?>';
-                console.log('Solana Pay URL (from PHP for main script):', solanaPayUrl); // Debug line updated for clarity
-                
-                var reference = $('#team556_reference').val();
-                
-                // Fallback QR code generator using HTML
-                function generateQRCodeFallback(url, containerId) {
-                    var container = document.getElementById(containerId.replace('#', ''));
-                    if (!container) return false;
-                    
-                    // Create a simple text fallback
-                    container.innerHTML = '<div style="padding: 20px; text-align: center;">' +
-                        '<p style="margin-bottom: 10px; color: #14151A;"><strong>Scan with your Solana wallet app:</strong></p>' +
-                        '<textarea readonly style="width: 100%; height: 80px; padding: 8px; font-size: 12px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9;">' + 
-                        url + '</textarea>' +
-                        '<p style="margin-top: 10px; font-size: 12px; color: #14151A;">The QR code couldn\'t be generated. Copy this URL to your wallet app.</p>' +
-                        '</div>';
-                    
-                    // Hide spinner
-                    $('.team556-qrcode-spinner').hide();
-                    return true;
-                }
-                
-                // Function to generate QR code using a more reliable method
-                function generateQRCode(url, containerId) {
-                    if (typeof QRCode === 'undefined') {
-                        console.error('QR code library not loaded');
-                        $('.team556-pay-status').html('<?php _e('QR code library not loaded. Please refresh the page.', 'team556-pay'); ?>').attr('data-status', 'error');
-                        $('.team556-qrcode-spinner').hide();
-                        // Try the fallback
-                        return generateQRCodeFallback(url, containerId);
-                    }
-                    
-                    try {
-                        // Get the container element
-                        var container = document.getElementById(containerId.replace('#', ''));
-                        if (!container) {
-                            console.error('QR code container not found:', containerId);
-                            return false;
-                        }
-                        
-                        // Clear the container first
-                        container.innerHTML = '';
-                        
-                        // Check which QRCode API we have available
-                        if (typeof QRCode === 'function') {
-                            // Standard QRCode library
-                            var qr = new QRCode(container, {
-                                text: url,
-                                width: 220,
-                                height: 220,
-                                colorDark: "#14151A",
-                                colorLight: "#ffffff",
-                                correctLevel: QRCode.CorrectLevel ? QRCode.CorrectLevel.H : 3 // Use H level (3) if available
-                            });
-                        } else if (QRCode && typeof QRCode.toCanvas === 'function') {
-                            // qrcode.js library with Canvas API
-                            var canvas = document.createElement('canvas');
-                            container.appendChild(canvas);
-                            QRCode.toCanvas(canvas, url, {
-                                width: 220,
-                                margin: 1,
-                                color: {
-                                    dark: '#14151A',
-                                    light: '#FFFFFF'
-                                }
-                            }, function(error) {
-                                if (error) throw error;
-                            });
-                        } else if (QRCode && typeof QRCode.toString === 'function') {
-                            // qrcode.js with toString API
-                            var svg = QRCode.toString(url, {
-                                type: 'svg',
-                                width: 220,
-                                margin: 1,
-                                color: {
-                                    dark: '#14151A',
-                                    light: '#FFFFFF'
-                                }
-                            });
-                            container.innerHTML = svg;
-                        } else {
-                            console.error('No compatible QRCode method found');
-                            return generateQRCodeFallback(url, containerId);
-                        }
-                        
-                        // Hide spinner once QR code is generated
-                        $('.team556-qrcode-spinner').hide();
-                        return true;
-                    } catch (error) {
-                        console.error('Exception in QR code generation:', error);
-                        $('.team556-pay-status').html('<?php _e('Error generating QR code. Using text URL instead.', 'team556-pay'); ?>').attr('data-status', 'error');
-                        // Try the fallback
-                        return generateQRCodeFallback(url, containerId);
-                    }
-                }
-                
-                // Load QR Code library if not present
-                function loadQRCodeLibrary(callback) {
-                    if (typeof QRCode !== 'undefined') {
-                        callback();
-                        return;
-                    }
-                    
-                    // Load the simplest QR code library (davidshimjs/qrcodejs)
-                    var script = document.createElement('script');
-                    script.src = 'https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js';
-                    script.onload = function() {
-                        if (typeof QRCode !== 'undefined') {
-                            callback();
-                        } else {
-                            // If still not defined, try alternative
-                            var altScript = document.createElement('script');
-                            altScript.src = 'https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js';
-                            altScript.onload = callback;
-                            altScript.onerror = function() {
-                                // If all QR libraries fail, use a fallback
-                                callback();
-                            };
-                            document.head.appendChild(altScript);
-                        }
-                    };
-                    script.onerror = function() {
-                        // If the first QR library fails, try the alternative immediately
-                        var altScript = document.createElement('script');
-                        altScript.src = 'https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js';
-                        altScript.onload = callback;
-                        altScript.onerror = function() {
-                            // If all QR libraries fail, use a fallback
-                            callback();
-                        };
-                        document.head.appendChild(altScript);
-                    };
-                    document.head.appendChild(script);
-                }
-                
-                // Generate QR code and start payment check
-                function initializePayment() {
-                    // Generate QR code
-                    if (generateQRCode(solanaPayUrl, 'team556-qr-code-container')) {
-                        // Start checking for payment status
-                        checkPaymentStatus(reference);
-                    }
-                }
-                
-                // Load QR Code library if needed and initialize payment
-                loadQRCodeLibrary(initializePayment);
-                
-                // Handle refresh button click
-                $('#team556-refresh-rate').on('click', function(e) {
-                    e.preventDefault();
-                    
-                    // Add spin animation to the refresh icon
-                    $(this).find('.dashicons').addClass('team556-refresh-spin');
-                    
-                    // Get current order total
-                    var orderTotal = parseFloat("<?php echo $order_total; ?>");
-                    if (isNaN(orderTotal) || orderTotal <= 0) {
-                        orderTotal = 0.01; // Minimum for testing
-                    }
-                    
-                    // Use fixed conversion rate (3.5 TEAM556 per $1)
-                    var conversionRate = 3.5;
-                    
-                    // Calculate new token amount
-                    var tokenAmount = orderTotal * conversionRate;
-                    var tokenAmountFormatted = tokenAmount.toFixed(2);
-                    
-                    // Update the displayed token amount
-                    $('#team556-token-amount').text(tokenAmountFormatted);
-                    $('#team556-token-amount-instructions').text(tokenAmountFormatted);
-                    
-                    // Regenerate QR code with updated amount
-                    regenerateQRCode(orderTotal, tokenAmount);
-                    
-                    // Remove spin animation after short delay
-                    setTimeout(function() {
-                        $('#team556-refresh-rate').find('.dashicons').removeClass('team556-refresh-spin');
-                    }, 1000);
-                });
-                
-                // Function to regenerate QR code with new amount
-                function regenerateQRCode(orderTotal, tokenAmount) {
-                    // Show spinner
-                    $('.team556-qrcode-spinner').show();
-                    
-                    // Get wallet address and reference
-                    var walletAddress = "<?php echo esc_js($this->wallet_address); ?>";
-                    var reference = $('#team556_reference').val();
-                    
-                    // Create new Solana Pay URL with updated amount
-                    var tokenMint = 'AMNfeXpjD6kXyyTDB4LMKzNWypqNHwtgJUACHUmuKLD5'; // Corrected Team556 Token Mint
-                    var shopName = "<?php echo esc_js(get_bloginfo('name')); ?>";
-                    
-                    // Format token amount
-                    var tokenAmountStr = tokenAmount.toFixed(2);
-                    
-                    // Build the Solana Pay URL
-                    var solanaPayUrl = 'solana:' + walletAddress + 
-                                      '?spl-token=' + tokenMint + 
-                                      '&amount=' + tokenAmountStr +
-                                      '&label=' + encodeURIComponent(shopName) +
-                                      '&message=' + encodeURIComponent('Payment for order at ' + shopName);
-                    
-                    // Update hidden field
-                    $('#team556_solana_pay_url').val(solanaPayUrl);
-                    
-                    // Generate new QR code
-                    generateQRCode(solanaPayUrl, 'team556-qr-code-container');
-                }
-                
-                // Function to check payment status
-                function checkPaymentStatus(reference) {
-                    // Capture nonce from PHP to avoid issues
-                    var securityNonce = '<?php echo wp_create_nonce('team556-pay-check-payment'); ?>';
-                    
-                    var checkInterval = setInterval(function() {
-                        $.ajax({
-                            url: wc_checkout_params ? wc_checkout_params.ajax_url : '<?php echo admin_url('admin-ajax.php'); ?>',
-                            type: 'POST',
-                            data: {
-                                action: 'team556_solana_pay_check_payment',
-                                reference: reference,
-                                security: securityNonce
-                            },
-                            success: function(response) {
-                                if (response && response.success && response.data && response.data.signature) {
-                                    // Payment found
-                                    clearInterval(checkInterval);
-                                    
-                                    // Update status and store signature
-                                    $('.team556-pay-status').html('<?php _e('Payment detected! Processing...', 'team556-pay'); ?>').attr('data-status', 'success');
-                                    $('#team556_signature').val(response.data.signature);
-                                    
-                                    // Submit payment form
-                                    setTimeout(function() {
-                                        $('form.checkout').submit();
-                                    }, 2000);
-                                }
-                            },
-                            error: function(xhr, status, error) {
-                                console.log('Error checking payment status:', error);
-                            }
-                        });
-                    }, 5000); // Check every 5 seconds
-                }
-                
-                // Copy link button functionality
-                $('#team556-copy-link-button').on('click', function() {
-                    var paymentLinkInput = document.getElementById('team556-payment-link');
-                    paymentLinkInput.select();
-                    paymentLinkInput.setSelectionRange(0, 99999); // For mobile devices
-
-                    try {
-                        var successful = document.execCommand('copy');
-                        var msg = successful ? '<?php _e("Copied!", "team556-pay"); ?>' : '<?php _e("Copy failed", "team556-pay"); ?>';
-                        $(this).text(msg);
-                    } catch (err) {
-                        $(this).text('<?php _e("Oops, unable to copy", "team556-pay"); ?>');
-                    }
-
-                    setTimeout(function() {
-                        $('#team556-copy-link-button').text('<?php _e("Copy Link", "team556-pay"); ?>');
-                    }, 2000);
-                });
-                
-                // Clean up interval when page unloads
-                $(window).on('beforeunload', function() {
-                    if (typeof checkInterval !== 'undefined') {
-                        clearInterval(checkInterval);
-                    }
-                });
-            });
-        </script>
-        <?php
+        error_log('[Team556_Pay_Gateway] SIMPLIFIED payment_fields() method FINISHED.');
     }
     
     /**
@@ -1131,6 +618,64 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
     }
 
     /**
+     * Check if the gateway is available for use.
+     * Overridden for debugging purposes.
+     *
+     * @return bool
+     */
+    public function is_available() {
+    error_log('[Team556_Pay_Gateway] IS_AVAILABLE_CALLED - TOP'); // Direct error_log
+        $logger = null;
+        if (class_exists('WC_Logger')) {
+            $logger = wc_get_logger();
+            $source = array('source' => $this->id); // Use $this->id for source
+            $logger->debug('Team556_Pay_Gateway is_available: ----- Start Check -----', $source);
+        }
+
+        // Log basic properties
+        if ($logger) $logger->debug('is_available: this->id = ' . $this->id, $source);
+        if ($logger) $logger->debug('is_available: this->enabled = ' . var_export($this->enabled, true), $source);
+    error_log('[Team556_Pay_Gateway] IS_AVAILABLE_ENABLED_STATUS: ' . var_export($this->enabled, true)); // Direct error_log
+        
+        // Check wallet_address specifically, considering global settings as per constructor logic
+        $effective_wallet_address = $this->get_option('wallet_address');
+        if (empty($effective_wallet_address)) {
+            $global_settings = get_option('team556_pay_settings'); // This is the option name for global settings
+            if (!empty($global_settings) && isset($global_settings['merchant_wallet_address'])) {
+                $effective_wallet_address = $global_settings['merchant_wallet_address'];
+                if ($logger) $logger->debug('is_available: Using global merchant_wallet_address.', $source);
+            }
+        }
+        if ($logger) $logger->debug('is_available: Effective wallet_address = ' . (empty($effective_wallet_address) ? 'EMPTY' : 'SET'), $source);
+    error_log('[Team556_Pay_Gateway] IS_AVAILABLE_WALLET_ADDRESS: ' . (empty($effective_wallet_address) ? 'EMPTY' : 'SET')); // Direct error_log
+        if (empty($effective_wallet_address) && $this->enabled === 'yes' && $logger) {
+             $logger->warning('is_available: Wallet address is EMPTY. This will likely cause the gateway to be unavailable if enabled.', $source);
+        }
+
+    // Call parent::is_available() to get its decision
+    // parent::is_available() checks $this->enabled, min_amount, etc.
+    $parent_is_available = parent::is_available();
+    if ($logger) $logger->debug('is_available: parent::is_available() returned = ' . ($parent_is_available ? 'true' : 'false'), $source);
+    error_log('[Team556_Pay_Gateway] IS_AVAILABLE_PARENT_RETURNED: ' . ($parent_is_available ? 'true' : 'false')); // Direct error_log
+    
+    // Our plugin's specific condition: must have a wallet address if the parent considers it available.
+    // However, the original logic simply returned parent_is_available. We'll stick to that for now
+    // and rely on the warning log for the empty wallet address.
+    $final_availability = $parent_is_available;
+    // Example of how to make wallet address mandatory if parent is okay:
+    // if ($final_availability && empty($effective_wallet_address)) {
+    //     $final_availability = false;
+    //     if ($logger) $logger->debug('is_available: Overriding to false due to EMPTY wallet_address.', $source);
+    //     error_log('[Team556_Pay_Gateway] IS_AVAILABLE_OVERRIDE_EMPTY_WALLET: false');
+    // }
+
+    if ($logger) $logger->debug('is_available: ----- Final Decision = ' . ($final_availability ? 'true' : 'false') . ' -----', $source);
+    error_log('[Team556_Pay_Gateway] IS_AVAILABLE_HAS_FIELDS_CHECK: ' . ($this->has_fields ? 'true' : 'false'));
+    error_log('[Team556_Pay_Gateway] IS_AVAILABLE_FINAL_DECISION: ' . ($final_availability ? 'true' : 'false')); // Direct error_log
+    return $final_availability;
+    }
+
+    /**
      * Add CSS to ensure payment method is visible on all themes
      */
     public function add_payment_method_styles() {
@@ -1140,21 +685,21 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         ?>
         <style type="text/css">
             /* Payment method selection - ensure visibility */
-            .wc_payment_method label[for="payment_method_team556_solana_pay"] {
+            .wc_payment_method label[for="payment_method_<?php echo esc_attr($this->id); ?>"] {
                 color: #14151A !important;
                 font-weight: 500;
                 position: relative;
             }
             
             /* Style the radio label when selected */
-            .wc_payment_method.payment_method_team556_solana_pay.active label,
-            .wc_payment_method.payment_method_team556_solana_pay input:checked + label {
+            .wc_payment_method.payment_method_<?php echo esc_attr($this->id); ?>.active label,
+            .wc_payment_method.payment_method_<?php echo esc_attr($this->id); ?> input:checked + label {
                 color: #9945FF !important;
                 font-weight: 600;
             }
             
             /* Ensure payment gateway icon has good spacing */
-            .wc_payment_method.payment_method_team556_solana_pay img {
+            .wc_payment_method.payment_method_<?php echo esc_attr($this->id); ?> img {
                 margin-left: 8px;
                 vertical-align: middle;
                 max-height: 28px;
@@ -1163,32 +708,32 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
             }
             
             /* Description of payment method */
-            .payment_box.payment_method_team556_solana_pay p {
+            .payment_box.payment_method_<?php echo esc_attr($this->id); ?> p {
                 color: #505050 !important;
             }
             
             /* Fix double checkbox issue by hiding the duplicate checkbox */
-            .wc_payment_method.payment_method_team556_solana_pay input[type="checkbox"] {
+            .wc_payment_method.payment_method_<?php echo esc_attr($this->id); ?> input[type="checkbox"] {
                 display: none !important;
             }
             
             /* Hide any duplicate checkbox in payment gateway container */
-            label[for="payment_method_team556_solana_pay"] input[type="checkbox"],
-            #payment ul.payment_methods li.payment_method_team556_solana_pay input[type="checkbox"] {
+            label[for="payment_method_<?php echo esc_attr($this->id); ?>"] input[type="checkbox"],
+            #payment ul.payment_methods li.payment_method_<?php echo esc_attr($this->id); ?> input[type="checkbox"] {
                 display: none !important;
             }
             
             /* Fix for themes that add additional inputs */
-            .payment_method_team556_solana_pay label::before,
-            .payment_method_team556_solana_pay label::after {
+            .payment_method_<?php echo esc_attr($this->id); ?> label::before,
+            .payment_method_<?php echo esc_attr($this->id); ?> label::after {
                 display: none !important;
             }
             
             /* Additional styling for dark mode themes */
-            body.dark-mode .wc_payment_method.payment_method_team556_solana_pay label,
-            .theme-dark .wc_payment_method.payment_method_team556_solana_pay label,
-            .dark-theme .wc_payment_method.payment_method_team556_solana_pay label,
-            .dark .wc_payment_method.payment_method_team556_solana_pay label {
+            body.dark-mode .wc_payment_method.payment_method_<?php echo esc_attr($this->id); ?> label,
+            .theme-dark .wc_payment_method.payment_method_<?php echo esc_attr($this->id); ?> label,
+            .dark-theme .wc_payment_method.payment_method_<?php echo esc_attr($this->id); ?> label,
+            .dark .wc_payment_method.payment_method_<?php echo esc_attr($this->id); ?> label {
                 color: #ffffff !important;
             }
         </style>

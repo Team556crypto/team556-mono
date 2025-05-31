@@ -2,7 +2,7 @@
 /**
  * Main plugin class
  */
-class Team556_Solana_Pay {
+class Team556_Pay {
     /**
      * Plugin instance
      */
@@ -30,16 +30,16 @@ class Team556_Solana_Pay {
         
         // Add WooCommerce payment gateway if WooCommerce is active
         if ($this->is_woocommerce_active()) {
-            add_filter('woocommerce_payment_gateways', array($this, 'add_solana_gateway'));
-            require_once TEAM556_SOLANA_PAY_PLUGIN_DIR . 'includes/class-team556-solana-pay-gateway.php';
+            add_filter('woocommerce_payment_gateways', array($this, 'add_pay_gateway'));
+            require_once TEAM556_PAY_PLUGIN_DIR . 'includes/class-team556-pay-gateway.php';
         }
         
         // Add shortcode
-        add_shortcode('team556_solana_pay', array($this, 'payment_shortcode'));
+        add_shortcode('team556_pay', array($this, 'payment_shortcode'));
         
         // Add AJAX handler for verifying transactions
-        add_action('wp_ajax_team556_solana_verify_transaction', array($this, 'ajax_verify_transaction'));
-        add_action('wp_ajax_nopriv_team556_solana_verify_transaction', array($this, 'ajax_verify_transaction'));
+        add_action('wp_ajax_team556_verify_transaction', array($this, 'ajax_verify_transaction'));
+        add_action('wp_ajax_nopriv_team556_verify_transaction', array($this, 'ajax_verify_transaction'));
         
         // Add AJAX handler for checking payment status
         add_action('wp_ajax_team556_check_payment_status', array($this, 'ajax_check_payment_status'));
@@ -55,7 +55,7 @@ class Team556_Solana_Pay {
             'team556-solana-web3',
             'https://unpkg.com/@solana/web3.js@1.73.0/lib/index.iife.min.js',
             array(),
-            TEAM556_SOLANA_PAY_VERSION,
+            TEAM556_PAY_VERSION,
             true
         );
         
@@ -79,19 +79,19 @@ class Team556_Solana_Pay {
 
         // Register our custom script
         wp_register_script(
-            'team556-solana-pay',
-            TEAM556_SOLANA_PAY_PLUGIN_URL . 'assets/js/team556-solana-pay.js',
+            'team556-pay',
+            TEAM556_PAY_PLUGIN_URL . 'assets/js/team556-pay.js',
             array('jquery', 'team556-buffer', 'team556-solana-web3', 'team556-qrcode'),
-            TEAM556_SOLANA_PAY_VERSION,
+            TEAM556_PAY_VERSION,
             true
         );
 
         // Register styles
         wp_register_style(
-            'team556-solana-pay-style',
-            TEAM556_SOLANA_PAY_PLUGIN_URL . 'assets/css/team556-solana-pay.css',
+            'team556-pay-style',
+            TEAM556_PAY_PLUGIN_URL . 'assets/css/team556-pay.css',
             array(),
-            TEAM556_SOLANA_PAY_VERSION
+            TEAM556_PAY_VERSION
         );
     }
 
@@ -104,7 +104,7 @@ class Team556_Solana_Pay {
         // Only enqueue on checkout or if our shortcode is present
         if (
             (function_exists('is_checkout') && is_checkout()) ||
-            (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'team556_solana_pay'))
+            (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'team556_pay'))
         ) {
             // First add Buffer
             wp_enqueue_script('team556-buffer');
@@ -113,24 +113,24 @@ class Team556_Solana_Pay {
             wp_enqueue_script('team556-solana-web3');
             
             // Add our script and styles
-            wp_enqueue_script('team556-solana-pay');
-            wp_enqueue_style('team556-solana-pay-style');
+            wp_enqueue_script('team556-pay');
+            wp_enqueue_style('team556-pay-style');
             
             // Localize script with necessary data
-            wp_localize_script('team556-solana-pay', 'team556SolanaPay', array(
+            wp_localize_script('team556-pay', 'team556Pay', array(
                 'ajaxUrl' => admin_url('admin-ajax.php'),
-                'restUrl' => rest_url('team556-solana-pay/v1'),
-                'merchantWallet' => get_option('team556_solana_pay_wallet_address', ''),
-                'tokenMint' => get_option('team556_solana_pay_token_mint', 'H7MeLVHPZcmcMzKRYUdtTJ4Bh3FahpfcmNhduJ7KvERg'),
-                'network' => get_option('team556_solana_pay_network', 'mainnet'),
-                'nonce' => wp_create_nonce('team556-solana-pay-nonce'),
+                'restUrl' => rest_url('team556-pay/v1'),
+                'merchantWallet' => get_option('team556_pay_wallet_address', ''),
+                'tokenMint' => get_option('team556_pay_token_mint', 'H7MeLVHPZcmcMzKRYUdtTJ4Bh3FahpfcmNhduJ7KvERg'),
+                'network' => get_option('team556_pay_network', 'mainnet'),
+                'nonce' => wp_create_nonce('team556-pay-nonce'),
                 'i18n' => array(
-                    'paymentSuccess' => get_option('team556_solana_pay_success_message', __('Payment successful!', 'team556-solana-pay')),
-                    'paymentFailed' => get_option('team556_solana_pay_error_message', __('Payment failed. Please try again.', 'team556-solana-pay')),
-                    'connecting' => __('Connecting to wallet...', 'team556-solana-pay'),
-                    'connected' => __('Connected to wallet', 'team556-solana-pay'),
-                    'connectionFailed' => __('Connection failed', 'team556-solana-pay'),
-                    'payNow' => get_option('team556_solana_pay_button_text', __('Pay with Team556 Token', 'team556-solana-pay')),
+                    'paymentSuccess' => get_option('team556_pay_success_message', __('Payment successful!', 'team556-pay')),
+                    'paymentFailed' => get_option('team556_pay_error_message', __('Payment failed. Please try again.', 'team556-pay')),
+                    'connecting' => __('Connecting to wallet...', 'team556-pay'),
+                    'connected' => __('Connected to wallet', 'team556-pay'),
+                    'connectionFailed' => __('Connection failed', 'team556-pay'),
+                    'payNow' => get_option('team556_pay_button_text', __('Pay with Team556 Token', 'team556-pay')),
                 ),
             ));
             
@@ -143,7 +143,7 @@ class Team556_Solana_Pay {
      * Register REST API routes
      */
     public function register_rest_routes() {
-        register_rest_route('team556-solana-pay/v1', '/verify-payment', array(
+        register_rest_route('team556-pay/v1', '/verify-payment', array(
             'methods' => 'POST',
             'callback' => array($this, 'verify_payment'),
             'permission_callback' => '__return_true',
@@ -155,7 +155,7 @@ class Team556_Solana_Pay {
      */
     public function ajax_verify_transaction() {
         // Check nonce
-        check_ajax_referer('team556-solana-pay-nonce', 'nonce');
+        check_ajax_referer('team556-pay-nonce', 'nonce');
         
         // Get parameters
         $signature = isset($_POST['signature']) ? sanitize_text_field($_POST['signature']) : '';
@@ -177,7 +177,7 @@ class Team556_Solana_Pay {
                 $order->payment_complete();
                 $order->add_order_note(
                     sprintf(
-                        __('Payment completed via Solana Pay. Transaction signature: %s', 'team556-solana-pay'),
+                        __('Payment completed via Solana Pay. Transaction signature: %s', 'team556-pay'),
                         $signature
                     )
                 );
@@ -226,7 +226,7 @@ class Team556_Solana_Pay {
                 $order->payment_complete();
                 $order->add_order_note(
                     sprintf(
-                        __('Payment completed via Solana Pay. Transaction signature: %s', 'team556-solana-pay'),
+                        __('Payment completed via Solana Pay. Transaction signature: %s', 'team556-pay'),
                         $signature
                     )
                 );
@@ -291,8 +291,8 @@ class Team556_Solana_Pay {
      */
     private function log_transaction($signature, $amount, $order_id = null) {
         // Get our database class
-        require_once TEAM556_SOLANA_PAY_PLUGIN_DIR . 'includes/class-team556-solana-pay-db.php';
-        $db = new Team556_Solana_Pay_DB();
+        require_once TEAM556_PAY_PLUGIN_DIR . 'includes/class-team556-pay-db.php';
+        $db = new Team556_Pay_DB();
         
         // Log the transaction
         $db->log_transaction(array(
@@ -311,8 +311,8 @@ class Team556_Solana_Pay {
     /**
      * Add Solana Pay gateway to WooCommerce
      */
-    public function add_solana_gateway($gateways) {
-        $gateways[] = 'Team556_Solana_Pay_Gateway';
+    public function add_pay_gateway($gateways) {
+        $gateways[] = 'Team556_Pay_Gateway';
         return $gateways;
     }
 
@@ -323,7 +323,7 @@ class Team556_Solana_Pay {
         $atts = shortcode_atts(array(
             'amount' => '0',
             'description' => '',
-            'button_text' => get_option('team556_solana_pay_button_text', __('Pay with Team556 Token', 'team556-solana-pay')),
+            'button_text' => get_option('team556_solana_pay_button_text', __('Pay with Team556 Token', 'team556-pay')),
             'success_url' => '',
             'cancel_url' => '',
         ), $atts);
@@ -331,25 +331,25 @@ class Team556_Solana_Pay {
         // Enqueue scripts
         wp_enqueue_script('team556-buffer');
         wp_enqueue_script('team556-solana-web3');
-        wp_enqueue_script('team556-solana-pay');
-        wp_enqueue_style('team556-solana-pay-style');
+        wp_enqueue_script('team556-pay');
+        wp_enqueue_style('team556-pay-style');
         
         // Get button color from settings
         $button_color = get_option('team556_solana_pay_button_color', '#9945FF');
         
         ob_start();
         ?>
-        <div class="team556-solana-pay-container" 
+        <div class="team556-pay-container" 
             data-amount="<?php echo esc_attr($atts['amount']); ?>" 
             data-description="<?php echo esc_attr($atts['description']); ?>" 
             data-success-url="<?php echo esc_url($atts['success_url']); ?>" 
             data-cancel-url="<?php echo esc_url($atts['cancel_url']); ?>">
             
-            <button class="team556-solana-pay-button" style="background-color: <?php echo esc_attr($button_color); ?>">
+            <button class="team556-pay-button" style="background-color: <?php echo esc_attr($button_color); ?>">
                 <?php echo esc_html($atts['button_text']); ?>
             </button>
             
-            <div class="team556-solana-pay-status"></div>
+            <div class="team556-pay-status"></div>
         </div>
         <?php
         return ob_get_clean();
@@ -367,7 +367,7 @@ class Team556_Solana_Pay {
      */
     public function ajax_check_payment_status() {
         // Verify nonce
-        check_ajax_referer('team556-solana-pay-check-payment', 'nonce');
+        check_ajax_referer('team556-pay-check-payment', 'nonce');
         
         // Get reference
         $reference = isset($_POST['reference']) ? sanitize_text_field($_POST['reference']) : '';

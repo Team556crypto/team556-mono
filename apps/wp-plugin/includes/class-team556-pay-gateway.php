@@ -11,16 +11,16 @@ if (!defined('ABSPATH')) {
 /**
  * WooCommerce Solana Pay Payment Gateway
  */
-class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
+class Team556_Pay_Gateway extends WC_Payment_Gateway {
     /**
      * Constructor
      */
     public function __construct() {
-        $this->id                 = 'team556_solana_pay';
-        $this->icon               = TEAM556_SOLANA_PAY_PLUGIN_URL . 'assets/images/logo-round-dark.png';
+        $this->id                 = 'team556_pay';
+        $this->icon               = TEAM556_PAY_PLUGIN_URL . 'assets/images/logo-round-dark.png';
         $this->has_fields         = true;
-        $this->method_title       = __('Team556 Solana Pay', 'team556-solana-pay');
-        $this->method_description = __('Accept Team556 token payments via Solana Pay', 'team556-solana-pay');
+        $this->method_title       = __('Team556 Pay', 'team556-pay');
+        $this->method_description = __('Accept Team556 token payments via Team556 Pay', 'team556-pay');
         $this->supports           = array('products');
 
         // Load settings
@@ -37,7 +37,12 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
 
         // If no wallet address is set, use the global plugin setting
         if (empty($this->wallet_address)) {
-            $this->wallet_address = get_option('team556_solana_pay_wallet_address', '');
+            $global_settings = get_option('team556_pay_settings'); // Fetch the array of global settings
+            if (!empty($global_settings) && isset($global_settings['merchant_wallet_address'])) {
+                $this->wallet_address = $global_settings['merchant_wallet_address'];
+            } else {
+                $this->wallet_address = ''; // Default if not found
+            }
         }
         
         // Add payment method CSS to ensure visibility on all themes
@@ -49,12 +54,12 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
         
         // Actions
         add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
-        add_action('woocommerce_api_team556_solana_pay_callback', array($this, 'check_payment'));
+        add_action('woocommerce_api_team556_pay_callback', array($this, 'check_payment'));
         add_action('woocommerce_admin_order_data_after_billing_address', array($this, 'display_transaction_data_in_admin'));
-        add_action('wp_ajax_team556_solana_pay_complete_payment', array($this, 'ajax_complete_payment'));
-        add_action('wp_ajax_nopriv_team556_solana_pay_complete_payment', array($this, 'ajax_complete_payment'));
-        add_action('wp_ajax_team556_solana_pay_check_payment', array($this, 'check_payment'));
-        add_action('wp_ajax_nopriv_team556_solana_pay_check_payment', array($this, 'check_payment'));
+        add_action('wp_ajax_team556_pay_complete_payment', array($this, 'ajax_complete_payment'));
+        add_action('wp_ajax_nopriv_team556_pay_complete_payment', array($this, 'ajax_complete_payment'));
+        add_action('wp_ajax_team556_pay_check_payment', array($this, 'check_payment'));
+        add_action('wp_ajax_nopriv_team556_pay_check_payment', array($this, 'check_payment'));
         
         // Admin notice for wallet address
         if (is_admin() && empty($this->wallet_address)) {
@@ -72,10 +77,10 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
         ?>
         <div class="notice notice-error">
             <p>
-                <strong><?php _e('Team556 Solana Pay Gateway', 'team556-solana-pay'); ?>:</strong> 
-                <?php _e('Please set your merchant wallet address to enable Solana Pay.', 'team556-solana-pay'); ?>
-                <a href="<?php echo admin_url('admin.php?page=wc-settings&tab=checkout&section=team556_solana_pay'); ?>" class="button button-primary">
-                    <?php _e('Set Wallet Address', 'team556-solana-pay'); ?>
+                <strong><?php _e('Team556 Pay Gateway', 'team556-pay'); ?>:</strong> 
+                <?php _e('Please set your merchant wallet address to enable Team556 Pay.', 'team556-pay'); ?>
+                <a href="<?php echo admin_url('admin.php?page=wc-settings&tab=checkout&section=team556_pay'); ?>" class="button button-primary">
+                    <?php _e('Set Wallet Address', 'team556-pay'); ?>
                 </a>
             </p>
         </div>
@@ -88,37 +93,37 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
     public function init_form_fields() {
         $this->form_fields = array(
             'enabled' => array(
-                'title' => __('Enable/Disable', 'team556-solana-pay'),
+                'title' => __('Enable/Disable', 'team556-pay'),
                 'type' => 'checkbox',
-                'label' => __('Enable Team556 Solana Pay', 'team556-solana-pay'),
+                'label' => __('Enable Team556 Pay', 'team556-pay'),
                 'default' => 'no',
             ),
             'title' => array(
-                'title' => __('Title', 'team556-solana-pay'),
+                'title' => __('Title', 'team556-pay'),
                 'type' => 'text',
-                'description' => __('This controls the title which the user sees during checkout.', 'team556-solana-pay'),
-                'default' => __('Team556 Token (Solana Pay)', 'team556-solana-pay'),
+                'description' => __('This controls the title which the user sees during checkout.', 'team556-pay'),
+                'default' => __('Team556 Token (Team556 Pay)', 'team556-pay'),
                 'desc_tip' => true,
             ),
             'description' => array(
-                'title' => __('Description', 'team556-solana-pay'),
+                'title' => __('Description', 'team556-pay'),
                 'type' => 'textarea',
-                'description' => __('This controls the description which the user sees during checkout.', 'team556-solana-pay'),
-                'default' => __('Pay with Team556 tokens via Solana Pay. You will need a Solana wallet with Team556 tokens.', 'team556-solana-pay'),
+                'description' => __('This controls the description which the user sees during checkout.', 'team556-pay'),
+                'default' => __('Pay with Team556 tokens via Team556 Pay. You will need a Solana wallet with Team556 tokens.', 'team556-pay'),
             ),
             'wallet_address' => array(
-                'title' => __('Merchant Wallet Address', 'team556-solana-pay'),
+                'title' => __('Merchant Wallet Address', 'team556-pay'),
                 'type' => 'text',
-                'description' => __('Enter your Solana wallet address to receive payments. If left empty, the global setting will be used.', 'team556-solana-pay'),
+                'description' => __('Enter your Solana wallet address to receive payments. If left empty, the global setting will be used.', 'team556-pay'),
                 'default' => '',
                 'desc_tip' => true,
             ),
             'debug_mode' => array(
-                'title' => __('Debug Mode', 'team556-solana-pay'),
+                'title' => __('Debug Mode', 'team556-pay'),
                 'type' => 'checkbox',
-                'label' => __('Enable debug mode', 'team556-solana-pay'),
+                'label' => __('Enable debug mode', 'team556-pay'),
                 'default' => 'no',
-                'description' => __('Enable debug mode to log payment process details.', 'team556-solana-pay'),
+                'description' => __('Enable debug mode to log payment process details.', 'team556-pay'),
             ),
         );
     }
@@ -141,13 +146,13 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
         wp_enqueue_script('team556-solana-web3');
         wp_enqueue_script('team556-buffer');
         wp_enqueue_script('team556-qrcode');
-        wp_enqueue_script('team556-solana-pay');
-        wp_enqueue_style('team556-solana-pay-style');
+        wp_enqueue_script('team556-pay');
+        wp_enqueue_style('team556-pay-style');
 
             // Add gateway-specific data
-            wp_localize_script('team556-solana-pay', 'team556SolanaPayGateway', array(
+            wp_localize_script('team556-pay', 'team556PayGateway', array(
                 'ajaxUrl' => admin_url('admin-ajax.php'),
-                'completePaymentNonce' => wp_create_nonce('team556-solana-pay-complete-payment'),
+                'completePaymentNonce' => wp_create_nonce('team556-pay-complete-payment'),
                 'merchantWallet' => $this->wallet_address,
                 'checkoutUrl' => $this->get_return_url(null), // We'll replace this with the actual order URL after payment
                 'debugMode' => $this->debug_mode === 'yes',
@@ -164,8 +169,8 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
         $order = wc_get_order($order_id);
         
         // Check if we received a transaction signature from the frontend
-        if (isset($_POST['team556_signature']) && !empty($_POST['team556_signature'])) {
-            $signature = sanitize_text_field($_POST['team556_signature']);
+        if (isset($_POST['team556_pay_signature']) && !empty($_POST['team556_pay_signature'])) {
+            $signature = sanitize_text_field($_POST['team556_pay_signature']);
             
             // Debug log
             if ($this->debug_mode === 'yes') {
@@ -173,12 +178,12 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
             }
             
             // Store transaction signature in order meta
-            $order->update_meta_data('_team556_solana_pay_signature', $signature);
+            $order->update_meta_data('_team556_pay_signature', $signature);
             
             // If reference is provided, store it as well
-            if (isset($_POST['team556_reference']) && !empty($_POST['team556_reference'])) {
-                $reference = sanitize_text_field($_POST['team556_reference']);
-                $order->update_meta_data('_team556_solana_pay_reference', $reference);
+            if (isset($_POST['team556_pay_reference']) && !empty($_POST['team556_pay_reference'])) {
+                $reference = sanitize_text_field($_POST['team556_pay_reference']);
+                $order->update_meta_data('_team556_pay_reference', $reference);
                 
                 if ($this->debug_mode === 'yes') {
                     $this->log("Storing reference for order #$order_id: $reference");
@@ -190,12 +195,12 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
             
             // Add transaction ID to order notes
             $order->add_order_note(sprintf(
-                __('Team556 token payment completed via Solana Pay. Transaction signature: %s', 'team556-solana-pay'),
+                __('Team556 token payment completed via Team556 Pay. Transaction signature: %s', 'team556-pay'),
                 $signature
             ));
             
             // Clear session data
-            WC()->session->__unset('team556_solana_pay_order_id');
+            WC()->session->__unset('team556_pay_order_id');
             
             // Return success and redirect URL
             return array(
@@ -206,15 +211,15 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
         
         // If no signature was provided, we're starting the payment process
         // Mark as pending (we're awaiting the payment)
-        $order->update_status('pending', __('Awaiting Team556 token payment via Solana Pay QR code', 'team556-solana-pay'));
+        $order->update_status('pending', __('Awaiting Team556 token payment via Team556 Pay QR code', 'team556-pay'));
         
         // Store order ID in session to retrieve it later
-        WC()->session->set('team556_solana_pay_order_id', $order_id);
+        WC()->session->set('team556_pay_order_id', $order_id);
         
         // Optionally, store the reference in the order metadata if present in the request
-        if (isset($_POST['team556_reference']) && !empty($_POST['team556_reference'])) {
-            $reference = sanitize_text_field($_POST['team556_reference']);
-            $order->update_meta_data('_team556_solana_pay_reference', $reference);
+        if (isset($_POST['team556_pay_reference']) && !empty($_POST['team556_pay_reference'])) {
+            $reference = sanitize_text_field($_POST['team556_pay_reference']);
+            $order->update_meta_data('_team556_pay_reference', $reference);
             $order->save();
             
             if ($this->debug_mode === 'yes') {
@@ -234,21 +239,21 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
      */
     public function ajax_complete_payment() {
         // Verify nonce
-        check_ajax_referer('team556-solana-pay-complete-payment', 'nonce');
+        check_ajax_referer('team556-pay-complete-payment', 'nonce');
         
         // Get parameters
         $order_id = isset($_POST['order_id']) ? intval($_POST['order_id']) : 0;
         $signature = isset($_POST['signature']) ? sanitize_text_field($_POST['signature']) : '';
         
         if (empty($order_id) || empty($signature)) {
-            wp_send_json_error(array('message' => __('Missing required parameters', 'team556-solana-pay')));
+            wp_send_json_error(array('message' => __('Missing required parameters', 'team556-pay')));
             exit;
         }
         
         // Get order
         $order = wc_get_order($order_id);
         if (!$order) {
-            wp_send_json_error(array('message' => __('Order not found', 'team556-solana-pay')));
+            wp_send_json_error(array('message' => __('Order not found', 'team556-pay')));
             exit;
         }
         
@@ -273,7 +278,7 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
             if ($this->debug_mode === 'yes') {
                 $this->log("Invalid signature format: $signature");
             }
-            wp_send_json_error(array('message' => __('Payment validation failed', 'team556-solana-pay')));
+            wp_send_json_error(array('message' => __('Payment validation failed', 'team556-pay')));
             exit;
         }
         
@@ -282,7 +287,7 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
         
         // Add transaction ID to order notes
         $order->add_order_note(sprintf(
-            __('Team556 token payment completed via Solana Pay. Transaction signature: %s', 'team556-solana-pay'),
+            __('Team556 token payment completed via Solana Pay. Transaction signature: %s', 'team556-pay'),
             $signature
         ));
         
@@ -326,14 +331,14 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
         }
         
         // Mark payment complete (through our main handler)
-        require_once TEAM556_SOLANA_PAY_PLUGIN_DIR . 'includes/class-team556-solana-pay.php';
+        require_once TEAM556_PAY_PLUGIN_DIR . 'includes/class-team556-pay.php';
         $plugin = new Team556_Solana_Pay();
         $verified = $plugin->verify_transaction_on_blockchain($signature, $order->get_total());
         
         if (!$verified) {
             // Payment verification failed
-            $order->update_status('failed', __('Solana Pay payment verification failed.', 'team556-solana-pay'));
-            wc_add_notice(__('Payment verification failed. Please try again or contact support.', 'team556-solana-pay'), 'error');
+            $order->update_status('failed', __('Solana Pay payment verification failed.', 'team556-pay'));
+            wc_add_notice(__('Payment verification failed. Please try again or contact support.', 'team556-pay'), 'error');
             wp_redirect(wc_get_checkout_url());
             exit;
         }
@@ -342,7 +347,7 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
         $order->payment_complete();
         $order->add_order_note(
             sprintf(
-                __('Payment completed via Solana Pay. Transaction signature: %s', 'team556-solana-pay'),
+                __('Payment completed via Solana Pay. Transaction signature: %s', 'team556-pay'),
                 $signature
             )
         );
@@ -376,7 +381,7 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
         }
 
         if ($order_total <= 0) {
-            echo '<p>' . __('Invalid order amount.', 'team556-solana-pay') . '</p>';
+            echo '<p>' . __('Invalid order amount.', 'team556-pay') . '</p>';
             return;
         }
 
@@ -384,7 +389,7 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
         $price_data = $this->fetch_team556_price_data();
 
         if (false === $price_data || !isset($price_data['price']) || $price_data['price'] <= 0) {
-            $error_message = isset($price_data['error']) ? esc_html($price_data['error']) : __('Could not retrieve the current TEAM556 exchange rate. This payment method is temporarily unavailable. Please try refreshing or contact support.', 'team556-solana-pay');
+            $error_message = isset($price_data['error']) ? esc_html($price_data['error']) : __('Could not retrieve the current TEAM556 exchange rate. This payment method is temporarily unavailable. Please try refreshing or contact support.', 'team556-pay');
             echo '<div class="woocommerce-error">' . $error_message . '</div>';
             // Log the error if in debug mode
             if (isset($price_data['error'])) {
@@ -401,7 +406,7 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
         // Calculate Team556 token amount based on real-time price
         // Ensure $team556_price_usdc is not zero to prevent division by zero
         if ($team556_price_usdc <= 0) {
-             echo '<div class="woocommerce-error">' . __('Invalid exchange rate received. Cannot calculate payment amount.', 'team556-solana-pay') . '</div>';
+             echo '<div class="woocommerce-error">' . __('Invalid exchange rate received. Cannot calculate payment amount.', 'team556-pay') . '</div>';
             $this->log('Price fetch error: team556_price_usdc was not positive after fetch.');
             return;
         }
@@ -427,57 +432,57 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
         
         // Display payment form with QR code
         ?>
-        <div id="team556-solana-pay-form" class="team556-adaptive">
+        <div id="team556-pay-form" class="team556-adaptive">
             <div class="team556-payment-summary">
                 <div class="team556-payment-row">
-                    <span><?php _e('Order Total:', 'team556-solana-pay'); ?></span>
+                    <span><?php _e('Order Total:', 'team556-pay'); ?></span>
                     <strong><?php echo wc_price($order_total); ?></strong>
                 </div>
                 <div class="team556-payment-row team556-token-amount">
-                    <span><?php _e('Team556 Amount:', 'team556-solana-pay'); ?></span>
+                    <span><?php _e('Team556 Amount:', 'team556-pay'); ?></span>
                     <strong><span id="team556-token-amount"><?php echo esc_html($team556_amount_formatted); ?></span> TEAM556</strong>
                 </div>
                 <div class="team556-payment-row team556-conversion-rate">
-                    <span><?php _e('Conversion Rate:', 'team556-solana-pay'); ?></span>
+                    <span><?php _e('Conversion Rate:', 'team556-pay'); ?></span>
                     <span>1 TEAM556 = <?php echo wc_price($team556_price_usdc); ?> (USDC)</span>
-                    <button type="button" id="team556-refresh-rate" class="team556-refresh-button" title="<?php esc_attr_e('Refresh conversion rate', 'team556-solana-pay'); ?>">
+                    <button type="button" id="team556-refresh-rate" class="team556-refresh-button" title="<?php esc_attr_e('Refresh conversion rate', 'team556-pay'); ?>">
                         <span class="dashicons dashicons-update"></span>
                     </button>
                 </div>
                  <div class="team556-payment-row team556-rate-info">
-                    <small><?php printf(__('Rate as of: %s. Updated every 10 seconds.', 'team556-solana-pay'), esc_html(wp_date(get_option('date_format') . ' ' . get_option('time_format'), $last_updated_timestamp))); ?></small>
+                    <small><?php printf(__('Rate as of: %s. Updated every 10 seconds.', 'team556-pay'), esc_html(wp_date(get_option('date_format') . ' ' . get_option('time_format'), $last_updated_timestamp))); ?></small>
                 </div>
             </div>
             
-            <p class="team556-scan-title"><?php _e('Scan this QR code with your Solana wallet app to pay with Team556 tokens:', 'team556-solana-pay'); ?></p>
+            <p class="team556-scan-title"><?php _e('Scan this QR code with your Solana wallet app to pay with Team556 tokens:', 'team556-pay'); ?></p>
             
             <div id="team556-qr-code-container" class="team556-qr-code-container">
                 <!-- QR code will be generated here by JavaScript -->
             </div>
             <div id="team556-payment-link-container" class="team556-payment-link-container" style="margin-top: 15px; text-align: center;">
-                <p style="margin-bottom: 5px; font-size: 0.9em;"><?php _e('Or copy this link to pay:', 'team556-solana-pay'); ?></p>
+                <p style="margin-bottom: 5px; font-size: 0.9em;"><?php _e('Or copy this link to pay:', 'team556-pay'); ?></p>
                 <input type="text" id="team556-payment-link" value="<?php echo esc_attr($solana_pay_url); ?>" readonly style="width: 80%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; text-align: center; background-color: #f9f9f9;">
                 <button type="button" id="team556-copy-link-button" class="button" style="padding: 8px 15px; font-size: 0.9em;">
-                    <?php _e('Copy Link', 'team556-solana-pay'); ?>
+                    <?php _e('Copy Link', 'team556-pay'); ?>
                 </button>
             </div>
             
             <ul class="team556-wallet-steps">
-                <li class="team556-wallet-step"><?php _e('1. Open your Solana wallet app', 'team556-solana-pay'); ?></li>
-                <li class="team556-wallet-step"><?php _e('2. Scan the QR code above', 'team556-solana-pay'); ?></li>
-                <li class="team556-wallet-step"><?php _e('3. Approve the payment of <strong id="team556-token-amount-instructions">' . esc_html($team556_amount_formatted) . '</strong> TEAM556 tokens', 'team556-solana-pay'); ?></li>
-                <li class="team556-wallet-step"><?php _e('4. Wait for confirmation and proceed to complete your order', 'team556-solana-pay'); ?></li>
+                <li class="team556-wallet-step"><?php _e('1. Open your Solana wallet app', 'team556-pay'); ?></li>
+                <li class="team556-wallet-step"><?php _e('2. Scan the QR code above', 'team556-pay'); ?></li>
+                <li class="team556-wallet-step"><?php _e('3. Approve the payment of <strong id="team556-token-amount-instructions">' . esc_html($team556_amount_formatted) . '</strong> TEAM556 tokens', 'team556-pay'); ?></li>
+                <li class="team556-wallet-step"><?php _e('4. Wait for confirmation and proceed to complete your order', 'team556-pay'); ?></li>
             </ul>
             
             <input type="hidden" name="team556_reference" id="team556_reference" value="<?php echo esc_attr($reference); ?>">
             <input type="hidden" name="team556_signature" id="team556_signature" value="">
             <input type="hidden" name="team556_wallet_address" id="team556_wallet_address" value="<?php echo esc_attr($this->wallet_address); ?>">
             
-            <div class="team556-solana-pay-status"></div>
+            <div class="team556-pay-status"></div>
         </div>
         
         <style>
-            /* Team556 Merchant Styling - Based on team556-solana-pay.css */
+            /* Team556 Merchant Styling - Based on team556-pay.css */
             :root {
                 --solana-dark: #14151A;
                 --solana-dark-lighter: #1C1D24;
@@ -492,7 +497,7 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
             }
             
             /* Overall form styling */
-            #team556-solana-pay-form {
+            #team556-pay-form {
                 background-color: var(--solana-dark);
                 border-radius: 12px;
                 padding: 20px;
@@ -662,7 +667,7 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
             }
             
             /* Status messages */
-            .team556-solana-pay-status {
+            .team556-pay-status {
                 margin-top: 20px;
                 padding: 15px;
                 border-radius: 8px;
@@ -673,19 +678,19 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
                 border: 1px solid var(--glass-border);
             }
             
-            .team556-solana-pay-status[data-status="error"] {
+            .team556-pay-status[data-status="error"] {
                 display: block;
                 border-left: 4px solid var(--solana-magenta);
                 color: var(--solana-magenta);
             }
             
-            .team556-solana-pay-status[data-status="success"] {
+            .team556-pay-status[data-status="success"] {
                 display: block;
                 border-left: 4px solid var(--solana-green);
                 color: var(--solana-green);
             }
             
-            .team556-solana-pay-status[data-status="processing"] {
+            .team556-pay-status[data-status="processing"] {
                 display: block;
                 border-left: 4px solid var(--solana-blue);
                 color: var(--solana-blue);
@@ -741,7 +746,7 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
                 function generateQRCode(url, containerId) {
                     if (typeof QRCode === 'undefined') {
                         console.error('QR code library not loaded');
-                        $('.team556-solana-pay-status').html('<?php _e('QR code library not loaded. Please refresh the page.', 'team556-solana-pay'); ?>').attr('data-status', 'error');
+                        $('.team556-pay-status').html('<?php _e('QR code library not loaded. Please refresh the page.', 'team556-pay'); ?>').attr('data-status', 'error');
                         $('.team556-qrcode-spinner').hide();
                         // Try the fallback
                         return generateQRCodeFallback(url, containerId);
@@ -805,7 +810,7 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
                         return true;
                     } catch (error) {
                         console.error('Exception in QR code generation:', error);
-                        $('.team556-solana-pay-status').html('<?php _e('Error generating QR code. Using text URL instead.', 'team556-solana-pay'); ?>').attr('data-status', 'error');
+                        $('.team556-pay-status').html('<?php _e('Error generating QR code. Using text URL instead.', 'team556-pay'); ?>').attr('data-status', 'error');
                         // Try the fallback
                         return generateQRCodeFallback(url, containerId);
                     }
@@ -928,7 +933,7 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
                 // Function to check payment status
                 function checkPaymentStatus(reference) {
                     // Capture nonce from PHP to avoid issues
-                    var securityNonce = '<?php echo wp_create_nonce('team556-solana-pay-check-payment'); ?>';
+                    var securityNonce = '<?php echo wp_create_nonce('team556-pay-check-payment'); ?>';
                     
                     var checkInterval = setInterval(function() {
                         $.ajax({
@@ -945,7 +950,7 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
                                     clearInterval(checkInterval);
                                     
                                     // Update status and store signature
-                                    $('.team556-solana-pay-status').html('<?php _e('Payment detected! Processing...', 'team556-solana-pay'); ?>').attr('data-status', 'success');
+                                    $('.team556-pay-status').html('<?php _e('Payment detected! Processing...', 'team556-pay'); ?>').attr('data-status', 'success');
                                     $('#team556_signature').val(response.data.signature);
                                     
                                     // Submit payment form
@@ -969,14 +974,14 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
 
                     try {
                         var successful = document.execCommand('copy');
-                        var msg = successful ? '<?php _e("Copied!", "team556-solana-pay"); ?>' : '<?php _e("Copy failed", "team556-solana-pay"); ?>';
+                        var msg = successful ? '<?php _e("Copied!", "team556-pay"); ?>' : '<?php _e("Copy failed", "team556-pay"); ?>';
                         $(this).text(msg);
                     } catch (err) {
-                        $(this).text('<?php _e("Oops, unable to copy", "team556-solana-pay"); ?>');
+                        $(this).text('<?php _e("Oops, unable to copy", "team556-pay"); ?>');
                     }
 
                     setTimeout(function() {
-                        $('#team556-copy-link-button').text('<?php _e("Copy Link", "team556-solana-pay"); ?>');
+                        $('#team556-copy-link-button').text('<?php _e("Copy Link", "team556-pay"); ?>');
                     }, 2000);
                 });
                 
@@ -1115,11 +1120,11 @@ class Team556_Solana_Pay_Gateway extends WC_Payment_Gateway {
             return;
         }
         
-        if (!is_dir(WP_CONTENT_DIR . '/uploads/team556-solana-pay-logs')) {
-            @mkdir(WP_CONTENT_DIR . '/uploads/team556-solana-pay-logs', 0755, true);
+        if (!is_dir(WP_CONTENT_DIR . '/uploads/team556-pay-logs')) {
+            @mkdir(WP_CONTENT_DIR . '/uploads/team556-pay-logs', 0755, true);
         }
         
-        $log_file = WP_CONTENT_DIR . '/uploads/team556-solana-pay-logs/debug-' . date('Y-m-d') . '.log';
+        $log_file = WP_CONTENT_DIR . '/uploads/team556-pay-logs/debug-' . date('Y-m-d') . '.log';
         $timestamp = date('Y-m-d H:i:s');
         
         error_log("[{$timestamp}] {$message}\n", 3, $log_file);

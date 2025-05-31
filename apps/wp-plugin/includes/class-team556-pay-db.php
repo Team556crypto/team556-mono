@@ -1,6 +1,6 @@
 <?php
 /**
- * Team556 Solana Pay Database Class
+ * Team556 Pay Database Class
  * Handles database operations for the plugin
  */
 
@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 /**
  * Database Class
  */
-class Team556_Solana_Pay_DB {
+class Team556_Pay_DB {
     /**
      * Transactions table name
      *
@@ -25,7 +25,7 @@ class Team556_Solana_Pay_DB {
      */
     public function __construct() {
         global $wpdb;
-        $this->transactions_table = $wpdb->prefix . 'team556_solana_transactions';
+        $this->transactions_table = $wpdb->prefix . 'team556_transactions';
     }
 
     /**
@@ -49,8 +49,8 @@ class Team556_Solana_Pay_DB {
             updated_at datetime DEFAULT NULL,
             metadata longtext DEFAULT NULL,
             PRIMARY KEY (id),
-            KEY transaction_signature (transaction_signature),
-            KEY wallet_address (wallet_address),
+            KEY transaction_signature (transaction_signature(191)),
+            KEY wallet_address (wallet_address(191)),
             KEY order_id (order_id),
             KEY status (status),
             KEY created_at (created_at)

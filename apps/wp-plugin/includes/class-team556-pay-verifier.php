@@ -281,7 +281,7 @@ class Team556_Solana_Pay_Verifier {
         }
         
         // Create log directory if it doesn't exist
-        $log_dir = WP_CONTENT_DIR . '/uploads/team556-solana-pay-logs';
+        $log_dir = WP_CONTENT_DIR . '/uploads/team556-pay-logs';
         if (!is_dir($log_dir)) {
             @mkdir($log_dir, 0755, true);
         }

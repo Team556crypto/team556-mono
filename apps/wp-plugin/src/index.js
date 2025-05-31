@@ -145,7 +145,7 @@ const Content = () => {
                     {qrValue ? (
                         <>
                             <QRCodeCanvas value={qrValue} size={200} bgColor="#ffffff" fgColor="#000000" level="L" />
-                            <div style={{ marginTop: '10px' }}>
+                            <div style={{ marginTop: '10px', textAlign: 'center' }}>
                                 <button 
                                     type="button"
                                     onClick={() => {
@@ -169,28 +169,11 @@ const Content = () => {
                                         padding: '8px 16px',
                                         borderRadius: '4px',
                                         cursor: 'pointer',
-                                        fontSize: '14px',
-                                        marginRight: '10px'
+                                        fontSize: '14px' // Removed marginRight
                                     }}
                                 >
                                     {__('Copy Payment Link', 'team556-pay')}
                                 </button>
-                                <a 
-                                    href={qrValue} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    style={{
-                                        backgroundColor: '#00a32a',
-                                        color: 'white',
-                                        textDecoration: 'none',
-                                        padding: '8px 16px',
-                                        borderRadius: '4px',
-                                        fontSize: '14px',
-                                        display: 'inline-block'
-                                    }}
-                                >
-                                    {__('Open in Wallet', 'team556-pay')}
-                                </a>
                             </div>
                         </>
                     ) : (

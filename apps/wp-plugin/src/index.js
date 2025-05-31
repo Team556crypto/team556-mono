@@ -1,6 +1,3 @@
-import { Buffer } from 'buffer';
-window.Buffer = Buffer;
-
 // Resolve WooCommerce Blocks functions from global scope
 // This is a workaround for potential mismatches in how @wordpress/scripts
 // maps these externals versus how they are provided on the window object.
@@ -9,6 +6,7 @@ const wcGlobal = window.wc || {};
 const blocksRegistry = wcGlobal.wcBlocksRegistry || {};
 const registerPaymentMethod = blocksRegistry.registerPaymentMethod || ((paymentMethodInterface) => {
     console.error('Team556 Pay: registerPaymentMethod function not found on window.wc.wcBlocksRegistry. Payment method will not be registered.', paymentMethodInterface);
+    return () => null; // Return a dummy unregister function or similar if needed
 });
 
 const wooSettings = wcGlobal.wcSettings || {};
@@ -16,6 +14,7 @@ const getSetting = wooSettings.getSetting || ((dataKey, defaultValue) => {
     console.error(`Team556 Pay: getSetting function not found on window.wc.wcSettings. Defaulting for key: ${dataKey}.`);
     return defaultValue;
 });
+
 import apiFetch from '@wordpress/api-fetch';
 import { decodeEntities } from '@wordpress/html-entities';
 import { useState, useEffect } from '@wordpress/element';
@@ -80,13 +79,62 @@ const Content = () => {
             <div className="team556-pay-payment-instructions" style={{ marginTop: '15px' }}>
                 <h4>Instructions:</h4>
                 <ol>
-                    <li>Open your Team556 Digital Armory app or compatible wallet.</li>
-                    <li>Scan the QR code below to initiate the payment.</li>
+                    <li>Open your Team556 Digital Armory and select the Pay Tab.</li>
+                    <li>Scan the QR code below or paste the link in the Pay Tab to initiate the payment.</li>
                     <li>Confirm the transaction in your wallet.</li>
                 </ol>
                 <div className="team556-pay-qr-code-area" style={{ marginTop: '15px', marginBottom: '15px', textAlign: 'center' }}>
                     {qrValue ? (
-                        <QRCodeCanvas value={qrValue} size={200} bgColor="#ffffff" fgColor="#000000" level="L" />
+                        <>
+                            <QRCodeCanvas value={qrValue} size={200} bgColor="#ffffff" fgColor="#000000" level="L" />
+                            <div style={{ marginTop: '10px' }}>
+                                <button 
+                                    type="button"
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(qrValue).then(() => {
+                                            alert(__('Payment link copied to clipboard!', 'team556-pay'));
+                                        }).catch(() => {
+                                            // Fallback for older browsers
+                                            const textArea = document.createElement('textarea');
+                                            textArea.value = qrValue;
+                                            document.body.appendChild(textArea);
+                                            textArea.select();
+                                            document.execCommand('copy');
+                                            document.body.removeChild(textArea);
+                                            alert(__('Payment link copied to clipboard!', 'team556-pay'));
+                                        });
+                                    }}
+                                    style={{
+                                        backgroundColor: '#0073aa',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '8px 16px',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer',
+                                        fontSize: '14px',
+                                        marginRight: '10px'
+                                    }}
+                                >
+                                    {__('Copy Payment Link', 'team556-pay')}
+                                </button>
+                                <a 
+                                    href={qrValue} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    style={{
+                                        backgroundColor: '#00a32a',
+                                        color: 'white',
+                                        textDecoration: 'none',
+                                        padding: '8px 16px',
+                                        borderRadius: '4px',
+                                        fontSize: '14px',
+                                        display: 'inline-block'
+                                    }}
+                                >
+                                    {__('Open in Wallet', 'team556-pay')}
+                                </a>
+                            </div>
+                        </>
                     ) : (
                         <p>{__('Generating QR Code...', 'team556-pay')}</p>
                     )}

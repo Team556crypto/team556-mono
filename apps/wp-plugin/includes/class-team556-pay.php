@@ -60,13 +60,38 @@ class Team556_Pay {
             true
         );
         
-        // Register Buffer needed for Solana Web3
+        // Register Buffer polyfill for browser compatibility (inline only)
         wp_register_script(
             'team556-buffer',
-            'https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js',
+            '', // Empty URL - just for inline script
             array(),
-            '6.0.3',
+            '1.0.0',
             true
+        );
+        
+        // Add inline script to create Buffer global for browser compatibility
+        wp_add_inline_script(
+            'team556-buffer',
+            '
+            // Browser-compatible Buffer polyfill
+            if (typeof window !== "undefined" && !window.Buffer) {
+                window.Buffer = {
+                    alloc: function(size) {
+                        return new Uint8Array(size);
+                    },
+                    from: function(data) {
+                        if (Array.isArray(data)) {
+                            return new Uint8Array(data);
+                        }
+                        if (typeof data === "string") {
+                            return new TextEncoder().encode(data);
+                        }
+                        return new Uint8Array(data);
+                    }
+                };
+            }
+            ',
+            'after'
         );
         
         // Register QR Code library
@@ -161,7 +186,6 @@ class Team556_Pay {
 	            ),
 	        ));
 	        
-	        wp_add_inline_script('team556-buffer', 'window.Buffer = buffer.Buffer;', 'after');
 	    } else {
 	        error_log('[Team556_Pay] Exiting enqueue_frontend_scripts - no relevant page or shortcode identified.');
 	    }

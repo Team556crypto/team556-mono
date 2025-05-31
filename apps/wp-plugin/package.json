@@ -11,7 +11,10 @@
   },
   "devDependencies": {
     "@wordpress/scripts": "^27.0.0",
-    "buffer": "^6.0.3"
+    "buffer": "^6.0.3",
+    "process": "^0.11.10",
+    "stream-browserify": "^3.0.0",
+    "util": "^0.12.5"
   },
   "author": "Team556",
   "license": "GPL-2.0-or-later",

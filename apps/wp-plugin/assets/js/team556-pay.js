@@ -244,9 +244,9 @@
             
             const [address] = await solanaWeb3.PublicKey.findProgramAddress(
                 [
-                    walletAddress.toBuffer(),
-                    TOKEN_PROGRAM_ID.toBuffer(),
-                    tokenMintAddress.toBuffer(),
+                    walletAddress.toBytes(),
+                    TOKEN_PROGRAM_ID.toBytes(),
+                    tokenMintAddress.toBytes(),
                 ],
                 SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID
             );
@@ -276,7 +276,7 @@
             return new solanaWeb3.TransactionInstruction({
                 keys,
                 programId: SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID,
-                data: Buffer.from([]),
+                data: new Uint8Array([]), 
             });
         },
         
@@ -293,7 +293,7 @@
             ];
             
             // Token instruction: Transfer = 3
-            const data = Buffer.from(Uint8Array.of(3, ...this.serializeUint64(amount)));
+            const data = new Uint8Array([3, ...this.serializeUint64(amount)]); 
             
             return new solanaWeb3.TransactionInstruction({
                 keys,
@@ -306,10 +306,12 @@
          * Serialize uint64 for token instructions
          */
         serializeUint64: function(value) {
-            const buffer = Buffer.alloc(8);
+            // Use Uint8Array instead of Buffer for browser compatibility
+            const buffer = new Uint8Array(8);
+            const dataView = new DataView(buffer.buffer);
             
             // Write value as little-endian
-            buffer.writeBigUInt64LE(BigInt(value), 0);
+            dataView.setBigUint64(0, BigInt(value), true); // true = little endian
             
             return [...buffer];
         },

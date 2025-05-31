@@ -26,7 +26,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         $this->has_fields         = true;
         $this->method_title       = __('Team556 Pay', 'team556-pay');
         $this->method_description = __('Accept Team556 token payments via Team556 Pay', 'team556-pay');
-        $this->supports           = array('products');
+        $this->supports           = array('products', 'woocommerce-blocks');
 
         // Load settings
         $this->init_form_fields();
@@ -80,6 +80,15 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
 
         // Filter to log available payment gateways for debugging
         add_filter('woocommerce_available_payment_gateways', array($this, 'log_available_gateways'), 100);
+    }
+
+    /**
+     * Get the icon URL for the block-based checkout.
+     *
+     * @return string
+     */
+    public function get_icon_url_for_blocks() {
+        return $this->icon;
     }
 
     /**

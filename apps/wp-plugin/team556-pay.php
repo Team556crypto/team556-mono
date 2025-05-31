@@ -29,6 +29,7 @@ require_once TEAM556_PAY_PLUGIN_DIR . 'includes/admin/class-team556-pay-settings
 require_once TEAM556_PAY_PLUGIN_DIR . 'includes/admin/class-team556-pay-welcome.php';
 require_once TEAM556_PAY_PLUGIN_DIR . 'includes/class-team556-pay-verifier.php';
 require_once TEAM556_PAY_PLUGIN_DIR . 'includes/class-team556-pay-shortcode.php';
+require_once TEAM556_PAY_PLUGIN_DIR . 'includes/class-team556-pay-gateway-blocks.php';
 
 // Temporary debugging function
 if (!function_exists('team556_debug_payment_gateways')) {
@@ -71,8 +72,69 @@ function team556_pay_init() {
     // Add AJAX Handlers for payment request
     add_action('wp_ajax_team556_create_payment', 'team556_handle_create_payment_request');
     add_action('wp_ajax_nopriv_team556_create_payment', 'team556_handle_create_payment_request');
+
+    // AJAX handler for block-based checkout QR code data
+    add_action('wp_ajax_team556_get_block_payment_data', 'team556_handle_get_block_payment_data_request');
+    add_action('wp_ajax_nopriv_team556_get_block_payment_data', 'team556_handle_get_block_payment_data_request');
 }
 add_action('plugins_loaded', 'team556_pay_init');
+
+/**
+ * Handle AJAX request to get payment data for block-based checkout QR code.
+ */
+function team556_handle_get_block_payment_data_request() {
+    // Basic security check - consider adding a nonce if sensitive operations were involved.
+    // check_ajax_referer('team556_pay_block_nonce', 'security');
+
+    if (!class_exists('WooCommerce') || !WC()->cart) {
+        wp_send_json_error(['message' => __('WooCommerce or Cart not available.', 'team556-pay')]);
+        return;
+    }
+
+    $cart_total = WC()->cart->get_total('edit'); // Get cart total without formatting
+    $currency = get_woocommerce_currency();
+
+    // TODO: Potentially convert $cart_total to the smallest unit of the token if necessary.
+
+    // Get recipient wallet and token mint from settings
+    // These are examples; adjust to how your settings are stored.
+    $gateway_settings = get_option('woocommerce_team556_pay_settings', array());
+    $recipient_wallet = !empty($gateway_settings['wallet_address']) ? $gateway_settings['wallet_address'] : '';
+    $token_mint = defined('TEAM556_PAY_TEAM556_TOKEN_MINT') ? TEAM556_PAY_TEAM556_TOKEN_MINT : ''; // Using the defined constant
+ 
+    if (empty($recipient_wallet)) {
+        error_log('Team556 Pay: Recipient wallet address is not configured in settings.');
+        wp_send_json_error(['message' => __('Payment gateway not configured correctly (missing wallet address).', 'team556-pay')]);
+        return;
+    }
+    if (empty($token_mint)) {
+        error_log('Team556 Pay: Token mint address is not configured.');
+        wp_send_json_error(['message' => __('Payment gateway not configured correctly (missing token mint).', 'team556-pay')]);
+        return;
+    }
+
+    // Generate a unique reference for the payment. Could be based on session, cart hash, or a pre-generated order ID if available.
+    // For simplicity, let's use a timestamp and a random component for now.
+    // In a real scenario, you'd want something more robust, possibly linked to a pre-saved order or payment intent.
+    $reference = 'block_' . time() . '_' . wp_generate_password(8, false);
+
+    // Construct the Solana Pay URL
+    // Ensure amount is formatted correctly (e.g., no thousands separators, correct decimal places for the token)
+    $payment_url_params = [
+        'amount' => $cart_total,
+        'spl-token' => $token_mint,
+        'reference' => $reference,
+        'label' => sanitize_text_field(get_bloginfo('name')),
+        'message' => sprintf(__('Order from %s', 'team556-pay'), sanitize_text_field(get_bloginfo('name'))),
+    ];
+    $payment_url = 'solana:' . $recipient_wallet . '?' . http_build_query($payment_url_params);
+
+    wp_send_json_success([
+        'paymentUrl' => $payment_url,
+        'reference' => $reference, // Send back the reference if needed for polling
+    ]);
+}
+
 
 /**
  * Enqueue public-facing scripts and styles.
@@ -198,6 +260,36 @@ function team556_handle_create_payment_request() {
         'solana_pay_url' => sanitize_url($data['solana_pay_url']) // Sanitize the URL before output
     ));
 }
+
+/**
+ * Registers the Team556 Pay block-based payment method type.
+ *
+ * @param Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry $payment_method_registry The payment method registry.
+ */
+function team556_pay_register_block_support( $payment_method_registry ) {
+    error_log('[Team556 Pay] Attempting to register block support...');
+    if ( ! class_exists( 'Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType' ) ) {
+        error_log('[Team556 Pay] AbstractPaymentMethodType class NOT FOUND.');
+        return;
+    }
+
+    // Register the payment method type.
+    // The class Team556_Pay_Gateway_Blocks_Integration is loaded via the include above.
+    error_log('[Team556 Pay] AbstractPaymentMethodType class FOUND.');
+    if ( ! class_exists( 'Team556_Pay_Gateway_Blocks_Integration' ) ) {
+        error_log('[Team556 Pay] Team556_Pay_Gateway_Blocks_Integration class NOT FOUND before registration.');
+        return;
+    }
+    error_log('[Team556 Pay] Team556_Pay_Gateway_Blocks_Integration class FOUND. Attempting to register.');
+    try {
+        $payment_method_registry->register( new Team556_Pay_Gateway_Blocks_Integration() );
+        error_log('[Team556 Pay] Successfully called payment_method_registry->register().');
+    } catch (Exception $e) {
+        error_log('[Team556 Pay] ERROR during registration: ' . $e->getMessage());
+    }
+}
+add_action( 'woocommerce_blocks_payment_method_type_registration', 'team556_pay_register_block_support' );
+
 
 // Register activation and deactivation hooks
 register_activation_hook(__FILE__, 'team556_pay_activate');

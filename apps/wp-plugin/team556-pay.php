@@ -83,55 +83,148 @@ add_action('plugins_loaded', 'team556_pay_init');
  * Handle AJAX request to get payment data for block-based checkout QR code.
  */
 function team556_handle_get_block_payment_data_request() {
-    // Basic security check - consider adding a nonce if sensitive operations were involved.
-    // check_ajax_referer('team556_pay_block_nonce', 'security');
+    $log_source = 'team556_pay_debug'; // Consolidated log source
 
+    // Log 1: Handler called
+    if (function_exists('wc_get_logger')) {
+        $logger = wc_get_logger();
+        $logger->debug('AJAX: Handler CALLED.', array('source' => $log_source));
+    }
+
+    // Check for Gateway Class File
+    $class_file = plugin_dir_path(__FILE__) . 'includes/class-team556-pay-gateway.php';
+    if (!file_exists($class_file)) {
+        if (function_exists('wc_get_logger')) {
+            $logger = wc_get_logger();
+            $logger->error('AJAX: Gateway class file NOT FOUND: ' . esc_html($class_file), array('source' => $log_source));
+        }
+        wp_send_json_error(['message' => 'Payment gateway error (file missing).', 'tokenPrice' => null, 'requiredTokenAmount' => null]);
+        return;
+    }
+    require_once $class_file;
+
+    // Check if Class is Defined
+    if (!class_exists('Team556_Pay_Gateway')) {
+        if (function_exists('wc_get_logger')) {
+            $logger = wc_get_logger();
+            $logger->error('AJAX: Team556_Pay_Gateway class NOT DEFINED after require_once.', array('source' => $log_source));
+        }
+        wp_send_json_error(['message' => 'Payment gateway error (class not defined).', 'tokenPrice' => null, 'requiredTokenAmount' => null]);
+        return;
+    }
+
+    // Check if WooCommerce is active and WC()->cart is available
     if (!class_exists('WooCommerce') || !WC()->cart) {
-        wp_send_json_error(['message' => __('WooCommerce or Cart not available.', 'team556-pay')]);
+        if (function_exists('wc_get_logger')) {
+            $logger = wc_get_logger();
+            $logger->error('AJAX: WooCommerce or WC()->cart not available. TERMINATING.', array('source' => $log_source));
+        }
+        wp_send_json_error(['message' => 'WooCommerce cart not available.', 'tokenPrice' => null, 'requiredTokenAmount' => null]);
         return;
     }
 
-    $cart_total = WC()->cart->get_total('edit'); // Get cart total without formatting
+    $gateway = new Team556_Pay_Gateway();
+
+    // Log 2: Gateway Instantiation Check
+    if (!is_object($gateway)) {
+        if (function_exists('wc_get_logger')) {
+            $logger = wc_get_logger();
+            $logger->error('AJAX: Team556_Pay_Gateway instantiation FAILED. $gateway type: ' . gettype($gateway), array('source' => $log_source));
+        }
+        wp_send_json_error(['message' => 'Payment gateway error (instantiation failed).', 'tokenPrice' => null, 'requiredTokenAmount' => null]);
+        return; 
+    }
+
+    if (function_exists('wc_get_logger')) {
+        $logger = wc_get_logger();
+        $logger->debug('AJAX: Team556_Pay_Gateway INSTANTIATED successfully.', array('source' => $log_source));
+    }
+    
+    // Log 3: Determine debug_mode status safely
+    $debug_mode_value = 'NOT_SET_OR_ACCESSIBLE'; // More descriptive default
+    if (property_exists($gateway, 'debug_mode')) {
+        $debug_mode_value = $gateway->debug_mode;
+    } elseif (isset($gateway->settings) && is_array($gateway->settings) && isset($gateway->settings['debug_mode'])) {
+        $debug_mode_value = $gateway->settings['debug_mode'];
+    } else {
+        $plugin_settings = get_option('woocommerce_team556_pay_settings');
+        if (is_array($plugin_settings) && isset($plugin_settings['debug_mode'])) {
+            $debug_mode_value = $plugin_settings['debug_mode'];
+        }
+    }
+
+    $current_debug_setting = ($debug_mode_value === 'yes'); // Boolean for easier use
+
+    if (function_exists('wc_get_logger')) {
+        $logger = wc_get_logger();
+        $logger->debug('AJAX: Effective debug_mode for AJAX handler: ' . var_export($debug_mode_value, true) . ' (Parsed as: ' . ($current_debug_setting ? 'true' : 'false') . ')', array('source' => $log_source));
+    }
+
+    // Fetch price data
+    // Note: $gateway->fetch_team556_price_data() uses its own $this->debug_mode. 
+    // The $current_debug_setting is for logging within *this* AJAX handler scope.
+    $price_data = $gateway->fetch_team556_price_data();
+
+    $token_price = null;
     $currency = get_woocommerce_currency();
+    $cart_total = WC()->cart->get_total('edit'); 
+    $required_token_amount = null;
+    $error_message = null;
 
-    // TODO: Potentially convert $cart_total to the smallest unit of the token if necessary.
-
-    // Get recipient wallet and token mint from settings
-    // These are examples; adjust to how your settings are stored.
-    $gateway_settings = get_option('woocommerce_team556_pay_settings', array());
-    $recipient_wallet = !empty($gateway_settings['wallet_address']) ? $gateway_settings['wallet_address'] : '';
-    $token_mint = defined('TEAM556_PAY_TEAM556_TOKEN_MINT') ? TEAM556_PAY_TEAM556_TOKEN_MINT : ''; // Using the defined constant
- 
-    if (empty($recipient_wallet)) {
-        error_log('Team556 Pay: Recipient wallet address is not configured in settings.');
-        wp_send_json_error(['message' => __('Payment gateway not configured correctly (missing wallet address).', 'team556-pay')]);
-        return;
+    if (isset($price_data['error'])) {
+        $error_message = $price_data['error'];
+        if ($current_debug_setting && function_exists('wc_get_logger')) {
+            $logger = wc_get_logger();
+            $logger->error('AJAX: Error from fetch_team556_price_data: ' . esc_html($error_message), array('source' => $log_source));
+        }
+    } elseif (isset($price_data['price'])) {
+        $token_price = (float) $price_data['price'];
+        if ($token_price > 0) {
+            $required_token_amount = $cart_total / $token_price;
+            $required_token_amount = round($required_token_amount, 6); 
+        } else {
+            $error_message = 'Token price is zero or invalid.';
+            if ($current_debug_setting && function_exists('wc_get_logger')) {
+                $logger = wc_get_logger();
+                $logger->error('AJAX: Token price is zero or invalid. Price received: ' . esc_html($token_price), array('source' => $log_source));
+            }
+        }
+    } else {
+        $error_message = 'Could not retrieve current token price (unknown reason).';
+        if ($current_debug_setting && function_exists('wc_get_logger')) {
+            $logger = wc_get_logger();
+            $logger->error('AJAX: Unknown error fetching price data. Raw data: ' . esc_html(json_encode($price_data)), array('source' => $log_source));
+        }
     }
-    if (empty($token_mint)) {
-        error_log('Team556 Pay: Token mint address is not configured.');
-        wp_send_json_error(['message' => __('Payment gateway not configured correctly (missing token mint).', 'team556-pay')]);
-        return;
-    }
 
-    // Generate a unique reference for the payment. Could be based on session, cart hash, or a pre-generated order ID if available.
-    // For simplicity, let's use a timestamp and a random component for now.
-    // In a real scenario, you'd want something more robust, possibly linked to a pre-saved order or payment intent.
-    $reference = 'block_' . time() . '_' . wp_generate_password(8, false);
+    // Construct Solana Pay URL
+    $recipient_wallet = $gateway->get_option('wallet_address');
+    $token_mint = $gateway->get_option('token_mint_address'); 
+    $reference = uniqid('tx_');
 
-    // Construct the Solana Pay URL
-    // Ensure amount is formatted correctly (e.g., no thousands separators, correct decimal places for the token)
     $payment_url_params = [
-        'amount' => $cart_total,
+        'recipient' => $recipient_wallet,
         'spl-token' => $token_mint,
+        'amount'    => $required_token_amount, 
         'reference' => $reference,
-        'label' => sanitize_text_field(get_bloginfo('name')),
-        'message' => sprintf(__('Order from %s', 'team556-pay'), sanitize_text_field(get_bloginfo('name'))),
+        'label'     => get_bloginfo('name'),
+        'message'   => sprintf(__('Payment for Order at %s', 'team556-pay'), get_bloginfo('name')),
     ];
-    $payment_url = 'solana:' . $recipient_wallet . '?' . http_build_query($payment_url_params);
+
+    $payment_url_params = array_filter($payment_url_params, function($value) {
+        return $value !== null && $value !== '';
+    });
+
+    $payment_url = 'solana:' . http_build_query($payment_url_params, '', '&', PHP_QUERY_RFC3986);
 
     wp_send_json_success([
         'paymentUrl' => $payment_url,
-        'reference' => $reference, // Send back the reference if needed for polling
+        'reference' => $reference,
+        'tokenPrice' => $token_price,
+        'currency' => $currency,
+        'cartTotalFiat' => (float) $cart_total,
+        'requiredTokenAmount' => $required_token_amount,
+        'errorMessage' => $error_message,
     ]);
 }
 

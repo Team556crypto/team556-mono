@@ -506,7 +506,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         // Format the TOKEN amount to a string with appropriate decimal places for the URL
         // Solana Pay spec usually implies the smallest unit of the token if not specified, 
         // but for SPL tokens, it's common to use the human-readable decimal amount.
-        // Jupiter API provides price for 1 token, so $amount here should be the decimal token amount.
+        // Alchemy API provides price for 1 token, so $amount here should be the decimal token amount.
         // Let's use 6 decimal places for the URL, consistent with $team556_amount_formatted.
         $token_amount_str = number_format($amount, 6, '.', '');
         
@@ -530,38 +530,65 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
     }
 
     /**
-     * Fetch TEAM556 price data from Jupiter API with caching.
+     * Fetch TEAM556 price data from Alchemy API with caching.
      *
      * @return array|false Price data array ['price' => float, 'last_updated' => timestamp, 'source' => 'cache'|'api'] or false on failure.
      */
-    private function fetch_team556_price_data() {
-        $transient_key = 'team556_jup_price_data';
+    public function fetch_team556_price_data() {
+        $transient_key = 'team556_alchemy_price_data';
         $cached_data = get_transient($transient_key);
 
-        if (false !== $cached_data && isset($cached_data['price']) && isset($cached_data['last_updated'])) {
-            // Ensure cache is not older than 10 seconds, though transient handles expiration
-            if ( (time() - $cached_data['last_updated']) < 10 ) { 
-                 $cached_data['source'] = 'cache';
-                if ($this->debug_mode === 'yes') {
-                    $this->log('Fetched TEAM556 price from cache: ' . $cached_data['price']);
-                }
-                return $cached_data;
+        if (false !== $cached_data && isset($cached_data['price'])) {
+            if ($this->debug_mode === 'yes' && function_exists('wc_get_logger')) {
+                $logger = wc_get_logger();
+                $logger->debug('Price data retrieved from cache.', array('source' => $this->id));
             }
+            $cached_data['source'] = 'cache';
+            return $cached_data;
+        }
+
+        // Hardcoded API Key for debugging purposes
+        $alchemy_api_key = 'alcht_XfC06RTw4Rfydwbx6CnK9zazC2GEfS'; 
+
+        if (empty($alchemy_api_key)) { // This check will now likely always pass with a hardcoded key
+            if ($this->debug_mode === 'yes' && function_exists('wc_get_logger')) {
+                $logger = wc_get_logger();
+                // This error message might be misleading now, but kept for structure
+                $logger->error('Alchemy API key (hardcoded) appears empty - this should not happen.', array('source' => $this->id));
+            }
+            return ['error' => __('Alchemy API key configuration issue (hardcoded).', 'team556-pay')];
         }
 
         $team556_token_mint = 'AMNfeXpjD6kXyyTDB4LMKzNWypqNHwtgJUACHUmuKLD5';
-        $vs_token = 'USDC'; // Target currency for the price
-        $api_url = sprintf('https://price.jup.ag/v6/price?ids=%s&vsToken=%s', $team556_token_mint, $vs_token);
+        $network = 'solana-mainnet'; // Solana mainnet network identifier for Alchemy
+        
+        // Alchemy Prices API endpoint for token prices by address
+        $api_url = sprintf('https://api.g.alchemy.com/prices/v1/%s/tokens/by-address', $alchemy_api_key);
+
+        $request_body = [
+            'addresses' => [
+                [
+                    'network' => $network,
+                    'address' => $team556_token_mint
+                ]
+            ]
+        ];
 
         if ($this->debug_mode === 'yes') {
-            $this->log('Fetching TEAM556 price from Jupiter API: ' . $api_url);
+            $this->log('Fetching TEAM556 price from Alchemy API: ' . $api_url);
         }
 
-        $response = wp_remote_get($api_url, array('timeout' => 10)); // 10 second timeout for the request
+        $response = wp_remote_post($api_url, array(
+            'timeout' => 10,
+            'headers' => array(
+                'Content-Type' => 'application/json',
+            ),
+            'body' => json_encode($request_body)
+        ));
 
         if (is_wp_error($response)) {
             if ($this->debug_mode === 'yes') {
-                $this->log('Jupiter API request failed (wp_error): ' . $response->get_error_message());
+                $this->log('Alchemy API request failed (wp_error): ' . $response->get_error_message());
             }
             return ['error' => 'API request failed: ' . $response->get_error_message()];
         }
@@ -571,25 +598,36 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
 
         if ($status_code !== 200) {
             if ($this->debug_mode === 'yes') {
-                $this->log('Jupiter API request failed (status ' . $status_code . '): ' . $body);
+                $this->log('Alchemy API request failed (status ' . $status_code . '): ' . $body);
             }
             return ['error' => 'API request failed with status: ' . $status_code];
         }
 
         $data = json_decode($body, true);
 
-        if (empty($data['data'][$team556_token_mint]['price'])) {
+        // Alchemy response structure: {"data": [{"address": "...", "network": "...", "prices": [{"currency": "USD", "value": "0.123", "lastUpdatedAt": "..."}], "error": null}]}
+        if (empty($data['data']) || !isset($data['data'][0]['prices'][0]['value'])) {
             if ($this->debug_mode === 'yes') {
-                $this->log('Jupiter API response did not contain expected price data. Response: ' . $body);
+                $this->log('Alchemy API response did not contain expected price data. Response: ' . $body);
             }
             return ['error' => 'Invalid price data received from API.'];
         }
 
-        $price = floatval($data['data'][$team556_token_mint]['price']);
+        $price_data = $data['data'][0];
+        
+        // Check for API errors
+        if (!empty($price_data['error'])) {
+            if ($this->debug_mode === 'yes') {
+                $this->log('Alchemy API returned error: ' . $price_data['error']);
+            }
+            return ['error' => 'API returned error: ' . $price_data['error']];
+        }
+
+        $price = floatval($price_data['prices'][0]['value']);
 
         if ($price <= 0) {
             if ($this->debug_mode === 'yes') {
-                $this->log('Jupiter API returned a non-positive price: ' . $price . '. Response: ' . $body);
+                $this->log('Alchemy API returned a non-positive price: ' . $price . '. Response: ' . $body);
             }
             return ['error' => 'Invalid price value (non-positive) received from API.'];
         }
@@ -603,7 +641,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         set_transient($transient_key, $price_info, 10); // Cache for 10 seconds
 
         if ($this->debug_mode === 'yes') {
-            $this->log('Fetched TEAM556 price from API: ' . $price . ' - Cached for 10 seconds.');
+            $this->log('Fetched TEAM556 price from Alchemy API: ' . $price . ' - Cached for 10 seconds.');
         }
         return $price_info;
     }

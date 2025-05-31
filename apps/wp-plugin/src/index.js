@@ -35,10 +35,19 @@ const iconUrl = settings.icon || null; // Get the icon URL
  */
 const Content = () => {
     const [qrValue, setQrValue] = useState('');
+    const [pricingInfo, setPricingInfo] = useState({
+        tokenPrice: 0,
+        currency: '',
+        cartTotalFiat: 0,
+        requiredTokenAmount: 0,
+        loaded: false,
+        error: null
+    });
 
     // Fetch payment data when the component mounts
     useEffect(() => {
         setQrValue(''); // Clear previous QR value
+        setPricingInfo({ tokenPrice: 0, currency: '', cartTotalFiat: 0, requiredTokenAmount: 0, loaded: false, error: null }); // Clear previous pricing info
         const ajaxUrl = window.ajaxurl || '/wp-admin/admin-ajax.php'; // Fallback just in case
         const params = new URLSearchParams({
             action: 'team556_get_block_payment_data',
@@ -58,16 +67,40 @@ const Content = () => {
                 // or { success: false, data: ... } for errors handled by wp_send_json_error
                 if (body.success && body.data && body.data.paymentUrl) {
                     setQrValue(body.data.paymentUrl);
+                    setPricingInfo({
+                        tokenPrice: parseFloat(body.data.tokenPrice) || 0,
+                        currency: body.data.currency || '',
+                        cartTotalFiat: parseFloat(body.data.cartTotalFiat) || 0,
+                        requiredTokenAmount: parseFloat(body.data.requiredTokenAmount) || 0,
+                        loaded: true,
+                        error: (parseFloat(body.data.tokenPrice) || 0) <= 0 && !body.data.paymentUrl ? __('Could not load token price.', 'team556-pay') : null
+                    });
                     // console.log('Team556 Pay: Payment URL received:', body.data.paymentUrl);
                     // console.log('Team556 Pay: Payment reference:', body.data.reference);
+                    // console.log('Team556 Pay: Pricing info:', body.data);
                 } else {
+                    setPricingInfo({
+                        tokenPrice: 0,
+                        currency: '',
+                        cartTotalFiat: 0,
+                        requiredTokenAmount: 0,
+                        loaded: true,
+                        error: body.message || __('Error fetching payment details.', 'team556-pay')
+                    });
                     console.error('Team556 Pay: Invalid or unsuccessful response from payment data endpoint.', body);
                     // TODO: Display a user-friendly error message in the UI
                 }
             })
             .catch(error => {
                 console.error('Team556 Pay: Error fetching payment data:', error);
-                // TODO: Display a user-friendly error message in the UI
+                setPricingInfo({
+                    tokenPrice: 0,
+                    currency: '',
+                    cartTotalFiat: 0,
+                    requiredTokenAmount: 0,
+                    loaded: true,
+                    error: __('Network error or server unavailable while fetching payment details.', 'team556-pay')
+                });
             });
         // You might also start polling for payment status here, using the reference from the response.
     }, []); // Empty dependency array means this runs once on mount. Consider re-fetching if cart changes.
@@ -76,6 +109,31 @@ const Content = () => {
     return (
         <>
             { description && <p>{ description }</p> }
+
+            <div className="team556-pay-pricing-info" style={{ marginBottom: '20px', padding: '10px', border: '1px solid #e0e0e0', borderRadius: '4px', background: '#f9f9f9' }}>
+                { !pricingInfo.loaded && <p>{__('Loading payment details...', 'team556-pay')}</p> }
+                { pricingInfo.loaded && pricingInfo.error && 
+                    <p style={{ color: 'red' }}>
+                        <strong>{__('Error:', 'team556-pay')}</strong> {pricingInfo.error}
+                    </p> }
+                { pricingInfo.loaded && !pricingInfo.error && pricingInfo.tokenPrice > 0 && (
+                    <>
+                        <p style={{ margin: '5px 0', fontSize: '14px' }}>
+                            <strong>{__('Order Total:', 'team556-pay')}</strong> {pricingInfo.cartTotalFiat.toFixed(2)} {pricingInfo.currency}
+                        </p>
+                        <p style={{ margin: '5px 0', fontSize: '14px' }}>
+                            <strong>{__('Current Price:', 'team556-pay')}</strong> 1 TEAM556 ≈ {pricingInfo.tokenPrice.toFixed(6)} {pricingInfo.currency}
+                        </p>
+                        <p style={{ margin: '5px 0', fontSize: '16px' }}>
+                            <strong>{__('Amount Due:', 'team556-pay')}</strong> {pricingInfo.requiredTokenAmount.toFixed(6)} TEAM556
+                        </p>
+                    </>
+                )}
+                { pricingInfo.loaded && !pricingInfo.error && pricingInfo.tokenPrice <= 0 && qrValue && (
+                     <p style={{ margin: '5px 0', fontSize: '14px' }}>{__('Could not retrieve current token price. Please refer to your wallet for the exact token amount based on the QR code.', 'team556-pay')}</p>
+                )}
+            </div>
+
             <div className="team556-pay-payment-instructions" style={{ marginTop: '15px' }}>
                 <h4>Instructions:</h4>
                 <ol>

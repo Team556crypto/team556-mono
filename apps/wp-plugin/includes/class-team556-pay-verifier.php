@@ -289,7 +289,7 @@ class Team556_Solana_Pay_Verifier {
         $log_file = $log_dir . '/verifier-' . date('Y-m-d') . '.log';
         $timestamp = date('Y-m-d H:i:s');
         
-        error_log("[{$timestamp}] {$message}\n", 3, $log_file);
+
     }
     
     /**

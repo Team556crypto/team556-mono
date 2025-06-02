@@ -99,7 +99,23 @@ class Team556_Pay_Settings {
         $sanitized_input['debug_mode'] = isset($input['debug_mode']) ? 1 : 0;
         
         // Confirmation blocks
-        $sanitized_input['confirmation_blocks'] = absint($input['confirmation_blocks']);
+        $sanitized_input['confirmation_blocks'] = absint($input['confirmation_blocks'] ?? 1); // Ensure default if not set
+
+        // Enable Maximum Order Total Limit
+        $sanitized_input['enable_max_order_total'] = isset($input['enable_max_order_total']) ? 1 : 0;
+
+        // Maximum Order Total
+        if (isset($input['max_order_total'])) {
+            if ($input['max_order_total'] === '' || $input['max_order_total'] === null) {
+                $sanitized_input['max_order_total'] = ''; // Allow empty to disable
+            } else {
+                // Sanitize as a positive decimal number
+                $max_total = wc_format_decimal($input['max_order_total'], wc_get_price_decimals());
+                $sanitized_input['max_order_total'] = ($max_total >= 0) ? (string) $max_total : '';
+            }
+        } else {
+            $sanitized_input['max_order_total'] = ''; // Default to empty if not set
+        }
         
         return $sanitized_input;
     }
@@ -165,6 +181,20 @@ class Team556_Pay_Settings {
                                 <option value="testnet" <?php selected($options['solana_network'] ?? '', 'testnet'); ?>><?php _e('Testnet', 'team556-pay'); ?></option>
                             </select>
                             <p class="description"><?php _e('Select the Solana network to use for transactions.', 'team556-pay'); ?></p>
+                        </div>
+
+                        <div class="form-group form-group-checkbox">
+                            <label for="enable_max_order_total">
+                                <input type="checkbox" id="enable_max_order_total" name="team556_pay_settings[enable_max_order_total]" value="1" <?php checked($options['enable_max_order_total'] ?? 0, 1); ?>>
+                                <?php _e('Enable Maximum Order Total Limit', 'team556-pay'); ?>
+                            </label>
+                            <p class="description"><?php _e('If checked, Team556 Pay will be unavailable for orders exceeding the amount specified below.', 'team556-pay'); ?></p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="max_order_total"><?php _e('Maximum Order Total Amount', 'team556-pay'); ?></label>
+                            <input type="number" step="0.01" min="0" id="max_order_total" name="team556_pay_settings[max_order_total]" value="<?php echo esc_attr($options['max_order_total'] ?? ''); ?>" placeholder="<?php echo esc_attr(wc_format_localized_price(0)); ?>" class="regular-text">
+                            <p class="description"><?php _e('Enter the maximum order total. This is only active if the checkbox above is enabled.', 'team556-pay'); ?></p>
                         </div>
 
                         <hr>

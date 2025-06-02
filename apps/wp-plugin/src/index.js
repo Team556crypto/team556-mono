@@ -85,7 +85,7 @@ const Content = () => {
                         cartTotalFiat: 0,
                         requiredTokenAmount: 0,
                         loaded: true,
-                        error: body.message || __('Error fetching payment details.', 'team556-pay')
+                        error: (body.data && body.data.message) || body.message || __('Error fetching payment details.', 'team556-pay')
                     });
                     console.error('Team556 Pay: Invalid or unsuccessful response from payment data endpoint.', body);
                     // TODO: Display a user-friendly error message in the UI

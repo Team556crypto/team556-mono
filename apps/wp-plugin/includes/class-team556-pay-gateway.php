@@ -12,15 +12,11 @@ if (!defined('ABSPATH')) {
  * WooCommerce Solana Pay Payment Gateway
  */
 class Team556_Pay_Gateway extends WC_Payment_Gateway {
+    public $unavailability_reason = '';
     /**
      * Constructor
      */
     public function __construct() {
-        if (class_exists('WC_Logger')) {
-            $logger = wc_get_logger();
-            $logger->debug('Team556_Pay_Gateway __construct: Gateway class constructed.', array('source' => 'team556-pay'));
-        }
-
         $this->id                 = 'team556_pay';
         $this->icon               = TEAM556_PAY_PLUGIN_URL . 'assets/images/logo-round-dark.png';
         $this->has_fields         = true;
@@ -39,9 +35,6 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         $this->wallet_address     = $this->get_option('wallet_address');
         $this->debug_mode         = $this->get_option('debug_mode', 'no');
         $this->network            = $this->get_option('network', 'mainnet');
-
-        error_log('[Team556_Pay_Gateway __construct] Loaded title: ' . ($this->title ? $this->title : 'EMPTY_OR_NULL'));
-        error_log('[Team556_Pay_Gateway __construct] Loaded description: ' . ($this->description ? $this->description : 'EMPTY_OR_NULL'));
 
         // If no wallet address is set, use the global plugin setting
         if (empty($this->wallet_address)) {
@@ -98,26 +91,21 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
      * @return array
      */
     public function log_available_gateways($gateways) {
-        error_log('[Team556_Pay_Gateway] log_available_gateways filter CALLED. Reviewing gateways provided by WooCommerce.');
-        if (empty($gateways)) {
-            error_log('[Team556_Pay_Gateway] No gateways provided to log_available_gateways filter.');
-            return $gateways;
+            if (empty($gateways)) {
+                return $gateways;
         }
 
         $found_our_gateway = false;
         foreach ($gateways as $gateway_id => $gateway) {
             $is_enabled = (isset($gateway->enabled) && $gateway->enabled === 'yes') ? 'Yes' : 'No';
             $title = isset($gateway->title) ? $gateway->title : 'N/A';
-            error_log("[Team556_Pay_Gateway] Available Gateway: ID='{$gateway_id}', Title='{$title}', Enabled='{$is_enabled}'");
             if ($gateway_id === $this->id) {
                 $found_our_gateway = true;
-                error_log("[Team556_Pay_Gateway] *** Our gateway '{$this->id}' FOUND. Current instance enabled status: {$this->enabled}. Gateway object enabled status in list: {$is_enabled} ***");
-            }
+                }
         }
 
         if (!$found_our_gateway) {
-            error_log("[Team556_Pay_Gateway] *** Our gateway '{$this->id}' NOT FOUND in the available gateways list. ***");
-        }
+            }
         return $gateways; // Always return the gateways array
     }
 
@@ -126,9 +114,9 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
      */
     public function team556_test_footer_checkout_status() {
         if (function_exists('is_checkout') && is_checkout()) {
-            error_log('[Team556_Pay_Gateway wp_footer] is_checkout() is TRUE');
+
         } else {
-            error_log('[Team556_Pay_Gateway wp_footer] is_checkout() is FALSE. Page ID: ' . (get_the_ID() ? get_the_ID() : 'N/A') . ', WC Checkout Page ID: ' . (function_exists('wc_get_page_id') ? wc_get_page_id('checkout') : 'N/A'));
+
         }
     }
 
@@ -185,8 +173,8 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
                 'type' => 'checkbox',
                 'label' => __('Enable debug mode', 'team556-pay'),
                 'default' => 'no',
-                'description' => __('Enable debug mode to log payment process details.', 'team556-pay'),
-            ),
+                'description' => __('Enable debug mode to log payment process details.', 'team556-pay')
+            )
         );
     }
 
@@ -195,7 +183,6 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
      */
     public function payment_scripts() {
         if ('no' === $this->enabled) {
-            error_log('[Team556_Pay_Gateway] payment_scripts: Gateway not enabled. Exiting.');
             return;
         }
 
@@ -207,36 +194,21 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         $current_page_id = get_queried_object_id(); // More reliable inside wp_enqueue_scripts
         $is_checkout_page_by_id_match = ($checkout_page_id && $current_page_id && $current_page_id == $checkout_page_id);
 
-        error_log('[Team556_Pay_Gateway] payment_scripts called (priority 90). Enabled: ' . $this->enabled);
-        error_log('[Team556_Pay_Gateway] Current Page ID (get_queried_object_id): ' . $current_page_id);
-        error_log('[Team556_Pay_Gateway] Checkout Page ID (wc_get_page_id): ' . $checkout_page_id);
-        error_log('[Team556_Pay_Gateway] is_checkout_page_by_id_match (current_page_id == checkout_page_id): ' . ($is_checkout_page_by_id_match ? 'true' : 'false'));
-        error_log('[Team556_Pay_Gateway] is_checkout() (WC function): ' . ($is_checkout_wc ? 'true' : 'false'));
-        error_log('[Team556_Pay_Gateway] is_wc_endpoint_url(\'order-pay\'): ' . ($is_order_pay_page ? 'true' : 'false'));
-        error_log('[Team556_Pay_Gateway] is_add_payment_method_page(): ' . ($is_add_payment_method_page ? 'true' : 'false'));
-
         $should_enqueue = false;
 
         if ($is_checkout_page_by_id_match) {
             $should_enqueue = true;
-            error_log('[Team556_Pay_Gateway] Matched by current_page_id == checkout_page_id.');
         } elseif ($is_checkout_wc) { // Fallback to WC's is_checkout()
             $should_enqueue = true;
-            error_log('[Team556_Pay_Gateway] Matched by is_checkout() (WC function).');
         } elseif ($is_order_pay_page) {
             $should_enqueue = true;
-            error_log('[Team556_Pay_Gateway] Matched by is_order_pay_page.');
         } elseif ($is_add_payment_method_page) {
             $should_enqueue = true;
-            error_log('[Team556_Pay_Gateway] Matched by is_add_payment_method_page.');
         }
 
         if (!$should_enqueue) {
-            error_log('[Team556_Pay_Gateway] Exiting payment_scripts - not a relevant page.');
             return;
         }
-
-        error_log('[Team556_Pay_Gateway] Conditions met, proceeding to enqueue scripts.');
 
         wp_enqueue_script('team556-buffer');
         wp_enqueue_script('team556-solana-web3');
@@ -273,7 +245,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
             
             // Debug log
             if ($this->debug_mode === 'yes') {
-                $this->log("Received Solana transaction signature for order #$order_id: $signature");
+
             }
             
             // Store transaction signature in order meta
@@ -285,7 +257,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
                 $order->update_meta_data('_team556_pay_reference', $reference);
                 
                 if ($this->debug_mode === 'yes') {
-                    $this->log("Storing reference for order #$order_id: $reference");
+
                 }
             }
             
@@ -322,7 +294,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
             $order->save();
             
             if ($this->debug_mode === 'yes') {
-                $this->log("Storing initial reference for order #$order_id: $reference");
+
             }
         }
         
@@ -358,7 +330,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         
         // Debug log
         if ($this->debug_mode === 'yes') {
-            $this->log("Processing payment completion for order #$order_id with signature: $signature");
+
         }
         
         // Verify the transaction on the blockchain
@@ -375,7 +347,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         
         if (!$valid_signature) {
             if ($this->debug_mode === 'yes') {
-                $this->log("Invalid signature format: $signature");
+
             }
             wp_send_json_error(array('message' => __('Payment validation failed', 'team556-pay')));
             exit;
@@ -395,7 +367,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         $order->save();
         
         if ($this->debug_mode === 'yes') {
-            $this->log("Payment completed for order #$order_id");
+
         }
         
         // Clear session data
@@ -463,35 +435,75 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         exit;
     }
 
-    /**
-     * Payment fields
-     */
     public function payment_fields() {
-        error_log('[Team556_Pay_Gateway] SIMPLIFIED payment_fields() method CALLED.');
+        $this->log('[CRITICAL CHECK] Method entered.', 'payment_fields_entry');
 
+        // Display the description if it's set
         if ($this->description) {
-            echo '<p>' . esc_html($this->description) . '</p>';
+            echo '<p>' . wp_kses_post($this->description) . '</p>';
         }
 
-        // Output a simple comment and a div for easy checking
-        echo '<!-- Team556 Pay Gateway SIMPLIFIED payment_fields() executed -->';
-        echo '<div id="team556-simplified-payment-fields" style="padding:10px; border:1px solid green; margin:10px 0;">';
-        echo 'Team556 Pay - Simplified Payment Fields. If you see this, the method was called.';
-        echo '</div>';
+        // Check for maximum order total
+        $this->log('Checking max order total.', 'payment_fields_logic');
+        $team556_pay_options = get_option('team556_pay_settings');
+        $this->log('$team556_pay_options = ' . print_r($team556_pay_options, true), 'payment_fields_vars');
 
-        // You can add any specific data you want to pass to JavaScript here if needed for other tests
-        // For example, if you still need to test JS interactions related to the gateway being chosen:
-        /*
-        wp_enqueue_script('team556-pay'); // Ensure your main JS is loaded if it handles gateway selection
-        wp_localize_script('team556-pay', 'team556PayGatewayData', array(
-            'isSimplified' => true,
-            'gatewayId' => $this->id
-        ));
-        */
+        $enable_max_total_limit = isset($team556_pay_options['enable_max_order_total']) && $team556_pay_options['enable_max_order_total'] == 1;
+        $max_total_setting = isset($team556_pay_options['max_order_total']) ? $team556_pay_options['max_order_total'] : '';
+        $this->log('$enable_max_total_limit = ' . ($enable_max_total_limit ? 'true' : 'false'), 'payment_fields_vars');
+        $this->log('$max_total_setting = ' . $max_total_setting, 'payment_fields_vars');
 
-        error_log('[Team556_Pay_Gateway] SIMPLIFIED payment_fields() method FINISHED.');
+        if (WC()->cart && $enable_max_total_limit && $max_total_setting !== '' && is_numeric($max_total_setting) && (float)$max_total_setting > 0) {
+            $this->log('Max total check condition: TRUE.', 'payment_fields_logic');
+            $max_total_value = (float) $max_total_setting;
+            $current_cart_total = WC()->cart->get_total('edit');
+            $this->log('$max_total_value = ' . $max_total_value, 'payment_fields_vars');
+            $this->log('$current_cart_total = ' . $current_cart_total, 'payment_fields_vars');
+
+            if ($current_cart_total > $max_total_value) {
+                $this->log('Cart total EXCEEDS max. Displaying error.', 'payment_fields_logic');
+                $message = sprintf(
+                    // translators: %1$s is the current cart total, %2$s is the maximum allowed total.
+                    __('Team556 Pay is currently unavailable because your order total of %1$s exceeds the merchant limit of %2$s for this payment method. Please adjust your cart or choose a different payment option.', 'team556-pay'),
+                    wc_price($current_cart_total),
+                    wc_price($max_total_value)
+                );
+                echo '<div class="woocommerce-error" role="alert">' . esc_html($message) . '</div>';
+                if ('yes' === $this->debug_mode) {
+                    $this->log('payment_fields: Displaying max order total exceeded message. Cart: ' . wc_price($current_cart_total) . ', Max: ' . wc_price($max_total_value));
+                }
+                return; // Do not display the payment interface
+            } else {
+                $this->log('Cart total OK. Proceeding.', 'payment_fields_logic');
+            }
+        } else {
+            $this->log('Max total check condition: FALSE. Skipping.', 'payment_fields_logic');
+        }
+
+        // Check if there's an unavailability reason (for other critical issues from is_available())
+        if (!empty($this->unavailability_reason)) {
+            // Display the reason and do not show the payment interface
+            echo '<div class="woocommerce-error" role="alert">' . esc_html($this->unavailability_reason) . '</div>';
+        } else {
+            // No unavailability reason, display the payment interface
+            echo '<div id="team556-payment-react-app">';
+            // The React app will be mounted here by JavaScript
+            // You can add a loading message or placeholder if desired
+            echo '<p>' . esc_html__('Loading payment options...', 'team556-pay') . '</p>';
+            echo '</div>';
+
+            // Enqueue scripts and localize data needed for the React app
+            wp_enqueue_script('team556-pay'); // Corrected handle
+            wp_localize_script('team556-pay', 'team556PayGatewayData', array( // Corrected handle
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce'    => wp_create_nonce('team556_pay_get_payment_data_nonce'),
+                'debug_mode' => $this->debug_mode === 'yes',
+                // Add any other data your React app needs from the gateway
+            ));
+        }
+
     }
-    
+
     /**
      * Create Solana Pay URL
      */
@@ -523,8 +535,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         
         // Log the URL if debug mode is enabled
         if ($this->debug_mode === 'yes') {
-            $this->log('Generated Solana Pay URL: ' . $solana_pay_url);
-        }
+            }
         
         return $solana_pay_url;
     }
@@ -541,7 +552,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         if (false !== $cached_data && isset($cached_data['price'])) {
             if ($this->debug_mode === 'yes' && function_exists('wc_get_logger')) {
                 $logger = wc_get_logger();
-                $logger->debug('Price data retrieved from cache.', array('source' => $this->id));
+
             }
             $cached_data['source'] = 'cache';
             return $cached_data;
@@ -554,7 +565,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
             if ($this->debug_mode === 'yes' && function_exists('wc_get_logger')) {
                 $logger = wc_get_logger();
                 // This error message might be misleading now, but kept for structure
-                $logger->error('Alchemy API key (hardcoded) appears empty - this should not happen.', array('source' => $this->id));
+
             }
             return ['error' => __('Alchemy API key configuration issue (hardcoded).', 'team556-pay')];
         }
@@ -575,7 +586,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         ];
 
         if ($this->debug_mode === 'yes') {
-            $this->log('Fetching TEAM556 price from Alchemy API: ' . $api_url);
+
         }
 
         $response = wp_remote_post($api_url, array(
@@ -588,7 +599,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
 
         if (is_wp_error($response)) {
             if ($this->debug_mode === 'yes') {
-                $this->log('Alchemy API request failed (wp_error): ' . $response->get_error_message());
+
             }
             return ['error' => 'API request failed: ' . $response->get_error_message()];
         }
@@ -598,7 +609,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
 
         if ($status_code !== 200) {
             if ($this->debug_mode === 'yes') {
-                $this->log('Alchemy API request failed (status ' . $status_code . '): ' . $body);
+
             }
             return ['error' => 'API request failed with status: ' . $status_code];
         }
@@ -608,7 +619,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         // Alchemy response structure: {"data": [{"address": "...", "network": "...", "prices": [{"currency": "USD", "value": "0.123", "lastUpdatedAt": "..."}], "error": null}]}
         if (empty($data['data']) || !isset($data['data'][0]['prices'][0]['value'])) {
             if ($this->debug_mode === 'yes') {
-                $this->log('Alchemy API response did not contain expected price data. Response: ' . $body);
+
             }
             return ['error' => 'Invalid price data received from API.'];
         }
@@ -618,7 +629,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         // Check for API errors
         if (!empty($price_data['error'])) {
             if ($this->debug_mode === 'yes') {
-                $this->log('Alchemy API returned error: ' . $price_data['error']);
+
             }
             return ['error' => 'API returned error: ' . $price_data['error']];
         }
@@ -627,7 +638,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
 
         if ($price <= 0) {
             if ($this->debug_mode === 'yes') {
-                $this->log('Alchemy API returned a non-positive price: ' . $price . '. Response: ' . $body);
+
             }
             return ['error' => 'Invalid price value (non-positive) received from API.'];
         }
@@ -641,7 +652,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         set_transient($transient_key, $price_info, 10); // Cache for 10 seconds
 
         if ($this->debug_mode === 'yes') {
-            $this->log('Fetched TEAM556 price from Alchemy API: ' . $price . ' - Cached for 10 seconds.');
+
         }
         return $price_info;
     }
@@ -649,19 +660,19 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
     /**
      * Log debug messages
      */
-    private function log($message) {
-        if ($this->debug_mode !== 'yes') {
+    private function log($message, $source = null) {
+        if ('yes' !== $this->debug_mode) {
             return;
         }
-        
-        if (!is_dir(WP_CONTENT_DIR . '/uploads/team556-pay-logs')) {
-            @mkdir(WP_CONTENT_DIR . '/uploads/team556-pay-logs', 0755, true);
-        }
-        
-        $log_file = WP_CONTENT_DIR . '/uploads/team556-pay-logs/debug-' . date('Y-m-d') . '.log';
-        $timestamp = date('Y-m-d H:i:s');
-        
-        error_log("[{$timestamp}] {$message}\n", 3, $log_file);
+
+        $logger = wc_get_logger();
+        $context = array('source' => $source ? $source : $this->id );
+
+        // To make the log message more informative, let's add a prefix.
+        // If you want to keep it exactly as before, you can remove this line.
+        $message_to_log = '[Team556_Pay_Gateway] ' . $message;
+
+        $logger->debug($message_to_log, $context);
     }
 
     /**
@@ -671,57 +682,74 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
      * @return bool
      */
     public function is_available() {
-    error_log('[Team556_Pay_Gateway] IS_AVAILABLE_CALLED - TOP'); // Direct error_log
-        $logger = null;
-        if (class_exists('WC_Logger')) {
-            $logger = wc_get_logger();
-            $source = array('source' => $this->id); // Use $this->id for source
-            $logger->debug('Team556_Pay_Gateway is_available: ----- Start Check -----', $source);
-        }
-
-        // Log basic properties
-        if ($logger) $logger->debug('is_available: this->id = ' . $this->id, $source);
-        if ($logger) $logger->debug('is_available: this->enabled = ' . var_export($this->enabled, true), $source);
-    error_log('[Team556_Pay_Gateway] IS_AVAILABLE_ENABLED_STATUS: ' . var_export($this->enabled, true)); // Direct error_log
-        
         // Check wallet_address specifically, considering global settings as per constructor logic
         $effective_wallet_address = $this->get_option('wallet_address');
         if (empty($effective_wallet_address)) {
             $global_settings = get_option('team556_pay_settings'); // This is the option name for global settings
             if (!empty($global_settings) && isset($global_settings['merchant_wallet_address'])) {
                 $effective_wallet_address = $global_settings['merchant_wallet_address'];
-                if ($logger) $logger->debug('is_available: Using global merchant_wallet_address.', $source);
             }
         }
-        if ($logger) $logger->debug('is_available: Effective wallet_address = ' . (empty($effective_wallet_address) ? 'EMPTY' : 'SET'), $source);
-    error_log('[Team556_Pay_Gateway] IS_AVAILABLE_WALLET_ADDRESS: ' . (empty($effective_wallet_address) ? 'EMPTY' : 'SET')); // Direct error_log
-        if (empty($effective_wallet_address) && $this->enabled === 'yes' && $logger) {
-             $logger->warning('is_available: Wallet address is EMPTY. This will likely cause the gateway to be unavailable if enabled.', $source);
+
+        // Call parent::is_available() to get its decision
+        $parent_is_available = parent::is_available();
+        $this->log('Parent is_available() result: ' . ($parent_is_available ? 'TRUE' : 'FALSE'), 'is_available_path');
+
+        if (!$parent_is_available) {
+            // If parent says no (e.g., gateway disabled, currency mismatch), then it's definitively unavailable.
+            $this->log('Path: Returning FALSE (due to parent).', 'is_available_path');
+            return false;
         }
 
-    // Call parent::is_available() to get its decision
-    // parent::is_available() checks $this->enabled, min_amount, etc.
-    $parent_is_available = parent::is_available();
-    if ($logger) $logger->debug('is_available: parent::is_available() returned = ' . ($parent_is_available ? 'true' : 'false'), $source);
-    error_log('[Team556_Pay_Gateway] IS_AVAILABLE_PARENT_RETURNED: ' . ($parent_is_available ? 'true' : 'false')); // Direct error_log
-    
-    // Our plugin's specific condition: must have a wallet address if the parent considers it available.
-    // However, the original logic simply returned parent_is_available. We'll stick to that for now
-    // and rely on the warning log for the empty wallet address.
-    $final_availability = $parent_is_available;
-    // Example of how to make wallet address mandatory if parent is okay:
-    // if ($final_availability && empty($effective_wallet_address)) {
-    //     $final_availability = false;
-    //     if ($logger) $logger->debug('is_available: Overriding to false due to EMPTY wallet_address.', $source);
-    //     error_log('[Team556_Pay_Gateway] IS_AVAILABLE_OVERRIDE_EMPTY_WALLET: false');
-    // }
+        // If parent is available, we proceed with our checks.
+        $team556_pay_options = get_option('team556_pay_settings');
 
-    if ($logger) $logger->debug('is_available: ----- Final Decision = ' . ($final_availability ? 'true' : 'false') . ' -----', $source);
-    error_log('[Team556_Pay_Gateway] IS_AVAILABLE_HAS_FIELDS_CHECK: ' . ($this->has_fields ? 'true' : 'false'));
-    error_log('[Team556_Pay_Gateway] IS_AVAILABLE_FINAL_DECISION: ' . ($final_availability ? 'true' : 'false')); // Direct error_log
-    return $final_availability;
+        // Check for required settings: wallet address from custom settings and token mint from constant
+        $wallet_address_from_custom_settings = isset($team556_pay_options['merchant_wallet_address']) ? $team556_pay_options['merchant_wallet_address'] : '';
+        $token_mint_constant = defined('TEAM556_PAY_TEAM556_TOKEN_MINT') ? TEAM556_PAY_TEAM556_TOKEN_MINT : '';
+
+        if (empty($this->unavailability_reason) && (empty($wallet_address_from_custom_settings) || empty($token_mint_constant))) {
+            $this->unavailability_reason = __('Team556 Pay is currently unavailable due to a configuration issue. Please contact support.', 'team556-pay');
+        }
+
+        // Check if cart total is zero or negative
+        if (WC()->cart) {
+            $this->log('Cart total for zero/negative check: ' . wc_price(WC()->cart->get_total('edit')) . ' (Raw: ' . WC()->cart->get_total('edit') . ')', 'is_available_cart_total');
+        } else {
+            $this->log('WC()->cart is not available for zero/negative check.', 'is_available_cart_total');
+        }
+        if (empty($this->unavailability_reason) && WC()->cart && WC()->cart->get_total('edit') <= 0) {
+            $this->unavailability_reason = __('Team556 Pay cannot be used for orders with a zero or negative total.', 'team556-pay');
+        }
+
+        // Check for maximum order total
+        $enable_max_total_limit = isset($team556_pay_options['enable_max_order_total']) && $team556_pay_options['enable_max_order_total'] == 1;
+        $max_total_setting = isset($team556_pay_options['max_order_total']) ? $team556_pay_options['max_order_total'] : '';
+
+        if (empty($this->unavailability_reason) && WC()->cart && $enable_max_total_limit && $max_total_setting !== '' && is_numeric($max_total_setting) && (float)$max_total_setting > 0) {
+            $max_total_value = (float) $max_total_setting;
+            $current_cart_total = WC()->cart->get_total('edit');
+            if ($current_cart_total > $max_total_value) {
+                $this->log('CHECKOUT_LIMIT_EXCEEDED: Cart total ' . wc_price($current_cart_total) . ' exceeds maximum ' . wc_price($max_total_value) . '. This will be handled in payment_fields().', 'team556_pay_checkout_limit');
+                // Unavailability reason for max total is now handled in payment_fields()
+                // to allow the gateway to be listed and show the message upon selection.
+                // DO NOT set $this->unavailability_reason here for this specific case.
+            }
+        }
+
+        // Log the final unavailability reason if one was set during the checks
+        // And determine final availability
+        if (!empty($this->unavailability_reason)) {
+            if ('yes' === $this->debug_mode) {
+                $this->log('is_available: Gateway is unavailable. Reason: ' . esc_html($this->unavailability_reason), 'is_available_path');
+            }
+            $this->log('Path: Returning FALSE (due to custom reason: ' . esc_html($this->unavailability_reason) . ').', 'is_available_path');
+            return false; // If a reason was set by our custom checks, it's unavailable.
+        }
+        
+        $this->log('Path: Returning TRUE.', 'is_available_path');
+        return true; // Otherwise, if parent was available and no custom reasons were set, it's available.
     }
-
     /**
      * Add CSS to ensure payment method is visible on all themes
      */

@@ -34,12 +34,12 @@ require_once TEAM556_PAY_PLUGIN_DIR . 'includes/class-team556-pay-gateway-blocks
 // Temporary debugging function
 if (!function_exists('team556_debug_payment_gateways')) {
     function team556_debug_payment_gateways($gateways) {
-        error_log('Available gateways: ' . print_r(array_map(function($gw) { return is_object($gw) ? get_class($gw) : $gw; }, $gateways), true));
+
         foreach ($gateways as $gateway) {
             if (is_string($gateway) && $gateway === 'Team556_Pay_Gateway') {
-                error_log('Team556_Pay_Gateway string found in gateways list.');
+
             } elseif (is_object($gateway) && get_class($gateway) === 'Team556_Pay_Gateway') {
-                error_log('Team556_Pay_Gateway object found. Enabled: ' . $gateway->enabled . ', Wallet: ' . $gateway->wallet_address);
+
             }
         }
         return $gateways;
@@ -88,7 +88,7 @@ function team556_handle_get_block_payment_data_request() {
     // Log 1: Handler called
     if (function_exists('wc_get_logger')) {
         $logger = wc_get_logger();
-        $logger->debug('AJAX: Handler CALLED.', array('source' => $log_source));
+
     }
 
     // Check for Gateway Class File
@@ -96,7 +96,7 @@ function team556_handle_get_block_payment_data_request() {
     if (!file_exists($class_file)) {
         if (function_exists('wc_get_logger')) {
             $logger = wc_get_logger();
-            $logger->error('AJAX: Gateway class file NOT FOUND: ' . esc_html($class_file), array('source' => $log_source));
+
         }
         wp_send_json_error(['message' => 'Payment gateway error (file missing).', 'tokenPrice' => null, 'requiredTokenAmount' => null]);
         return;
@@ -107,7 +107,7 @@ function team556_handle_get_block_payment_data_request() {
     if (!class_exists('Team556_Pay_Gateway')) {
         if (function_exists('wc_get_logger')) {
             $logger = wc_get_logger();
-            $logger->error('AJAX: Team556_Pay_Gateway class NOT DEFINED after require_once.', array('source' => $log_source));
+
         }
         wp_send_json_error(['message' => 'Payment gateway error (class not defined).', 'tokenPrice' => null, 'requiredTokenAmount' => null]);
         return;
@@ -117,7 +117,7 @@ function team556_handle_get_block_payment_data_request() {
     if (!class_exists('WooCommerce') || !WC()->cart) {
         if (function_exists('wc_get_logger')) {
             $logger = wc_get_logger();
-            $logger->error('AJAX: WooCommerce or WC()->cart not available. TERMINATING.', array('source' => $log_source));
+
         }
         wp_send_json_error(['message' => 'WooCommerce cart not available.', 'tokenPrice' => null, 'requiredTokenAmount' => null]);
         return;
@@ -129,7 +129,7 @@ function team556_handle_get_block_payment_data_request() {
     if (!is_object($gateway)) {
         if (function_exists('wc_get_logger')) {
             $logger = wc_get_logger();
-            $logger->error('AJAX: Team556_Pay_Gateway instantiation FAILED. $gateway type: ' . gettype($gateway), array('source' => $log_source));
+
         }
         wp_send_json_error(['message' => 'Payment gateway error (instantiation failed).', 'tokenPrice' => null, 'requiredTokenAmount' => null]);
         return; 
@@ -137,7 +137,7 @@ function team556_handle_get_block_payment_data_request() {
 
     if (function_exists('wc_get_logger')) {
         $logger = wc_get_logger();
-        $logger->debug('AJAX: Team556_Pay_Gateway INSTANTIATED successfully.', array('source' => $log_source));
+
     }
     
     // Log 3: Determine debug_mode status safely
@@ -157,7 +157,7 @@ function team556_handle_get_block_payment_data_request() {
 
     if (function_exists('wc_get_logger')) {
         $logger = wc_get_logger();
-        $logger->debug('AJAX: Effective debug_mode for AJAX handler: ' . var_export($debug_mode_value, true) . ' (Parsed as: ' . ($current_debug_setting ? 'true' : 'false') . ')', array('source' => $log_source));
+
     }
 
     // Fetch price data
@@ -171,11 +171,44 @@ function team556_handle_get_block_payment_data_request() {
     $required_token_amount = null;
     $error_message = null;
 
+    // Check maximum order total limit before processing payment
+    $team556_pay_options = get_option('team556_pay_settings');
+    $enable_max_total_limit = isset($team556_pay_options['enable_max_order_total']) && $team556_pay_options['enable_max_order_total'] == 1;
+    $max_total_setting = isset($team556_pay_options['max_order_total']) ? $team556_pay_options['max_order_total'] : '';
+
+    if ($enable_max_total_limit && $max_total_setting !== '' && is_numeric($max_total_setting) && (float)$max_total_setting > 0) {
+        $max_total_value = (float) $max_total_setting;
+        if ($cart_total > $max_total_value) {
+            $formatted_cart_total = number_format($cart_total, 2);
+            $formatted_max_total = number_format($max_total_value, 2);
+            $error_message = sprintf(
+                __('Your order total %s exceeds the maximum allowed for Team556 Pay (%s). Please choose a different payment method or reduce your order total.', 'team556-pay'),
+                $formatted_cart_total . ' ' . $currency,
+                $formatted_max_total . ' ' . $currency
+            );
+            
+            if ($current_debug_setting && function_exists('wc_get_logger')) {
+                $logger = wc_get_logger();
+                $logger->info('BLOCK_CHECKOUT_LIMIT_EXCEEDED: Cart total ' . $formatted_cart_total . ' ' . $currency . ' exceeds maximum ' . $formatted_max_total . ' ' . $currency, array('source' => $log_source));
+            }
+            
+            // Return error to prevent payment URL generation
+            wp_send_json_error([
+                'message' => $error_message,
+                'tokenPrice' => null, 
+                'requiredTokenAmount' => null,
+                'cartTotalFiat' => $cart_total,
+                'currency' => $currency
+            ]);
+            return;
+        }
+    }
+
     if (isset($price_data['error'])) {
         $error_message = $price_data['error'];
         if ($current_debug_setting && function_exists('wc_get_logger')) {
             $logger = wc_get_logger();
-            $logger->error('AJAX: Error from fetch_team556_price_data: ' . esc_html($error_message), array('source' => $log_source));
+
         }
     } elseif (isset($price_data['price'])) {
         $token_price = (float) $price_data['price'];
@@ -186,14 +219,14 @@ function team556_handle_get_block_payment_data_request() {
             $error_message = 'Token price is zero or invalid.';
             if ($current_debug_setting && function_exists('wc_get_logger')) {
                 $logger = wc_get_logger();
-                $logger->error('AJAX: Token price is zero or invalid. Price received: ' . esc_html($token_price), array('source' => $log_source));
+
             }
         }
     } else {
         $error_message = 'Could not retrieve current token price (unknown reason).';
         if ($current_debug_setting && function_exists('wc_get_logger')) {
             $logger = wc_get_logger();
-            $logger->error('AJAX: Unknown error fetching price data. Raw data: ' . esc_html(json_encode($price_data)), array('source' => $log_source));
+
         }
     }
 
@@ -296,7 +329,7 @@ function team556_handle_create_payment_request() {
     
     if ($main_api_url === 'YOUR_MAIN_API_ENDPOINT_URL') {
          if ($debug_mode) {
-            error_log('[Team556 Pay] Debug: Main API URL is not defined. Using placeholder logic.');
+
             // Fallback to placeholder for debugging if URL not set
             wp_send_json_success(array(
                 'message' => 'Payment request initiated (Debug - Placeholder URL).',
@@ -304,7 +337,7 @@ function team556_handle_create_payment_request() {
                 'solana_pay_url' => 'solana:https://placeholder.solanapay.com/api/pay?reference=' . $reference . '&amount=' . $amount
             ));
          } else {
-            error_log('[Team556 Pay] Error: Main API payment endpoint URL is not configured.');
+
             wp_send_json_error(array('message' => __('Payment processing service is not configured.', 'team556-pay')), 503); // Service Unavailable
          }
          return;
@@ -324,7 +357,7 @@ function team556_handle_create_payment_request() {
     
     if (is_wp_error($response)) {
         $error_message = $response->get_error_message();
-        error_log('[Team556 Pay] Error calling main API: ' . $error_message);
+
         wp_send_json_error(array(
             'message' => __('Failed to communicate with the payment service.', 'team556-pay'), 
             'details' => $debug_mode ? $error_message : null // Only show details in debug mode
@@ -338,7 +371,7 @@ function team556_handle_create_payment_request() {
     
     if ($http_code >= 400 || !$data || !isset($data['solana_pay_url'])) {
         $error_detail = $debug_mode && $data ? json_encode($data) : ($http_code >= 400 ? "Service responded with status {$http_code}" : 'Invalid response format from service.');
-        error_log("[Team556 Solana Pay] Error response from main API (HTTP {$http_code}): " . $body);
+
         wp_send_json_error(array(
             'message' => __('Failed to create the payment request.', 'team556-pay'), 
             'details' => $error_detail
@@ -360,25 +393,25 @@ function team556_handle_create_payment_request() {
  * @param Automattic\WooCommerce\Blocks\Payments\PaymentMethodRegistry $payment_method_registry The payment method registry.
  */
 function team556_pay_register_block_support( $payment_method_registry ) {
-    error_log('[Team556 Pay] Attempting to register block support...');
+
     if ( ! class_exists( 'Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType' ) ) {
-        error_log('[Team556 Pay] AbstractPaymentMethodType class NOT FOUND.');
+
         return;
     }
 
     // Register the payment method type.
     // The class Team556_Pay_Gateway_Blocks_Integration is loaded via the include above.
-    error_log('[Team556 Pay] AbstractPaymentMethodType class FOUND.');
+
     if ( ! class_exists( 'Team556_Pay_Gateway_Blocks_Integration' ) ) {
-        error_log('[Team556 Pay] Team556_Pay_Gateway_Blocks_Integration class NOT FOUND before registration.');
+
         return;
     }
-    error_log('[Team556 Pay] Team556_Pay_Gateway_Blocks_Integration class FOUND. Attempting to register.');
+
     try {
         $payment_method_registry->register( new Team556_Pay_Gateway_Blocks_Integration() );
-        error_log('[Team556 Pay] Successfully called payment_method_registry->register().');
+
     } catch (Exception $e) {
-        error_log('[Team556 Pay] ERROR during registration: ' . $e->getMessage());
+
     }
 }
 add_action( 'woocommerce_blocks_payment_method_type_registration', 'team556_pay_register_block_support' );

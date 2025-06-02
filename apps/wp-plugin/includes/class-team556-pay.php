@@ -50,7 +50,7 @@ class Team556_Pay {
      * Register scripts
      */
     public function register_scripts() {
-        error_log('[Team556_Pay] register_scripts called.');
+
         // Register Solana Pay scripts
         wp_register_script(
             'team556-solana-web3',
@@ -134,35 +134,35 @@ class Team556_Pay {
 	    $is_checkout_page_by_id = ($checkout_page_id && $current_page_id && $current_page_id == $checkout_page_id);
 	    // $is_checkout_page_by_is_page = function_exists('wc_get_page_id') && is_page(wc_get_page_id('checkout')); // Alternative, often less reliable during AJAX
 
-	    error_log('[Team556_Pay] enqueue_frontend_scripts called. Priority 90.');
-	    error_log('[Team556_Pay] Current Page ID (get_queried_object_id): ' . $current_page_id);
-	    error_log('[Team556_Pay] Checkout Page ID (wc_get_page_id): ' . $checkout_page_id);
-	    error_log('[Team556_Pay] is_checkout_page_by_id (current_page_id == checkout_page_id): ' . ($is_checkout_page_by_id ? 'true' : 'false'));
-	    error_log('[Team556_Pay] is_checkout(): ' . ($is_checkout ? 'true' : 'false'));
-	    error_log('[Team556_Pay] is_wc_endpoint_url(\'order-pay\'): ' . ($is_order_pay_page ? 'true' : 'false'));
-	    error_log('[Team556_Pay] is_team556_pay_shortcode_present(): ' . ($is_shortcode_present ? 'true' : 'false'));
-	    error_log('[Team556_Pay] is_cart(): ' . ($is_cart ? 'true' : 'false'));
-	    // error_log('[Team556_Pay] is_page(wc_get_page_id(\'checkout\')) (is_page_check): ' . (function_exists('wc_get_page_id') && is_page(wc_get_page_id('checkout')) ? 'true' : 'false'));
+
+
+
+
+
+
+
+
+
 
 	    $should_enqueue = false;
 
 	    if ($is_checkout_page_by_id) {
 	        $should_enqueue = true;
-	        error_log('[Team556_Pay] Matched by current_page_id == checkout_page_id.');
+
 	    } elseif ($is_shortcode_present) {
 	        $should_enqueue = true;
-	        error_log('[Team556_Pay] Matched by shortcode_present.');
+
 	    } elseif ($is_checkout) { // Fallback to is_checkout
 	        $should_enqueue = true;
-	        error_log('[Team556_Pay] Matched by is_checkout (fallback).');
+
 	    } elseif ($is_order_pay_page) { // Fallback to order-pay page
 	        $should_enqueue = true;
-	        error_log('[Team556_Pay] Matched by is_order_pay_page (fallback).');
+
 	    }
 	    // Not including $is_cart as it's usually too broad for payment gateway specific scripts.
 
 	    if ($should_enqueue) {
-	        error_log('[Team556_Pay] Conditions met, enqueuing scripts in enqueue_frontend_scripts...');
+
 	        wp_enqueue_script('team556-buffer');
 	        wp_enqueue_script('team556-solana-web3');
 	        wp_enqueue_script('team556-qrcode'); // Added qrcode
@@ -187,7 +187,7 @@ class Team556_Pay {
 	        ));
 	        
 	    } else {
-	        error_log('[Team556_Pay] Exiting enqueue_frontend_scripts - no relevant page or shortcode identified.');
+
 	    }
 	}
 

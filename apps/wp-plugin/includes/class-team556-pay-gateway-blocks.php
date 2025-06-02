@@ -31,7 +31,7 @@ final class Team556_Pay_Gateway_Blocks_Integration extends AbstractPaymentMethod
      * We need to pass the gateway instance to this class.
      */
     public function __construct() {
-        error_log('[Team556 Pay Blocks] Constructor called for integration class.');
+
         // Gateway instance will be fetched by get_gateway_instance() when needed.
     }
 
@@ -55,13 +55,13 @@ final class Team556_Pay_Gateway_Blocks_Integration extends AbstractPaymentMethod
      */
     protected function get_gateway_instance() {
         if ( ! isset( $this->gateway ) ) {
-            error_log('[Team556 Pay Blocks] get_gateway_instance: Gateway instance not set. Attempting to fetch.');
+
             $all_gateways = WC()->payment_gateways()->payment_gateways();
             if ( isset( $all_gateways[$this->name] ) ) {
                 $this->gateway = $all_gateways[$this->name];
-                error_log('[Team556 Pay Blocks] get_gateway_instance: Gateway instance for ' . $this->name . ' fetched and set.');
+
             } else {
-                error_log('[Team556 Pay Blocks] get_gateway_instance: Could not fetch gateway ' . $this->name . ' from WC()->payment_gateways(). Available: ' . implode(', ', array_keys($all_gateways)));
+
                 return false;
             }
         }
@@ -69,11 +69,11 @@ final class Team556_Pay_Gateway_Blocks_Integration extends AbstractPaymentMethod
     }
 
     public function is_active() {
-        error_log('[Team556 Pay Blocks] is_active() CALLED.');
+
         $gateway = $this->get_gateway_instance();
 
         if ( ! $gateway ) {
-            error_log('[Team556 Pay Blocks] is_active: Gateway instance NOT found. Returning false.');
+
             return false;
         }
 
@@ -82,13 +82,13 @@ final class Team556_Pay_Gateway_Blocks_Integration extends AbstractPaymentMethod
         // consider the payment method active if the gateway itself is enabled in settings.
         if ( is_admin() ) {
             $enabled = isset( $gateway->enabled ) && 'yes' === $gateway->enabled;
-            error_log('[Team556 Pay Blocks] is_active: Admin context detected. Gateway enabled flag is ' . ( $enabled ? 'yes' : 'no' ) . '.');
+
             return $enabled;
         }
 
         // Front-end (actual checkout) – use the classic availability logic.
         $is_gateway_available = $gateway->is_available();
-        error_log('[Team556 Pay Blocks] is_active: Frontend context. Main gateway is_available() returned: ' . ( $is_gateway_available ? 'true' : 'false' ) );
+
 
         return $is_gateway_available;
     }
@@ -142,7 +142,7 @@ final class Team556_Pay_Gateway_Blocks_Integration extends AbstractPaymentMethod
      */
     public function get_payment_method_script_handles_for_admin() {
         // Re-use the same script handles for the block editor context.
-        error_log('[Team556 Pay Blocks] get_payment_method_script_handles_for_admin called.');
+
         return $this->get_payment_method_script_handles();
     }
 
@@ -155,7 +155,7 @@ final class Team556_Pay_Gateway_Blocks_Integration extends AbstractPaymentMethod
         $this->get_gateway_instance(); // Ensure $this->gateway is populated
 
         if ( ! $this->gateway ) {
-            error_log('[Team556 Pay Blocks] get_payment_method_data: Gateway instance is NOT available after explicit fetch. Returning error data.');
+
             // Return minimal data to prevent JS errors, but indicate a problem
             return array(
                 'title'       => __( 'Team556 Pay (Error)', 'team556-pay' ),
@@ -165,8 +165,8 @@ final class Team556_Pay_Gateway_Blocks_Integration extends AbstractPaymentMethod
             );
         }
 
-        error_log('[Team556 Pay Blocks] get_payment_method_data: Gateway instance IS available. Title: ' . $this->gateway->get_title());
-        error_log('[Team556 Pay Blocks] get_payment_method_data: Original supports from gateway: ' . print_r($this->gateway->supports, true));
+
+
 
         return array(
             'title'       => $this->gateway->get_title(),
@@ -186,17 +186,17 @@ final class Team556_Pay_Gateway_Blocks_Integration extends AbstractPaymentMethod
      * @return array
      */
     public function filter_gateway_supports( $support ) {
-        error_log('[Team556 Pay Blocks] filter_gateway_supports called with original supports: ' . print_r( $support, true ) );
+
         // Ensure 'products' is supported if the original supports array is empty or doesn't include it.
         // WooCommerce Blocks generally expects payment methods to support 'products'.
         if ( empty( $support ) || !is_array( $support ) ) {
             $support = ['products'];
-            error_log('[Team556 Pay Blocks] filter_gateway_supports: Original supports empty or not an array, defaulting to ["products"].');
+
         } elseif ( !in_array( 'products', $support ) ) {
             $support[] = 'products';
-            error_log('[Team556 Pay Blocks] filter_gateway_supports: Added "products" to supports.');
+
         }
-        error_log('[Team556 Pay Blocks] filter_gateway_supports: Returning supports: ' . print_r( $support, true ) );
+
         return $support;
     }
 }

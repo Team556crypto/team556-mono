@@ -40,36 +40,54 @@ export default function PayScreen() {
   }, [permission, requestPermission]);
 
   const handleBarCodeScanned = ({ type, data }: BarcodeScanningResult) => { 
-    setScanned(true); 
-    console.log(`Processing URL: ${data} (Type: ${type})`);
+  setScanned(true); 
+  console.log(`Processing URL: ${data} (Type: ${type})`);
 
-    if (!data || !data.startsWith('solana:')) {
-        Alert.alert('Invalid QR Code', 'This does not look like a Team556 Pay QR Code.');
-        return;
+  if (!data || !data.startsWith('solana:')) {
+      Alert.alert('Invalid QR Code', 'This does not look like a Team556 Pay QR Code.');
+      return;
+  }
+
+  // Attempt to correct a common manual input error: solana:recipient=ADDRESS...
+  let correctedData = data;
+  const recipientPrefix = 'solana:recipient=';
+  if (data.startsWith(recipientPrefix)) {
+    let addressAndParams = data.substring(recipientPrefix.length);
+    const ampersandIndex = addressAndParams.indexOf('&');
+    
+    if (ampersandIndex !== -1) {
+      const addressPart = addressAndParams.substring(0, ampersandIndex);
+      const paramsPart = addressAndParams.substring(ampersandIndex + 1);
+      correctedData = `solana:${addressPart}?${paramsPart}`;
+    } else {
+      // No parameters, just the address
+      correctedData = `solana:${addressAndParams}`;
     }
+    console.log(`Attempted correction for manual input: ${correctedData}`);
+  }
 
-    try {
-        const parsed = parseURL(data) as TransferRequestURL; 
-        console.log('Parsed Team556 Pay URL:', parsed);
+  try {
+      const parsed = parseURL(correctedData) as TransferRequestURL; 
+      console.log('Parsed Team556 Pay URL:', parsed);
 
-        if (parsed.splToken && parsed.splToken.equals(TEAM556_MINT_ADDRESS)) {
-            setPaymentDetails({
-                recipient: parsed.recipient,
-                amount: parsed.amount,
-                label: parsed.label,
-                message: parsed.message
-            });
-        } else if (parsed.splToken) {
-             Alert.alert('Invalid Token', `This request is for a different token, not TEAM556. (${parsed.splToken.toBase58()})`);
-        } else {
-            Alert.alert('Unsupported Request', 'This QR code does not represent a TEAM556 payment request.');
-        }
-    } catch (error) {
-        console.error("Input data that caused parsing error:", data); // Log the problematic data
-        console.error("Error parsing Team556 Pay URL:", error);
-        Alert.alert('Error', 'Could not parse the Team556 Pay QR Code.');
-    }
-  };
+      if (parsed.splToken && parsed.splToken.equals(TEAM556_MINT_ADDRESS)) {
+          setPaymentDetails({
+              recipient: parsed.recipient,
+              amount: parsed.amount,
+              label: parsed.label,
+              message: parsed.message
+          });
+      } else if (parsed.splToken) {
+           Alert.alert('Invalid Token', `This request is for a different token, not TEAM556. (${parsed.splToken.toBase58()})`);
+      } else {
+          Alert.alert('Unsupported Request', 'This QR code does not represent a TEAM556 payment request.');
+      }
+  } catch (error) {
+      console.error("Input data that caused parsing error (original input):", data); // Log the problematic data
+      console.error("Error parsing Team556 Pay URL:", error);
+      Alert.alert('Error', 'Could not parse the Team556 Pay QR Code.');
+  }
+};
 
   const handleSubmitManualUrl = () => {
     if (manualUrlInput.trim()) {

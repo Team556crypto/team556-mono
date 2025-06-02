@@ -79,9 +79,8 @@ class Team556_Pay_Settings {
         // Merchant wallet address
         $sanitized_input['merchant_wallet_address'] = sanitize_text_field($input['merchant_wallet_address']);
         
-        // Solana network
-        $allowed_networks = array('mainnet', 'devnet', 'testnet');
-        $sanitized_input['solana_network'] = in_array($input['solana_network'], $allowed_networks) ? $input['solana_network'] : 'mainnet';
+        // Solana network - Force to mainnet
+        $sanitized_input['solana_network'] = 'mainnet';
         
         // Button text
         $sanitized_input['button_text'] = sanitize_text_field($input['button_text']);
@@ -115,6 +114,16 @@ class Team556_Pay_Settings {
             }
         } else {
             $sanitized_input['max_order_total'] = ''; // Default to empty if not set
+        }
+
+        // Gateway Title (for WooCommerce Payments screen)
+        if (isset($input['gateway_title'])) {
+            $sanitized_input['gateway_title'] = sanitize_text_field($input['gateway_title']);
+        }
+
+        // Gateway Description (for WooCommerce Payments screen)
+        if (isset($input['gateway_description'])) {
+            $sanitized_input['gateway_description'] = sanitize_textarea_field($input['gateway_description']);
         }
         
         return $sanitized_input;
@@ -173,14 +182,18 @@ class Team556_Pay_Settings {
                             <p class="description"><?php _e('Enter your Solana wallet address where you will receive Team556 token payments.', 'team556-pay'); ?></p>
                         </div>
                         
+                        <!-- Solana Network field removed - hardcoded to mainnet -->
+
                         <div class="form-group">
-                            <label for="solana_network"><?php _e('Solana Network', 'team556-pay'); ?></label>
-                            <select id="solana_network" name="team556_pay_settings[solana_network]">
-                                <option value="mainnet" <?php selected($options['solana_network'] ?? 'mainnet', 'mainnet'); ?>><?php _e('Mainnet', 'team556-pay'); ?></option>
-                                <option value="devnet" <?php selected($options['solana_network'] ?? '', 'devnet'); ?>><?php _e('Devnet', 'team556-pay'); ?></option>
-                                <option value="testnet" <?php selected($options['solana_network'] ?? '', 'testnet'); ?>><?php _e('Testnet', 'team556-pay'); ?></option>
-                            </select>
-                            <p class="description"><?php _e('Select the Solana network to use for transactions.', 'team556-pay'); ?></p>
+                            <label for="gateway_title"><?php _e('Gateway Title', 'team556-pay'); ?></label>
+                            <input type="text" id="gateway_title" name="team556_pay_settings[gateway_title]" value="<?php echo esc_attr($options['gateway_title'] ?? __('Team556 Pay', 'team556-pay')); ?>" class="regular-text">
+                            <p class="description"><?php _e('This is the title shown to customers on the checkout page for this payment method. It will be synced to WooCommerce payment settings.', 'team556-pay'); ?></p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="gateway_description"><?php _e('Gateway Description', 'team556-pay'); ?></label>
+                            <textarea id="gateway_description" name="team556_pay_settings[gateway_description]" rows="3" class="large-text"><?php echo esc_textarea($options['gateway_description'] ?? __('Pay with Team556 tokens via Team556 Pay. You will need a Team556 Digital Armory account to do so.', 'team556-pay')); ?></textarea>
+                            <p class="description"><?php _e('This is the description shown to customers on the checkout page under the payment method title. It will be synced to WooCommerce payment settings.', 'team556-pay'); ?></p>
                         </div>
 
                         <div class="form-group form-group-checkbox">

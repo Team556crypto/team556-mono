@@ -30,6 +30,7 @@ require_once TEAM556_PAY_PLUGIN_DIR . 'includes/admin/class-team556-pay-welcome.
 require_once TEAM556_PAY_PLUGIN_DIR . 'includes/class-team556-pay-verifier.php';
 require_once TEAM556_PAY_PLUGIN_DIR . 'includes/class-team556-pay-shortcode.php';
 require_once TEAM556_PAY_PLUGIN_DIR . 'includes/class-team556-pay-gateway-blocks.php';
+require_once TEAM556_PAY_PLUGIN_DIR . 'includes/constants/color-constants.php';
 
 // Temporary debugging function
 if (!function_exists('team556_debug_payment_gateways')) {
@@ -46,6 +47,81 @@ if (!function_exists('team556_debug_payment_gateways')) {
     }
     add_filter('woocommerce_payment_gateways', 'team556_debug_payment_gateways', 20);
 }
+
+/**
+ * Synchronize relevant global Team556 settings to the Team556 Pay WooCommerce gateway settings.
+ *
+ * This ensures that when the main Team556 settings are updated, the specific
+ * WooCommerce payment gateway settings for Team556 Pay are also updated to match,
+ * maintaining consistency across the plugin.
+ *
+ * @param mixed $old_value The old option value for 'team556_pay_settings'.
+ * @param mixed $new_value The new option value for 'team556_pay_settings' (array).
+ * @param string $option_name The name of the option being updated (should be 'team556_pay_settings').
+ */
+function team556_sync_global_settings_to_gateway($old_value, $new_value, $option_name) {
+    // Ensure we are only acting on our specific global settings option.
+    if ('team556_pay_settings' !== $option_name) {
+        return;
+    }
+
+    // The option name for WooCommerce gateway settings is 'woocommerce_{gateway_id}_settings'.
+    $gateway_settings_option_name = 'woocommerce_team556_pay_settings';
+    $gateway_settings = get_option($gateway_settings_option_name, array());
+
+    $settings_changed = false;
+
+    // 1. Synchronize Merchant Wallet Address
+    // Global key: 'merchant_wallet_address', Gateway key: 'wallet_address'
+    if (isset($new_value['merchant_wallet_address'])) {
+        $new_wallet_address = sanitize_text_field($new_value['merchant_wallet_address']);
+        if (!isset($gateway_settings['wallet_address']) || $gateway_settings['wallet_address'] !== $new_wallet_address) {
+            $gateway_settings['wallet_address'] = $new_wallet_address;
+            $settings_changed = true;
+        }
+    }
+
+    // 2. Synchronize Debug Mode
+    // Global key: 'debug_mode' (1 for true/checked, 0 or not set for false/unchecked)
+    // Gateway key: 'debug_mode' ('yes' or 'no')
+    $new_global_debug_mode = isset($new_value['debug_mode']) && $new_value['debug_mode'] == 1;
+    $new_gateway_debug_mode_value = $new_global_debug_mode ? 'yes' : 'no';
+    
+    if (!isset($gateway_settings['debug_mode']) || $gateway_settings['debug_mode'] !== $new_gateway_debug_mode_value) {
+        $gateway_settings['debug_mode'] = $new_gateway_debug_mode_value;
+        $settings_changed = true;
+    }
+
+    // Solana Network is now hardcoded to 'mainnet' in the gateway, no sync needed.
+
+    // 4. Synchronize Gateway Title
+    // Global key: 'gateway_title', Gateway key: 'title'
+    if (isset($new_value['gateway_title'])) {
+        $new_gateway_title = sanitize_text_field($new_value['gateway_title']);
+        if (!isset($gateway_settings['title']) || $gateway_settings['title'] !== $new_gateway_title) {
+            $gateway_settings['title'] = $new_gateway_title;
+            $settings_changed = true;
+        }
+    }
+
+    // 5. Synchronize Gateway Description
+    // Global key: 'gateway_description', Gateway key: 'description'
+    if (isset($new_value['gateway_description'])) {
+        $new_gateway_description = sanitize_textarea_field($new_value['gateway_description']);
+        if (!isset($gateway_settings['description']) || $gateway_settings['description'] !== $new_gateway_description) {
+            $gateway_settings['description'] = $new_gateway_description;
+            $settings_changed = true;
+        }
+    }
+
+    // If any settings were changed in the gateway's array, update the option.
+    if ($settings_changed) {
+        update_option($gateway_settings_option_name, $gateway_settings);
+    }
+}
+add_action('update_option_team556_pay_settings', 'team556_sync_global_settings_to_gateway', 10, 3);
+
+
 
 // Initialize the plugin
 function team556_pay_init() {
@@ -135,31 +211,6 @@ function team556_handle_get_block_payment_data_request() {
         return; 
     }
 
-    if (function_exists('wc_get_logger')) {
-        $logger = wc_get_logger();
-
-    }
-    
-    // Log 3: Determine debug_mode status safely
-    $debug_mode_value = 'NOT_SET_OR_ACCESSIBLE'; // More descriptive default
-    if (property_exists($gateway, 'debug_mode')) {
-        $debug_mode_value = $gateway->debug_mode;
-    } elseif (isset($gateway->settings) && is_array($gateway->settings) && isset($gateway->settings['debug_mode'])) {
-        $debug_mode_value = $gateway->settings['debug_mode'];
-    } else {
-        $plugin_settings = get_option('woocommerce_team556_pay_settings');
-        if (is_array($plugin_settings) && isset($plugin_settings['debug_mode'])) {
-            $debug_mode_value = $plugin_settings['debug_mode'];
-        }
-    }
-
-    $current_debug_setting = ($debug_mode_value === 'yes'); // Boolean for easier use
-
-    if (function_exists('wc_get_logger')) {
-        $logger = wc_get_logger();
-
-    }
-
     // Fetch price data
     // Note: $gateway->fetch_team556_price_data() uses its own $this->debug_mode. 
     // The $current_debug_setting is for logging within *this* AJAX handler scope.
@@ -186,12 +237,6 @@ function team556_handle_get_block_payment_data_request() {
                 $formatted_cart_total . ' ' . $currency,
                 $formatted_max_total . ' ' . $currency
             );
-            
-            if ($current_debug_setting && function_exists('wc_get_logger')) {
-                $logger = wc_get_logger();
-                $logger->info('BLOCK_CHECKOUT_LIMIT_EXCEEDED: Cart total ' . $formatted_cart_total . ' ' . $currency . ' exceeds maximum ' . $formatted_max_total . ' ' . $currency, array('source' => $log_source));
-            }
-            
             // Return error to prevent payment URL generation
             wp_send_json_error([
                 'message' => $error_message,
@@ -206,10 +251,6 @@ function team556_handle_get_block_payment_data_request() {
 
     if (isset($price_data['error'])) {
         $error_message = $price_data['error'];
-        if ($current_debug_setting && function_exists('wc_get_logger')) {
-            $logger = wc_get_logger();
-
-        }
     } elseif (isset($price_data['price'])) {
         $token_price = (float) $price_data['price'];
         if ($token_price > 0) {
@@ -217,42 +258,40 @@ function team556_handle_get_block_payment_data_request() {
             $required_token_amount = round($required_token_amount, 6); 
         } else {
             $error_message = 'Token price is zero or invalid.';
-            if ($current_debug_setting && function_exists('wc_get_logger')) {
-                $logger = wc_get_logger();
-
-            }
         }
     } else {
         $error_message = 'Could not retrieve current token price (unknown reason).';
-        if ($current_debug_setting && function_exists('wc_get_logger')) {
-            $logger = wc_get_logger();
-
-        }
     }
 
     // Construct Solana Pay URL
     $recipient_wallet = $gateway->get_option('wallet_address');
-    $token_mint = $gateway->get_option('token_mint_address'); 
-    $reference = uniqid('tx_');
+    $token_mint = 'AMNfeXpjD6kXyyTDB4LMKzNWypqNHwtgJUACHUmuKLD5'; // Always use Team556 token mint
 
-    $payment_url_params = [
-        'recipient' => $recipient_wallet,
+    // Parameters for the query string part of the Solana Pay URL
+    $query_params = [
         'spl-token' => $token_mint,
-        'amount'    => $required_token_amount, 
-        'reference' => $reference,
+        'amount'    => $required_token_amount,
         'label'     => get_bloginfo('name'),
         'message'   => sprintf(__('Payment for Order at %s', 'team556-pay'), get_bloginfo('name')),
     ];
 
-    $payment_url_params = array_filter($payment_url_params, function($value) {
+    // Filter out any null or empty parameters from the query
+    $query_params = array_filter($query_params, function($value) {
         return $value !== null && $value !== '';
     });
 
-    $payment_url = 'solana:' . http_build_query($payment_url_params, '', '&', PHP_QUERY_RFC3986);
+    // Build the query string
+    $query_string = http_build_query($query_params, '', '&', PHP_QUERY_RFC3986);
+
+    // Construct the final Solana Pay URL
+    // Format: solana:<recipient_address>?<query_parameters>
+    $payment_url = 'solana:' . $recipient_wallet;
+    if (!empty($query_string)) {
+        $payment_url .= '?' . $query_string;
+    }
 
     wp_send_json_success([
         'paymentUrl' => $payment_url,
-        'reference' => $reference,
         'tokenPrice' => $token_price,
         'currency' => $currency,
         'cartTotalFiat' => (float) $cart_total,

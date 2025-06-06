@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 /**
  * Dashboard Class
  */
-class Team556_Solana_Pay_Dashboard {
+class Team556_Pay_Dashboard {
     /**
      * Constructor
      */
@@ -36,10 +36,10 @@ class Team556_Solana_Pay_Dashboard {
     public function add_admin_menu() {
         // Main dashboard page
         add_menu_page(
-            __('Team556 Solana Pay', 'team556-solana-pay'),
-            __('Team556 Pay', 'team556-solana-pay'),
+            __('Team556 Solana Pay', 'team556-pay'),
+            __('Team556 Pay', 'team556-pay'),
             'manage_options',
-            'team556-solana-pay',
+            'team556-pay',
             array($this, 'render_dashboard_page'),
             'dashicons-money-alt',
             30
@@ -47,41 +47,41 @@ class Team556_Solana_Pay_Dashboard {
         
         // Dashboard submenu
         add_submenu_page(
-            'team556-solana-pay',
-            __('Dashboard', 'team556-solana-pay'),
-            __('Dashboard', 'team556-solana-pay'),
+            'team556-pay',
+            __('Dashboard', 'team556-pay'),
+            __('Dashboard', 'team556-pay'),
             'manage_options',
-            'team556-solana-pay',
+            'team556-pay',
             array($this, 'render_dashboard_page')
         );
         
         // Transactions submenu
         add_submenu_page(
-            'team556-solana-pay',
-            __('Transactions', 'team556-solana-pay'),
-            __('Transactions', 'team556-solana-pay'),
+            'team556-pay',
+            __('Transactions', 'team556-pay'),
+            __('Transactions', 'team556-pay'),
             'manage_options',
-            'team556-solana-pay-transactions',
+            'team556-pay-transactions',
             array($this, 'render_transactions_page')
         );
         
         // Settings submenu - link to the settings page in the options menu
         add_submenu_page(
-            'team556-solana-pay',
-            __('Settings', 'team556-solana-pay'),
-            __('Settings', 'team556-solana-pay'),
+            'team556-pay',
+            __('Settings', 'team556-pay'),
+            __('Settings', 'team556-pay'),
             'manage_options',
-            'team556-solana-settings',
+            'team556-pay-settings',
             array($this, 'render_settings_redirect')
         );
         
         // Help submenu
         add_submenu_page(
-            'team556-solana-pay',
-            __('Help', 'team556-solana-pay'),
-            __('Help', 'team556-solana-pay'),
+            'team556-pay',
+            __('Help', 'team556-pay'),
+            __('Help', 'team556-pay'),
             'manage_options',
-            'team556-solana-pay-help',
+            'team556-pay-help',
             array($this, 'render_help_page')
         );
     }
@@ -90,37 +90,39 @@ class Team556_Solana_Pay_Dashboard {
      * Enqueue admin scripts and styles
      */
     public function enqueue_admin_scripts($hook) {
-        // Only enqueue on our plugin pages
-        if (strpos($hook, 'team556-solana') === false) {
+        // Only enqueue on our plugin pages. 
+        // The $hook variable for a top-level page is 'toplevel_page_team556-pay'.
+        // For submenu pages, it's 'team556-pay_page_team556-pay-transactions', 'team556-pay_page_team556-pay-settings', etc.
+        if (strpos($hook, 'team556-pay') === false) {
             return;
         }
         
         // Enqueue admin styles
         wp_enqueue_style(
-            'team556-solana-pay-admin',
-            TEAM556_SOLANA_PAY_PLUGIN_URL . 'assets/css/team556-solana-pay-admin.css',
+            'team556-pay-admin',
+            TEAM556_PAY_PLUGIN_URL . 'assets/css/team556-pay-admin.css',
             array(),
-            TEAM556_SOLANA_PAY_VERSION
+            TEAM556_PAY_VERSION
         );
         
         // Enqueue admin scripts
         wp_enqueue_script(
-            'team556-solana-pay-admin',
-            TEAM556_SOLANA_PAY_PLUGIN_URL . 'assets/js/team556-solana-pay-admin.js',
+            'team556-pay-admin',
+            TEAM556_PAY_PLUGIN_URL . 'assets/js/team556-pay-admin.js',
             array('jquery'),
-            TEAM556_SOLANA_PAY_VERSION,
+            TEAM556_PAY_VERSION,
             true
         );
         
         // Localize script
-        wp_localize_script('team556-solana-pay-admin', 'team556SolanaPayAdmin', array(
+        wp_localize_script('team556-pay-admin', 'team556PayAdmin', array(
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce'   => wp_create_nonce('team556-solana-pay-admin-nonce'),
             'i18n'    => array(
-                'confirmDelete' => __('Are you sure you want to delete this transaction?', 'team556-solana-pay'),
-                'deletingTransaction' => __('Deleting transaction...', 'team556-solana-pay'),
-                'transactionDeleted' => __('Transaction deleted successfully.', 'team556-solana-pay'),
-                'error' => __('An error occurred.', 'team556-solana-pay'),
+                'confirmDelete' => __('Are you sure you want to delete this transaction?', 'team556-pay'),
+                'deletingTransaction' => __('Deleting transaction...', 'team556-pay'),
+                'transactionDeleted' => __('Transaction deleted successfully.', 'team556-pay'),
+                'error' => __('An error occurred.', 'team556-pay'),
             ),
         ));
     }
@@ -150,7 +152,7 @@ class Team556_Solana_Pay_Dashboard {
         
         wp_add_dashboard_widget(
             'team556_solana_pay_stats_widget',
-            __('Team556 Solana Pay Stats', 'team556-solana-pay'),
+            __('Team556 Solana Pay Stats', 'team556-pay'),
             array($this, 'render_dashboard_widget')
         );
     }
@@ -160,7 +162,7 @@ class Team556_Solana_Pay_Dashboard {
      */
     public function render_dashboard_widget() {
         // Get transactions data
-        $db = new Team556_Solana_Pay_DB();
+        $db = new Team556_Pay_DB();
         
         $total_transactions = $db->count_transactions();
         $successful_transactions = $db->count_transactions(array('status' => 'completed'));
@@ -183,27 +185,27 @@ class Team556_Solana_Pay_Dashboard {
             <div class="team556-stats-grid">
                 <div class="team556-stat-card">
                     <div class="team556-stat-value"><?php echo esc_html($total_transactions); ?></div>
-                    <div class="team556-stat-label"><?php _e('Total Transactions', 'team556-solana-pay'); ?></div>
+                    <div class="team556-stat-label"><?php _e('Total Transactions', 'team556-pay'); ?></div>
                 </div>
                 
                 <div class="team556-stat-card">
                     <div class="team556-stat-value"><?php echo esc_html($successful_transactions); ?></div>
-                    <div class="team556-stat-label"><?php _e('Successful', 'team556-solana-pay'); ?></div>
+                    <div class="team556-stat-label"><?php _e('Successful', 'team556-pay'); ?></div>
                 </div>
                 
                 <div class="team556-stat-card">
                     <div class="team556-stat-value"><?php echo esc_html($pending_transactions); ?></div>
-                    <div class="team556-stat-label"><?php _e('Pending', 'team556-solana-pay'); ?></div>
+                    <div class="team556-stat-label"><?php _e('Pending', 'team556-pay'); ?></div>
                 </div>
                 
                 <div class="team556-stat-card">
                     <div class="team556-stat-value"><?php echo round($success_rate, 1); ?>%</div>
-                    <div class="team556-stat-label"><?php _e('Success Rate', 'team556-solana-pay'); ?></div>
+                    <div class="team556-stat-label"><?php _e('Success Rate', 'team556-pay'); ?></div>
                 </div>
             </div>
             
             <?php if (!empty($recent_transactions)) : ?>
-                <h3><?php _e('Recent Transactions', 'team556-solana-pay'); ?></h3>
+                <h3><?php _e('Recent Transactions', 'team556-pay'); ?></h3>
                 <div class="team556-transaction-list">
                     <?php foreach ($recent_transactions as $transaction) : 
                         $explorer_url = sprintf(
@@ -221,7 +223,7 @@ class Team556_Solana_Pay_Dashboard {
                                     </a>
                                 </div>
                                 <div class="team556-tx-date">
-                                    <?php echo esc_html(human_time_diff(strtotime($transaction->created_at), current_time('timestamp'))) . ' ' . __('ago', 'team556-solana-pay'); ?>
+                                    <?php echo esc_html(human_time_diff(strtotime($transaction->created_at), current_time('timestamp'))) . ' ' . __('ago', 'team556-pay'); ?>
                                 </div>
                             </div>
                             <div class="team556-tx-details">
@@ -238,14 +240,14 @@ class Team556_Solana_Pay_Dashboard {
                             <div class="team556-tx-extra-info">
                                  <?php if (!empty($transaction->order_id)) : ?>
                                     <div class="team556-tx-order">
-                                        <?php _e('Order:', 'team556-solana-pay'); ?> 
+                                        <?php _e('Order:', 'team556-pay'); ?> 
                                         <a href="<?php echo esc_url(admin_url('post.php?post=' . $transaction->order_id . '&action=edit')); ?>" target="_blank">
                                             #<?php echo esc_html($transaction->order_id); ?>
                                         </a>
                                     </div>
                                  <?php endif; ?>
                                  <div class="team556-tx-payer" title="<?php echo esc_attr($transaction->wallet_address); ?>">
-                                    <?php _e('Payer:', 'team556-solana-pay'); ?>
+                                    <?php _e('Payer:', 'team556-pay'); ?>
                                     <?php echo esc_html(substr($transaction->wallet_address, 0, 4) . '...' . substr($transaction->wallet_address, -4)); ?>
                                  </div>
                             </div>
@@ -255,12 +257,12 @@ class Team556_Solana_Pay_Dashboard {
                 
                 <p class="team556-view-all">
                     <a href="<?php echo esc_url(admin_url('admin.php?page=team556-solana-transactions')); ?>" class="team556-button">
-                        <?php _e('View All Transactions', 'team556-solana-pay'); ?>
+                        <?php _e('View All Transactions', 'team556-pay'); ?>
                     </a>
                 </p>
             <?php else : ?>
                 <div class="team556-empty-state">
-                    <p><?php _e('No transactions yet.', 'team556-solana-pay'); ?></p>
+                    <p><?php _e('No transactions yet.', 'team556-pay'); ?></p>
                 </div>
             <?php endif; ?>
         </div>
@@ -272,7 +274,7 @@ class Team556_Solana_Pay_Dashboard {
      */
     public function render_dashboard_page() {
         // Get DB instance
-        $db = new Team556_Solana_Pay_DB();
+        $db = new Team556_Pay_DB();
         
         // Get stats
         $total_transactions = $db->count_transactions();
@@ -303,7 +305,7 @@ class Team556_Solana_Pay_Dashboard {
         
         ?>
         <div class="wrap team556-admin-dashboard team556-dark-theme-wrapper">
-            <h1><?php _e('Team556 Solana Pay Dashboard', 'team556-solana-pay'); ?></h1>
+            <h1><?php _e('Team556 Solana Pay Dashboard', 'team556-pay'); ?></h1>
             
             <div class="team556-dashboard-header team556-portfolio-card">
                 <div class="team556-portfolio-info">
@@ -311,7 +313,7 @@ class Team556_Solana_Pay_Dashboard {
                         <div class="team556-portfolio-wallet">
                             <span class="dashicons dashicons-admin-users team556-portfolio-icon"></span>
                             <div class="team556-portfolio-details">
-                                <h2><?php _e('Merchant Wallet', 'team556-solana-pay'); ?></h2>
+                                <h2><?php _e('Merchant Wallet', 'team556-pay'); ?></h2>
                                 <div class="team556-wallet-address">
                                     <?php echo esc_html(substr($wallet_address, 0, 6) . '...' . substr($wallet_address, -6)); ?>
                                     <span class="team556-clipboard-copy" data-clipboard="<?php echo esc_attr($wallet_address); ?>">
@@ -325,14 +327,14 @@ class Team556_Solana_Pay_Dashboard {
                         </div>
                         <div class="team556-portfolio-balance">
                             <div class="team556-balance-value"><?php echo esc_html($total_amount_display); ?></div>
-                            <div class="team556-balance-label"><?php _e('Total Received (Completed)', 'team556-solana-pay'); ?></div>
+                            <div class="team556-balance-label"><?php _e('Total Received (Completed)', 'team556-pay'); ?></div>
                             <?php /* TODO: Potentially add token symbol here */ ?>
                         </div>
                     <?php else : ?>
                         <div class="team556-wallet-not-configured">
-                            <p><?php _e('Your wallet is not configured yet.', 'team556-solana-pay'); ?></p>
-                            <a href="<?php echo esc_url(admin_url('options-general.php?page=team556-solana-settings')); ?>" class="team556-button">
-                                <?php _e('Configure Now', 'team556-solana-pay'); ?>
+                            <p><?php _e('Your wallet is not configured yet.', 'team556-pay'); ?></p>
+                            <a href="<?php echo esc_url(admin_url('options-general.php?page=team556-pay-settings')); ?>" class="team556-button">
+                                <?php _e('Configure Now', 'team556-pay'); ?>
                             </a>
                         </div>
                     <?php endif; ?>
@@ -341,17 +343,17 @@ class Team556_Solana_Pay_Dashboard {
                 <div class="team556-action-buttons">
                     <a href="<?php echo esc_url(admin_url('admin.php?page=team556-solana-pay-transactions')); ?>" class="team556-button secondary">
                         <span class="dashicons dashicons-list-view"></span>
-                        <?php _e('View All Transactions', 'team556-solana-pay'); ?>
+                        <?php _e('View All Transactions', 'team556-pay'); ?>
                     </a>
-                    <a href="<?php echo esc_url(admin_url('options-general.php?page=team556-solana-settings')); ?>" class="team556-button outline">
+                    <a href="<?php echo esc_url(admin_url('options-general.php?page=team556-pay-settings')); ?>" class="team556-button outline">
                         <span class="dashicons dashicons-admin-settings"></span>
-                        <?php _e('Settings', 'team556-solana-pay'); ?>
+                        <?php _e('Settings', 'team556-pay'); ?>
                     </a>
                 </div>
             </div>
             
             <div class="team556-dashboard-recent">
-                <h2><?php _e('Recent Transactions', 'team556-solana-pay'); ?></h2>
+                <h2><?php _e('Recent Transactions', 'team556-pay'); ?></h2>
                 
                 <?php if (!empty($recent_transactions)) : ?>
                     <div class="team556-transaction-list"> 
@@ -371,7 +373,7 @@ class Team556_Solana_Pay_Dashboard {
                                         </a>
                                     </div>
                                     <div class="team556-tx-date">
-                                        <?php echo esc_html(human_time_diff(strtotime($transaction->created_at), current_time('timestamp'))) . ' ' . __('ago', 'team556-solana-pay'); ?>
+                                        <?php echo esc_html(human_time_diff(strtotime($transaction->created_at), current_time('timestamp'))) . ' ' . __('ago', 'team556-pay'); ?>
                                     </div>
                                 </div>
                                 <div class="team556-tx-details">
@@ -388,14 +390,14 @@ class Team556_Solana_Pay_Dashboard {
                                 <div class="team556-tx-extra-info">
                                      <?php if (!empty($transaction->order_id)) : ?>
                                         <div class="team556-tx-order">
-                                            <?php _e('Order:', 'team556-solana-pay'); ?> 
+                                            <?php _e('Order:', 'team556-pay'); ?> 
                                             <a href="<?php echo esc_url(admin_url('post.php?post=' . $transaction->order_id . '&action=edit')); ?>" target="_blank">
                                                 #<?php echo esc_html($transaction->order_id); ?>
                                             </a>
                                         </div>
                                      <?php endif; ?>
                                      <div class="team556-tx-payer" title="<?php echo esc_attr($transaction->wallet_address); ?>">
-                                        <?php _e('Payer:', 'team556-solana-pay'); ?>
+                                        <?php _e('Payer:', 'team556-pay'); ?>
                                         <?php echo esc_html(substr($transaction->wallet_address, 0, 4) . '...' . substr($transaction->wallet_address, -4)); ?>
                                      </div>
                                 </div>
@@ -407,22 +409,22 @@ class Team556_Solana_Pay_Dashboard {
                     
                 <?php else : ?>
                     <div class="team556-empty-state">
-                        <p><?php _e('No transactions have been recorded yet.', 'team556-solana-pay'); ?></p>
-                        <p><?php _e('Once customers start making payments with Team556 tokens, you\'ll see them here.', 'team556-solana-pay'); ?></p>
+                        <p><?php _e('No transactions have been recorded yet.', 'team556-pay'); ?></p>
+                        <p><?php _e('Once customers start making payments with Team556 tokens, you\'ll see them here.', 'team556-pay'); ?></p>
                     </div>
                 <?php endif; ?>
             </div>
             
             <div class="team556-dashboard-help">
-                <h2><?php _e('Getting Started', 'team556-solana-pay'); ?></h2>
+                <h2><?php _e('Getting Started', 'team556-pay'); ?></h2>
                 <div class="team556-help-wrapper">
                     <div class="team556-help-step">
                         <div class="team556-step-number">1</div>
                         <div class="team556-step-content">
-                            <h3><?php _e('Configure Settings', 'team556-solana-pay'); ?></h3>
-                            <p><?php _e('Enter your Solana wallet address and Team556 token details in the plugin settings.', 'team556-solana-pay'); ?></p>
-                            <a href="<?php echo esc_url(admin_url('options-general.php?page=team556-solana-settings')); ?>" class="team556-button">
-                                <?php _e('Go to Settings', 'team556-solana-pay'); ?>
+                            <h3><?php _e('Configure Settings', 'team556-pay'); ?></h3>
+                            <p><?php _e('Enter your Solana wallet address and Team556 token details in the plugin settings.', 'team556-pay'); ?></p>
+                            <a href="<?php echo esc_url(admin_url('options-general.php?page=team556-pay-settings')); ?>" class="team556-button">
+                                <?php _e('Go to Settings', 'team556-pay'); ?>
                             </a>
                         </div>
                     </div>
@@ -430,23 +432,23 @@ class Team556_Solana_Pay_Dashboard {
                     <div class="team556-help-step">
                         <div class="team556-step-number">2</div>
                         <div class="team556-step-content">
-                            <h3><?php _e('Add Payment Buttons', 'team556-solana-pay'); ?></h3>
-                            <p><?php _e('Use the shortcode to add payment buttons to any page or post.', 'team556-solana-pay'); ?></p>
-                            <code>[team556_solana_pay amount="10" description="My Product" button_text="Pay Now"]</code>
+                            <h3><?php _e('Add Payment Buttons', 'team556-pay'); ?></h3>
+                            <p><?php _e('Use the shortcode to add payment buttons to any page or post.', 'team556-pay'); ?></p>
+                            <code>[team556_pay_button amount="10" label="My Product"]</code>
                         </div>
                     </div>
                     
                     <div class="team556-help-step">
                         <div class="team556-step-number">3</div>
                         <div class="team556-step-content">
-                            <h3><?php _e('Enable in WooCommerce', 'team556-solana-pay'); ?></h3>
-                            <p><?php _e('If you use WooCommerce, Team556 Solana Pay has been automatically enabled. You can adjust settings in your payment methods.', 'team556-solana-pay'); ?></p>
+                            <h3><?php _e('Enable in WooCommerce', 'team556-pay'); ?></h3>
+                            <p><?php _e('If you use WooCommerce, Team556 Solana Pay has been automatically enabled. You can adjust settings in your payment methods.', 'team556-pay'); ?></p>
                             <?php if (class_exists('WooCommerce')) : ?>
                                 <a href="<?php echo esc_url(admin_url('admin.php?page=wc-settings&tab=checkout')); ?>" class="team556-button">
-                                    <?php _e('WooCommerce Payment Settings', 'team556-solana-pay'); ?>
+                                    <?php _e('WooCommerce Payment Settings', 'team556-pay'); ?>
                                 </a>
                             <?php else : ?>
-                                <p><em><?php _e('WooCommerce is not installed or activated.', 'team556-solana-pay'); ?></em></p>
+                                <p><em><?php _e('WooCommerce is not installed or activated.', 'team556-pay'); ?></em></p>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -461,7 +463,7 @@ class Team556_Solana_Pay_Dashboard {
      */
     public function render_transactions_page() {
         // Get DB instance
-        $db = new Team556_Solana_Pay_DB();
+        $db = new Team556_Pay_DB();
         
         // Process actions
         if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id']) && current_user_can('manage_options')) {
@@ -509,11 +511,11 @@ class Team556_Solana_Pay_Dashboard {
         
         ?>
         <div class="wrap team556-admin-transactions team556-dark-theme-wrapper">
-            <h1 class="wp-heading-inline"><?php _e('Team556 Solana Pay Transactions', 'team556-solana-pay'); ?></h1>
+            <h1 class="wp-heading-inline"><?php _e('Team556 Solana Pay Transactions', 'team556-pay'); ?></h1>
             
             <?php if (isset($_GET['deleted']) && $_GET['deleted'] == 1) : ?>
                 <div class="notice notice-success is-dismissible">
-                    <p><?php _e('Transaction deleted successfully.', 'team556-solana-pay'); ?></p>
+                    <p><?php _e('Transaction deleted successfully.', 'team556-pay'); ?></p>
                 </div>
             <?php endif; ?>
             
@@ -522,18 +524,18 @@ class Team556_Solana_Pay_Dashboard {
                     <input type="hidden" name="page" value="team556-solana-transactions">
                     
                     <select name="status">
-                        <option value=""><?php _e('All Statuses', 'team556-solana-pay'); ?></option>
-                        <option value="pending" <?php selected($status_filter, 'pending'); ?>><?php _e('Pending', 'team556-solana-pay'); ?></option>
-                        <option value="completed" <?php selected($status_filter, 'completed'); ?>><?php _e('Completed', 'team556-solana-pay'); ?></option>
-                        <option value="failed" <?php selected($status_filter, 'failed'); ?>><?php _e('Failed', 'team556-solana-pay'); ?></option>
+                        <option value=""><?php _e('All Statuses', 'team556-pay'); ?></option>
+                        <option value="pending" <?php selected($status_filter, 'pending'); ?>><?php _e('Pending', 'team556-pay'); ?></option>
+                        <option value="completed" <?php selected($status_filter, 'completed'); ?>><?php _e('Completed', 'team556-pay'); ?></option>
+                        <option value="failed" <?php selected($status_filter, 'failed'); ?>><?php _e('Failed', 'team556-pay'); ?></option>
                     </select>
                     
-                    <input type="number" name="order_id" placeholder="<?php esc_attr_e('Order ID', 'team556-solana-pay'); ?>" value="<?php echo esc_attr($order_id_filter !== null ? $order_id_filter : ''); ?>">
+                    <input type="number" name="order_id" placeholder="<?php esc_attr_e('Order ID', 'team556-pay'); ?>" value="<?php echo esc_attr($order_id_filter !== null ? $order_id_filter : ''); ?>">
                     
-                    <button type="submit" class="team556-button"><?php _e('Filter', 'team556-solana-pay'); ?></button>
+                    <button type="submit" class="team556-button"><?php _e('Filter', 'team556-pay'); ?></button>
                     
                     <?php if (!empty($status_filter) || !empty($order_id_filter)) : ?>
-                        <a href="<?php echo esc_url(admin_url('admin.php?page=team556-solana-transactions')); ?>" class="team556-button outline"><?php _e('Reset', 'team556-solana-pay'); ?></a>
+                        <a href="<?php echo esc_url(admin_url('admin.php?page=team556-solana-transactions')); ?>" class="team556-button outline"><?php _e('Reset', 'team556-pay'); ?></a>
                     <?php endif; ?>
                 </form>
             </div>
@@ -542,14 +544,14 @@ class Team556_Solana_Pay_Dashboard {
                 <table class="wp-list-table widefat fixed striped team556-transactions-table">
                     <thead>
                         <tr>
-                            <th><?php _e('ID', 'team556-solana-pay'); ?></th>
-                            <th><?php _e('Transaction Signature', 'team556-solana-pay'); ?></th>
-                            <th><?php _e('Wallet Address', 'team556-solana-pay'); ?></th>
-                            <th><?php _e('Amount', 'team556-solana-pay'); ?></th>
-                            <th><?php _e('Order ID', 'team556-solana-pay'); ?></th>
-                            <th><?php _e('Status', 'team556-solana-pay'); ?></th>
-                            <th><?php _e('Date', 'team556-solana-pay'); ?></th>
-                            <th><?php _e('Actions', 'team556-solana-pay'); ?></th>
+                            <th><?php _e('ID', 'team556-pay'); ?></th>
+                            <th><?php _e('Transaction Signature', 'team556-pay'); ?></th>
+                            <th><?php _e('Wallet Address', 'team556-pay'); ?></th>
+                            <th><?php _e('Amount', 'team556-pay'); ?></th>
+                            <th><?php _e('Order ID', 'team556-pay'); ?></th>
+                            <th><?php _e('Status', 'team556-pay'); ?></th>
+                            <th><?php _e('Date', 'team556-pay'); ?></th>
+                            <th><?php _e('Actions', 'team556-pay'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -576,7 +578,7 @@ class Team556_Solana_Pay_Dashboard {
                                             }
                                             ?>
                                             <a href="<?php echo esc_url($explorer_url); ?>" target="_blank">
-                                                <?php _e('View on Explorer', 'team556-solana-pay'); ?>
+                                                <?php _e('View on Explorer', 'team556-pay'); ?>
                                             </a>
                                         </span>
                                     </div>
@@ -606,7 +608,7 @@ class Team556_Solana_Pay_Dashboard {
                                 </td>
                                 <td><?php echo esc_html(date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($transaction->created_at))); ?></td>
                                 <td>
-                                    <a href="<?php echo esc_url(wp_nonce_url(admin_url('admin.php?page=team556-solana-transactions&action=delete&id=' . $transaction->id), 'delete_transaction_' . $transaction->id)); ?>" class="team556-delete-transaction" onclick="return confirm('<?php esc_attr_e('Are you sure you want to delete this transaction?', 'team556-solana-pay'); ?>');">
+                                    <a href="<?php echo esc_url(wp_nonce_url(admin_url('admin.php?page=team556-solana-transactions&action=delete&id=' . $transaction->id), 'delete_transaction_' . $transaction->id)); ?>" class="team556-delete-transaction" onclick="return confirm('<?php esc_attr_e('Are you sure you want to delete this transaction?', 'team556-pay'); ?>');">
                                         <span class="dashicons dashicons-trash"></span>
                                     </a>
                                 </td>
@@ -634,11 +636,11 @@ class Team556_Solana_Pay_Dashboard {
                 
             <?php else : ?>
                 <div class="team556-empty-state">
-                    <p><?php _e('No transactions found.', 'team556-solana-pay'); ?></p>
+                    <p><?php _e('No transactions found.', 'team556-pay'); ?></p>
                     <?php if (!empty($status_filter) || !empty($order_id_filter)) : ?>
                         <p>
                             <a href="<?php echo esc_url(admin_url('admin.php?page=team556-solana-transactions')); ?>" class="team556-button">
-                                <?php _e('Clear Filters', 'team556-solana-pay'); ?>
+                                <?php _e('Clear Filters', 'team556-pay'); ?>
                             </a>
                         </p>
                     <?php endif; ?>
@@ -654,9 +656,9 @@ class Team556_Solana_Pay_Dashboard {
     public function render_settings_redirect() {
         ?>
         <script type="text/javascript">
-            window.location.href = "<?php echo esc_url(admin_url('options-general.php?page=team556-solana-settings')); ?>";
+            window.location.href = "<?php echo esc_url(admin_url('options-general.php?page=team556-pay-settings')); ?>";
         </script>
         <?php
-        _e('Redirecting to settings page...', 'team556-solana-pay');
+        _e('Redirecting to settings page...', 'team556-pay');
     }
 } 

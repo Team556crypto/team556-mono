@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { StyleSheet, View, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Button, Text } from '@repo/ui'
@@ -6,7 +6,9 @@ import { Ionicons } from '@expo/vector-icons'
 import { ScreenLayout } from '@/components/layout/ScreenLayout'
 import { Colors } from '@/constants/Colors'
 import { useAuthStore } from '@/store/authStore'
+import { useToastStore } from '@/store/toastStore'
 import { format, addWeeks } from 'date-fns'
+import { PublicKey } from '@solana/web3.js'
 
 // Interface for vesting card data
 interface VestingCardProps {
@@ -16,6 +18,7 @@ interface VestingCardProps {
   isEnabled: boolean
   onClaim: () => void
   isLoading?: boolean
+  isClaimed?: boolean
 }
 
 // VestingCard component to display vesting information
@@ -25,10 +28,22 @@ const VestingCard: React.FC<VestingCardProps> = ({
   tokenAmount,
   isEnabled,
   onClaim,
-  isLoading = false
+  isLoading = false,
+  isClaimed = false
 }) => {
   const formattedDate = format(vestedDate, 'MMM dd, yyyy')
   const isVestingDateReached = new Date() >= vestedDate
+
+  let statusText = 'Pending release'
+  let statusStyle = styles.statusPending
+
+  if (isClaimed) {
+    statusText = 'Claimed'
+    statusStyle = styles.statusReady
+  } else if (isVestingDateReached) {
+    statusText = 'Ready to claim'
+    statusStyle = styles.statusReady
+  }
 
   return (
     <View style={styles.card}>
@@ -51,48 +66,142 @@ const VestingCard: React.FC<VestingCardProps> = ({
         </View>
 
         <View style={styles.statusRow}>
-          <View style={[styles.statusIndicator, isVestingDateReached ? styles.statusReady : styles.statusPending]} />
-          <Text style={styles.statusText}>{isVestingDateReached ? 'Ready to claim' : 'Pending release'}</Text>
+          <View style={[styles.statusIndicator, statusStyle]} />
+          <Text style={styles.statusText}>{statusText}</Text>
         </View>
       </View>
 
       <View style={styles.cardFooter}>
         <Button
-          title='Claim Tokens'
+          title={isClaimed ? 'Claimed' : 'Claim Tokens'}
           onPress={onClaim}
-          disabled={!isEnabled || !isVestingDateReached || isLoading}
-          style={[styles.claimButton, (!isEnabled || !isVestingDateReached) && styles.disabledButton]}
-        >
-          {isLoading ? <ActivityIndicator color={Colors.text} /> : null}
-        </Button>
+          disabled={!isEnabled || isLoading || isClaimed}
+          loading={isLoading}
+          style={styles.claimButton}
+        />
       </View>
     </View>
   )
 }
 
+// Placeholder for your API client - replace with your actual implementation
+const apiClient = {
+  get: async (endpoint: string, token: string | null) => {
+    const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}${endpoint}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: response.statusText }))
+      throw new Error(errorData.error || errorData.message || 'API request failed')
+    }
+    return response.json()
+  },
+  post: async (endpoint: string, body: any, token: string | null) => {
+    const response = await fetch(`${process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(body)
+    })
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: response.statusText }))
+      throw new Error(errorData.error || errorData.message || 'API request failed')
+    }
+    return response.json()
+  }
+}
+
+interface ClaimStatus {
+  tokensClaimedP1P1: boolean
+  tokensClaimedP1P2: boolean
+  tokensClaimedP2: boolean
+  hasPresaleCode: boolean
+}
+
+const isValidSolanaAddress = (address: string): boolean => {
+  if (!address || typeof address !== 'string') return false
+  try {
+    new PublicKey(address)
+    return true
+  } catch (e) {
+    return false
+  }
+}
+
 export default function RedeemDashboard() {
   const router = useRouter()
-  const { user } = useAuthStore()
+  const { user, token } = useAuthStore()
+  const { showToast } = useToastStore()
+
   const [isLoading, setIsLoading] = useState(false)
 
-  // Reference date for vesting calculations - April 27, 2025
-  const baseDate = new Date(2025, 3, 27) // Month is 0-indexed (3 = April)
+  const [claimStatusLoading, setClaimStatusLoading] = useState(true)
+  const [claimProcessingLoading, setClaimProcessingLoading] = useState(false)
+  const [claimStatus, setClaimStatus] = useState<ClaimStatus | null>(null)
 
-  // Calculate vesting dates from the base date
-  const vestingDate4Weeks = addWeeks(baseDate, 4)
-  const vestingDate8Weeks = addWeeks(baseDate, 8)
-  const vestingDate12Weeks = addWeeks(baseDate, 12)
+  // Specific claim start times
+  const p1p1ClaimStartTime = new Date(2025, 4, 27, 17, 0, 0) // May 27, 2025, 5:00 PM local time
+  const p1p2ClaimStartTime = addWeeks(new Date(2025, 4, 27, 17, 0, 0), 4) // Placeholder: 4 weeks after P1P1 start, at 5 PM
+  const p2ClaimStartTime = addWeeks(new Date(2025, 4, 27, 17, 0, 0), 8) // Placeholder: 8 weeks after P1P1 start, at 5 PM
 
   // Determine presale type
-  const presaleType = user?.presale_type ?? null // Use nullish coalescing for clarity
+  const presaleType = user?.presale_type ?? null
+
+  const fetchClaimStatus = async () => {
+    if (!token) return
+    setClaimStatusLoading(true)
+    try {
+      const status = await apiClient.get('/presale/claim-status', token)
+      setClaimStatus(status)
+    } catch (error: any) {
+      showToast(error.message || 'Failed to fetch claim status.', 'error')
+      setClaimStatus({
+        tokensClaimedP1P1: false,
+        tokensClaimedP1P2: false,
+        tokensClaimedP2: false,
+        hasPresaleCode: false
+      })
+    } finally {
+      setClaimStatusLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchClaimStatus()
+  }, [token])
 
   // Handlers
-  const handleClaimTokens = (vestingIndex: number) => {
-    setIsLoading(true)
-    // In a real implementation, you would call an API here to claim tokens
-    setTimeout(() => {
-      setIsLoading(false)
-    }, 2000)
+  const handleClaimP1P1 = async () => {
+    if (!token) {
+      showToast('Authentication token not found.', 'error')
+      return
+    }
+
+    // Wallet validation
+    const walletAddress = user?.wallets?.[0]?.address
+    if (!walletAddress) {
+      showToast('Wallet address not found. Please ensure your wallet is set up.', 'error')
+      return
+    }
+    if (!isValidSolanaAddress(walletAddress)) {
+      showToast('Invalid wallet address format. Please check your wallet.', 'error')
+      return
+    }
+
+    setClaimProcessingLoading(true)
+    try {
+      const response = await apiClient.post('/presale/claim/p1p1', {}, token)
+      showToast(response.message || 'Tokens claimed successfully!', 'success')
+      fetchClaimStatus()
+    } catch (error: any) {
+      showToast(error.message || 'Failed to claim tokens.', 'error')
+    } finally {
+      setClaimProcessingLoading(false)
+    }
   }
 
   // Header element (close button)
@@ -122,34 +231,59 @@ export default function RedeemDashboard() {
           <>
             <VestingCard
               vestedPercent={50}
-              vestedDate={vestingDate4Weeks}
+              vestedDate={p1p1ClaimStartTime} // Use specific claim start time
               tokenAmount={500000}
-              isEnabled={true}
-              onClaim={() => handleClaimTokens(1)}
-              isLoading={isLoading}
+              isEnabled={
+                (claimStatus?.hasPresaleCode ?? false) &&
+                presaleType === 1 &&
+                !(claimStatus?.tokensClaimedP1P1 ?? false) &&
+                new Date() >= p1p1ClaimStartTime // Explicit check for claim time
+              }
+              onClaim={handleClaimP1P1}
+              isLoading={claimProcessingLoading || claimStatusLoading}
+              isClaimed={claimStatus?.tokensClaimedP1P1 ?? false}
             />
 
             <VestingCard
               vestedPercent={50}
-              vestedDate={vestingDate8Weeks}
+              vestedDate={p1p2ClaimStartTime} // Use specific claim start time
               tokenAmount={500000}
-              isEnabled={true}
-              onClaim={() => handleClaimTokens(2)}
-              isLoading={isLoading}
+              isEnabled={
+                false // P1P2 claim logic not yet implemented
+                // (claimStatus?.hasPresaleCode ?? false) &&
+                // presaleType === 1 &&
+                // !(claimStatus?.tokensClaimedP1P2 ?? false) &&
+                // new Date() >= p1p2ClaimStartTime
+              }
+              onClaim={() => showToast('P1P2 Claim not yet implemented.', 'info')}
+              isLoading={claimStatusLoading}
+              isClaimed={claimStatus?.tokensClaimedP1P2 ?? false}
             />
           </>
         ) : presaleType === 2 ? (
           // Presale Type 2: One period (100%)
           <VestingCard
             vestedPercent={100}
-            vestedDate={vestingDate12Weeks}
+            vestedDate={p2ClaimStartTime} // Use specific claim start time
             tokenAmount={500000}
-            isEnabled={true}
-            onClaim={() => handleClaimTokens(1)}
-            isLoading={isLoading}
+            isEnabled={
+              false
+              // (claimStatus?.hasPresaleCode ?? false) &&
+              // presaleType === 2 &&
+              // !(claimStatus?.tokensClaimedP2 ?? false) &&
+              // new Date() >= p2ClaimStartTime // Explicit check for claim time
+            }
+            onClaim={() => showToast('P2 Claim not yet implemented.', 'info')}
+            isLoading={claimStatusLoading}
+            isClaimed={claimStatus?.tokensClaimedP2 ?? false}
           />
+        ) : claimStatusLoading ? (
+          <View style={styles.centeredMessageContainer}>
+            <ActivityIndicator size='large' color={Colors.tint} />
+            <Text style={styles.loadingText}>Loading vesting information...</Text>
+          </View>
         ) : (
-          // No presale type or unknown type
+          // No presale type or unknown type, or no presale code
           <View style={styles.notEligibleContainer}>
             <Ionicons name='alert-circle-outline' size={60} color={Colors.error} style={styles.alertIcon} />
             <Text style={styles.notEligibleTitle}>Not Eligible</Text>
@@ -204,15 +338,15 @@ const styles = StyleSheet.create({
     color: Colors.text
   },
   badgeContainer: {
-    backgroundColor: Colors.primarySubtleDark,
-    paddingHorizontal: 12,
+    backgroundColor: Colors.primarySubtle,
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12
   },
   badgeText: {
     color: Colors.primary,
-    fontWeight: 'bold',
-    fontSize: 14
+    fontSize: 12,
+    fontWeight: 'bold'
   },
   cardBody: {
     padding: 16
@@ -220,21 +354,22 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12
+    marginBottom: 10
   },
   infoLabel: {
-    fontSize: 14,
+    fontSize: 15,
     color: Colors.textSecondary
   },
   infoValue: {
-    fontSize: 14,
+    fontSize: 15,
     color: Colors.text,
-    fontWeight: '600'
+    fontWeight: '500'
   },
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8
+    marginTop: 8,
+    marginBottom: 4
   },
   statusIndicator: {
     width: 10,
@@ -246,11 +381,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.success
   },
   statusPending: {
-    backgroundColor: Colors.textTertiary
+    backgroundColor: Colors.warning
   },
   statusText: {
     fontSize: 14,
-    color: Colors.text
+    color: Colors.textSecondary
   },
   cardFooter: {
     padding: 16,
@@ -258,33 +393,44 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.backgroundDark
   },
   claimButton: {
-    backgroundColor: Colors.primary
+    // backgroundColor: Colors.primary,
   },
   disabledButton: {
-    opacity: 0.6
+    backgroundColor: Colors.backgroundSubtle
   },
   notEligibleContainer: {
-    alignItems: 'center',
+    flex: 1,
     justifyContent: 'center',
-    padding: 32,
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: 12,
-    marginTop: 24
+    alignItems: 'center',
+    padding: 20,
+    marginTop: 40
   },
   alertIcon: {
     marginBottom: 16
   },
   notEligibleTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.error,
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: Colors.text,
     marginBottom: 8,
     textAlign: 'center'
   },
   notEligibleText: {
-    fontSize: 14,
+    fontSize: 16,
     color: Colors.textSecondary,
     textAlign: 'center',
-    opacity: 0.8
+    lineHeight: 22
+  },
+  centeredMessageContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    marginTop: 40
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: Colors.textSecondary
   }
 })

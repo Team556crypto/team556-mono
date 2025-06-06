@@ -173,6 +173,20 @@ export default function OnboardingScreen() {
 
   const toggleConfirmation = useCallback(() => setConfirmedSaved(!confirmedSaved), [])
 
+  const handleNextStep = useCallback(() => {
+    if (currentStep < 2) {
+      setCurrentStep(currentStep + 1)
+      setError(null) // Clear error when moving to next step
+    }
+  }, [currentStep])
+
+  const handlePreviousStep = useCallback(() => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1)
+      setError(null) // Clear error when moving to previous step
+    }
+  }, [currentStep])
+
   const steps = [
     {
       title: 'Verify Email',
@@ -289,10 +303,9 @@ export default function OnboardingScreen() {
       <StepForm
         steps={steps}
         currentStep={currentStep}
-        // Call verify for step 0, create for step 1
-        onNextStep={currentStep === 0 ? handleVerifyEmail : currentStep === 1 ? handleCreateWallet : undefined}
-        onComplete={handleComplete} // Called on the final step
-        // Dynamic button text based on current step
+        onNextStep={currentStep === 0 ? handleVerifyEmail : currentStep === 1 ? handleCreateWallet : handleNextStep}
+        onPreviousStep={handlePreviousStep}
+        onComplete={handleComplete}
         nextButtonText={
           currentStep === 0
             ? isVerifying
@@ -302,11 +315,10 @@ export default function OnboardingScreen() {
               ? isLoading
                 ? 'Creating...'
                 : 'Create Wallet'
-              : 'Next' // Default 'Next' for the last step (though 'Finish' is usually shown)
+              : 'Next'
         }
-        completeButtonText={'Finish'} // Show 'Finish' only on the last step (step 2)
-        hidePreviousButton={true} // Keep hidden for step 1 and 2
-        // Disable logic based on current step and loading states
+        previousButtonText={currentStep > 0 ? 'Back' : undefined}
+        completeButtonText={isLoading ? 'Finishing...' : 'Finish'}
         disableNextButton={
           (currentStep === 0 && (isVerifying || verificationCode.length !== 6)) ||
           (currentStep === 1 && isLoading) ||

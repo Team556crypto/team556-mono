@@ -1,9 +1,9 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Button, Text } from '@repo/ui';
+import React from 'react'
+import { View, StyleSheet } from 'react-native'
+import { Button, Text } from '@repo/ui'
 
 interface ComingSoonDrawerContentProps {
-  onClose: () => void;
+  onClose: () => void
 }
 
 const ComingSoonDrawerContent: React.FC<ComingSoonDrawerContentProps> = ({ onClose }) => {
@@ -11,22 +11,22 @@ const ComingSoonDrawerContent: React.FC<ComingSoonDrawerContentProps> = ({ onClo
     <View style={styles.container}>
       <Text preset='h4'>Feature Coming Soon!</Text>
       <Text preset='paragraph' style={styles.messageText}>
-        The ability to change your password directly within the app is under development.
+        Please contact support@team556.com for assistance.
       </Text>
       <Button title='Close' onPress={onClose} variant='secondary' />
     </View>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
     padding: 20,
     alignItems: 'center',
-    gap: 15,
+    gap: 15
   },
   messageText: {
-    textAlign: 'center',
-  },
-});
+    textAlign: 'center'
+  }
+})
 
-export default ComingSoonDrawerContent;
+export default ComingSoonDrawerContent

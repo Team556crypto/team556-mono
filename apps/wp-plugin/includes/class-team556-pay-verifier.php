@@ -52,13 +52,11 @@ class Team556_Solana_Pay_Verifier {
     public function verify_transaction($signature, $expected_recipient, $expected_amount, $network = 'mainnet') {
         // For development testing, allow simulated signatures
         if (strpos($signature, 'simulated_') === 0 && (defined('WP_DEBUG') && WP_DEBUG)) {
-            $this->log_debug("Accepting simulated signature in debug mode: $signature");
             return true;
         }
         
         // Validate signature format
         if (!$this->is_valid_signature_format($signature)) {
-            $this->log_debug("Invalid signature format: $signature");
             return false;
         }
         
@@ -68,19 +66,16 @@ class Team556_Solana_Pay_Verifier {
         // Get transaction details
         $transaction_data = $this->get_transaction_data($signature, $endpoint);
         if (empty($transaction_data)) {
-            $this->log_debug("Failed to retrieve transaction data for signature: $signature");
             return false;
         }
         
         // Verify transaction success
         if (!$this->is_transaction_successful($transaction_data)) {
-            $this->log_debug("Transaction was not successful: $signature");
             return false;
         }
         
         // Verify token program involvement (for SPL tokens)
         if (!$this->verify_token_program($transaction_data)) {
-            $this->log_debug("Transaction doesn't involve the SPL Token program: $signature");
             return false;
         }
         
@@ -89,13 +84,11 @@ class Team556_Solana_Pay_Verifier {
         
         // Verify token mint (must be Team556 token)
         if (!$this->verify_token_mint($transaction_data, $expected_token_mint)) {
-            $this->log_debug("Transaction doesn't involve the Team556 token mint: $signature");
             return false;
         }
         
         // Verify recipient
         if (!$this->verify_recipient($transaction_data, $expected_recipient)) {
-            $this->log_debug("Transaction recipient doesn't match expected: $signature");
             return false;
         }
         
@@ -104,7 +97,6 @@ class Team556_Solana_Pay_Verifier {
         // and verify the exact amount transferred
         
         // The transaction passed all checks
-        $this->log_debug("Transaction verification successful for signature: $signature");
         return true;
     }
     
@@ -151,7 +143,6 @@ class Team556_Solana_Pay_Verifier {
         
         // Check for HTTP errors
         if (is_wp_error($response)) {
-            $this->log_debug('RPC error: ' . $response->get_error_message());
             return null;
         }
         
@@ -270,29 +261,6 @@ class Team556_Solana_Pay_Verifier {
     }
     
     /**
-     * Log debug message
-     *
-     * @param string $message Debug message
-     * @return void
-     */
-    private function log_debug($message) {
-        if (!$this->debug_mode) {
-            return;
-        }
-        
-        // Create log directory if it doesn't exist
-        $log_dir = WP_CONTENT_DIR . '/uploads/team556-solana-pay-logs';
-        if (!is_dir($log_dir)) {
-            @mkdir($log_dir, 0755, true);
-        }
-        
-        $log_file = $log_dir . '/verifier-' . date('Y-m-d') . '.log';
-        $timestamp = date('Y-m-d H:i:s');
-        
-        error_log("[{$timestamp}] {$message}\n", 3, $log_file);
-    }
-    
-    /**
      * Check for a transaction by reference ID
      *
      * @param string $reference Reference ID to check
@@ -309,7 +277,6 @@ class Team556_Solana_Pay_Verifier {
         ));
         
         if ($transaction) {
-            $this->log_debug("Transaction found in database for reference: $reference");
             return $transaction;
         }
         
@@ -320,30 +287,25 @@ class Team556_Solana_Pay_Verifier {
         $signatures = $this->get_signatures_by_reference($reference, $endpoint);
         
         if (empty($signatures)) {
-            $this->log_debug("No transactions found for reference: $reference");
             return false;
         }
         
         // Get the transaction data for the most recent signature
         $signature = $signatures[0];
-        $this->log_debug("Found signature for reference: $reference, signature: $signature");
         
         // Get transaction details
         $transaction_data = $this->get_transaction_data($signature, $endpoint);
         if (empty($transaction_data)) {
-            $this->log_debug("Failed to retrieve transaction data for signature: $signature");
             return false;
         }
         
         // Verify transaction success
         if (!$this->is_transaction_successful($transaction_data)) {
-            $this->log_debug("Transaction was not successful: $signature");
             return false;
         }
         
         // Verify token program involvement (for SPL tokens)
         if (!$this->verify_token_program($transaction_data)) {
-            $this->log_debug("Transaction doesn't involve the SPL Token program: $signature");
             return false;
         }
         
@@ -351,20 +313,17 @@ class Team556_Solana_Pay_Verifier {
         // Hardcoded Team556 token mint address for security
         $token_mint = 'H7MeLVHPZcmcMzKRYUdtTJ4Bh3FahpfcmNhduJ7KvERg';
         if (!$this->verify_token_mint($transaction_data, $token_mint)) {
-            $this->log_debug("Transaction doesn't involve the Team556 token mint: $signature");
             return false;
         }
         
         // Get merchant wallet address
         $merchant_wallet = get_option('team556_solana_pay_wallet_address', '');
         if (empty($merchant_wallet)) {
-            $this->log_debug("Merchant wallet not configured");
             return false;
         }
         
         // Verify recipient
         if (!$this->verify_recipient($transaction_data, $merchant_wallet)) {
-            $this->log_debug("Transaction recipient doesn't match merchant wallet: $signature");
             return false;
         }
         
@@ -420,7 +379,6 @@ class Team556_Solana_Pay_Verifier {
         
         // Check for HTTP errors
         if (is_wp_error($response)) {
-            $this->log_debug('RPC error: ' . $response->get_error_message());
             return array();
         }
         

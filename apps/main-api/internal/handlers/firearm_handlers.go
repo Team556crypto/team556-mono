@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -93,14 +94,26 @@ func CreateFirearmHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 			return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized: missing user ID"})
 		}
 
-		// Beta Test: Limit firearms to 2 per user
-		var count int64
-		if err := db.Model(&models.Firearm{}).Where("user_id = ?", userID).Count(&count).Error; err != nil {
-			log.Printf("Error counting firearms for user %d: %v", userID, err)
-			// Allow creation if count fails, to not block users due to a potential DB issue during beta.
-			// Consider stricter error handling in production.
-		} else if count >= 2 {
-			return c.Status(http.StatusForbidden).JSON(fiber.Map{"error": "Firearm limit reached (max 2 for beta test)"})
+		// Determine if user is P1 presale user
+		isP1User := false
+		var presaleCode models.PresaleCode
+		// Check for a redeemed presale code for this user that starts with P1
+		if err := db.Where("user_id = ? AND redeemed = ? AND code LIKE ?", userID, true, "P1%").First(&presaleCode).Error; err == nil {
+			isP1User = true
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			// Log actual errors, but don't block creation if this check fails for other reasons
+			log.Printf("Error checking presale code for user %d: %v", userID, err)
+		}
+
+		// Apply limit if not a P1 user
+		if !isP1User {
+			var count int64
+			if err := db.Model(&models.Firearm{}).Where("user_id = ?", userID).Count(&count).Error; err != nil {
+				log.Printf("Error counting firearms for user %d: %v", userID, err)
+				// Allow creation if count fails, to not block users due to a potential DB issue.
+			} else if count >= 2 {
+				return c.Status(http.StatusForbidden).JSON(fiber.Map{"error": "Firearm limit reached (max 2). P1 presale members have unlimited additions."})
+			}
 		}
 
 		// Parse the request body into CreateFirearmRequest
@@ -137,12 +150,12 @@ func CreateFirearmHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 		if requestPayload.ImageBase64 != nil && *requestPayload.ImageBase64 != "" {
 			// Store the base64 image string directly in the database
 			imageBase64Str := *requestPayload.ImageBase64
-			
+
 			// Add data:image prefix if not already present
 			if !strings.HasPrefix(imageBase64Str, "data:image") {
 				imageBase64Str = "data:image/png;base64," + imageBase64Str
 			}
-			
+
 			// Set the image field directly with the base64 string
 			firearmModel.Image = &imageBase64Str
 		}
@@ -299,7 +312,7 @@ func UpdateFirearmHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 		newImageURL := existingFirearmModel.Image // Keep existing image URL by default
 		if requestPayload.ImageData != nil && *requestPayload.ImageData != "" {
 			log.Println("UpdateFirearmHandler: ImageData received. Processing base64 image.")
-			
+
 			// Log info about the received image (truncated to avoid huge logs)
 			if len(*requestPayload.ImageData) > 50 {
 				log.Printf("UpdateFirearmHandler: Received ImageData (first 50 chars): %s...", (*requestPayload.ImageData)[:50])
@@ -322,12 +335,12 @@ func UpdateFirearmHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 
 			// Set the image field with the base64 string
 			newImageURL = &imageBase64Str
-		} else if requestPayload.Image != nil && *requestPayload.Image == "" { 
+		} else if requestPayload.Image != nil && *requestPayload.Image == "" {
 			log.Println("UpdateFirearmHandler: Clearing image as per request (Image field is empty string).")
 			// If image field is explicitly sent as empty string, intent is to remove image
 			emptyStr := ""
-			newImageURL = &emptyStr 
-		} else if requestPayload.Image != nil { 
+			newImageURL = &emptyStr
+		} else if requestPayload.Image != nil {
 			// If image field is sent with a non-empty value but no ImageData, it implies user wants to manually set URL (less common)
 			// Or if image data was not provided, and client sends current URL, this handles it.
 			newImageURL = requestPayload.Image
@@ -341,29 +354,57 @@ func UpdateFirearmHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 		}
 
 		// Apply updates from requestPayload to existingFirearmModel
-		if requestPayload.Name != nil { existingFirearmModel.Name = *requestPayload.Name }
-		if requestPayload.Type != nil { existingFirearmModel.Type = *requestPayload.Type }
-		if requestPayload.Caliber != nil { existingFirearmModel.Caliber = *requestPayload.Caliber }
-		if requestPayload.SerialNumber != nil { existingFirearmModel.SerialNumber = *requestPayload.SerialNumber }
-		if requestPayload.AcquisitionDate != nil { existingFirearmModel.AcquisitionDate = requestPayload.AcquisitionDate } // This is already *time.Time
-		if requestPayload.PurchasePrice != nil { existingFirearmModel.PurchasePrice = requestPayload.PurchasePrice } // This is already *decimal.Decimal
-		if requestPayload.LastFired != nil { existingFirearmModel.LastFired = requestPayload.LastFired } // This is already *time.Time
-		if requestPayload.Manufacturer != nil { existingFirearmModel.Manufacturer = *requestPayload.Manufacturer }
-		if requestPayload.ModelName != nil { existingFirearmModel.ModelName = *requestPayload.ModelName }
-		if requestPayload.RoundCount != nil { existingFirearmModel.RoundCount = requestPayload.RoundCount } // This is already *int
-		if requestPayload.LastCleaned != nil { existingFirearmModel.LastCleaned = requestPayload.LastCleaned } // This is already *time.Time
-		if requestPayload.Value != nil { existingFirearmModel.Value = requestPayload.Value } // This is already *float64
-		if requestPayload.Status != nil { existingFirearmModel.Status = requestPayload.Status } // This is already *string in models.Firearm
-		if requestPayload.BallisticPerformance != nil { existingFirearmModel.BallisticPerformance = *requestPayload.BallisticPerformance }
-		
+		if requestPayload.Name != nil {
+			existingFirearmModel.Name = *requestPayload.Name
+		}
+		if requestPayload.Type != nil {
+			existingFirearmModel.Type = *requestPayload.Type
+		}
+		if requestPayload.Caliber != nil {
+			existingFirearmModel.Caliber = *requestPayload.Caliber
+		}
+		if requestPayload.SerialNumber != nil {
+			existingFirearmModel.SerialNumber = *requestPayload.SerialNumber
+		}
+		if requestPayload.AcquisitionDate != nil {
+			existingFirearmModel.AcquisitionDate = requestPayload.AcquisitionDate
+		} // This is already *time.Time
+		if requestPayload.PurchasePrice != nil {
+			existingFirearmModel.PurchasePrice = requestPayload.PurchasePrice
+		} // This is already *decimal.Decimal
+		if requestPayload.LastFired != nil {
+			existingFirearmModel.LastFired = requestPayload.LastFired
+		} // This is already *time.Time
+		if requestPayload.Manufacturer != nil {
+			existingFirearmModel.Manufacturer = *requestPayload.Manufacturer
+		}
+		if requestPayload.ModelName != nil {
+			existingFirearmModel.ModelName = *requestPayload.ModelName
+		}
+		if requestPayload.RoundCount != nil {
+			existingFirearmModel.RoundCount = requestPayload.RoundCount
+		} // This is already *int
+		if requestPayload.LastCleaned != nil {
+			existingFirearmModel.LastCleaned = requestPayload.LastCleaned
+		} // This is already *time.Time
+		if requestPayload.Value != nil {
+			existingFirearmModel.Value = requestPayload.Value
+		} // This is already *float64
+		if requestPayload.Status != nil {
+			existingFirearmModel.Status = requestPayload.Status
+		} // This is already *string in models.Firearm
+		if requestPayload.BallisticPerformance != nil {
+			existingFirearmModel.BallisticPerformance = *requestPayload.BallisticPerformance
+		}
+
 		existingFirearmModel.Image = newImageURL // Set the image URL (either new, cleared, or existing)
 
 		// UserID and ID are protected (not updated from payload)
 		// CreatedAt is preserved
-		if err := db.Save(&existingFirearmModel).Error; err != nil { 
+		if err := db.Save(&existingFirearmModel).Error; err != nil {
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Could not update firearm", "details": err.Error()})
 		}
-        
+
 		// Convert to FirearmResponse before sending
 		response := FirearmResponse{
 			ID:                   existingFirearmModel.ID,

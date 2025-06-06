@@ -17,7 +17,8 @@ import {
   TransactionInstruction,
   SystemProgram,
   Transaction, // Ensure Transaction is imported
-  BlockhashWithExpiryBlockHeight // Import for type clarity
+  BlockhashWithExpiryBlockHeight, // Import for type clarity
+  SendTransactionError // Import SendTransactionError
 } from '@solana/web3.js'
 import dotenv from 'dotenv'
 import path from 'path'
@@ -633,6 +634,10 @@ export const submitTokenAccountTransaction = async (serializedTransaction: strin
   const connection = new Connection(process.env.GLOBAL__MAINNET_RPC_URL || '', 'confirmed')
   let backupConnection: Connection | null = null
 
+  // Declare variables here to be accessible in both try and catch blocks
+  let originalBlockhashForConfirmation: string | undefined
+  let originalLastValidBlockHeightForConfirmation: number | undefined
+
   if (process.env.GLOBAL__BACKUP_RPC_URL) {
     backupConnection = new Connection(process.env.GLOBAL__BACKUP_RPC_URL, 'confirmed')
   }
@@ -645,88 +650,85 @@ export const submitTokenAccountTransaction = async (serializedTransaction: strin
     if (process.env.NODE_ENV !== 'production') {
       try {
         // Attempt to deserialize as legacy first, then versioned
-        let legacyTx: Transaction;
-        let originalBlockhash: string;
-        let originalLastValidBlockHeight: number | undefined;
+        let legacyTx: Transaction
+        let originalBlockhash: string
+        let originalLastValidBlockHeight: number | undefined
 
         try {
-          legacyTx = Transaction.from(transactionBuffer);
-          originalBlockhash = legacyTx.recentBlockhash!;
-          originalLastValidBlockHeight = legacyTx.lastValidBlockHeight;
+          legacyTx = Transaction.from(transactionBuffer)
+          originalBlockhash = legacyTx.recentBlockhash!
+          originalLastValidBlockHeight = legacyTx.lastValidBlockHeight
         } catch (e) {
           // If legacy fails, try versioned
-          const versionedTx = VersionedTransaction.deserialize(transactionBuffer);
-          originalBlockhash = versionedTx.message.recentBlockhash;
+          const versionedTx = VersionedTransaction.deserialize(transactionBuffer)
+          originalBlockhash = versionedTx.message.recentBlockhash
           // lastValidBlockHeight is not directly available on VersionedTransaction message prior to signing
           // but it's embedded in the blockhash. confirmTransaction will use it.
-          // We will fetch it IF NEEDED from the blockhash later if legacyTx.lastValidBlockHeight is undefined.
+          // Solana's `confirmTransaction` can often derive `lastValidBlockHeight` from `blockhash` if it's a `BlockhashWithExpiryBlockHeight` object.
+          // Let's try to get it from parsing the blockhash, or if not, fetch from connection using the default or 'confirmed' commitment.
+          // const blockhashDetails = await connection.getBlockHeight(originalBlockhash); // This call was causing a lint error if a second arg string was passed.
+          // We don't strictly need blockhashDetails here as confirmTransaction is robust with the original blockhash.
+          // The logic below fetches lastValidBlockHeight based on whether the originalBlockhashForConfirmation is still the latest.
+          originalLastValidBlockHeight = undefined
         }
-
-        const simConnection = new Connection(process.env.GLOBAL__MAINNET_RPC_URL || '', 'confirmed');
-        // For simulation, legacyTx (if it is) is fine. VersionedTx would need more handling for simulation here if strictly typed.
-        // However, sendRawTransaction below handles both types correctly.
-        // The main goal here is to get the originalBlockhash and potentially lastValidBlockHeight.
 
         // If legacyTx exists and has lastValidBlockHeight, use it for simulation context
-        const simTxToUse = Transaction.from(transactionBuffer); // Re-deserialize for simulation to be safe
+        const simTxToUse = Transaction.from(transactionBuffer) // Re-deserialize for simulation to be safe
 
-        const simResult = await simConnection.simulateTransaction(simTxToUse, undefined, true);
+        const simResult = await connection.simulateTransaction(simTxToUse, undefined, true)
         if (simResult.value.err) {
-          console.error('Preflight simulation failed:', JSON.stringify(simResult.value.err));
+          console.error('Preflight simulation failed:', JSON.stringify(simResult.value.err))
           if (simResult.value.logs) {
-            simResult.value.logs.forEach(log => console.error('sim log:', log));
+            simResult.value.logs.forEach(log => console.error('sim log:', log))
           }
         } else {
-          console.log('Preflight simulation succeeded');
+          console.log('Preflight simulation succeeded')
         }
       } catch (simErr) {
-        console.warn('Simulation attempt threw error:', simErr instanceof Error ? simErr.message : String(simErr));
+        console.warn('Simulation attempt threw error:', simErr instanceof Error ? simErr.message : String(simErr))
       }
     }
 
     // Extract original blockhash and lastValidBlockHeight from the transaction for confirmation
-    let originalBlockhashForConfirmation: string;
-    let originalLastValidBlockHeightForConfirmation: number;
-
     try {
       // Try deserializing as a legacy Transaction first
-      const legacyTransaction = Transaction.from(transactionBuffer);
+      const legacyTransaction = Transaction.from(transactionBuffer)
       if (!legacyTransaction.recentBlockhash) {
-        throw new Error('recentBlockhash not found in legacy transaction');
+        throw new Error('recentBlockhash not found in legacy transaction')
       }
-      originalBlockhashForConfirmation = legacyTransaction.recentBlockhash;
-      if (legacyTransaction.lastValidBlockHeight === undefined || legacyTransaction.lastValidBlockHeight === null) {
-         // If lastValidBlockHeight is not on the legacy tx, derive from a getFeeForMessage call with the blockhash
-         // This is a fallback; ideally, the client includes it or we parse it carefully from versioned if applicable.
-         // For now, we'll fetch it based on the blockhash if not present.
-         // This part might need refinement based on how client constructs legacy TX.
-         console.warn('lastValidBlockHeight not found on legacy transaction, fetching using blockhash. Client should include this.');
-         const feeForMessage = await connection.getFeeForMessage(legacyTransaction.compileMessage(), 'confirmed');
-         if (!feeForMessage || !feeForMessage.context || !feeForMessage.context.slot) {
-            throw new Error('Could not determine lastValidBlockHeight from legacy transaction blockhash.')
-         }
-         // A common heuristic: lastValidBlockHeight is often blockhash expiry block height, which is ~300 blocks from current.
-         // The most reliable way is if the client provides it, or we derive it from the blockhash string itself if it's a new format blockhash.
-         // For this fix, we rely on confirmTransaction's internal logic given the correct blockhash, or this fetch.
-         // Solana's `confirmTransaction` can often derive `lastValidBlockHeight` from `blockhash` if it's a `BlockhashWithExpiryBlockHeight` object.
-         // Let's try to get it from parsing the blockhash, or if not, fetch from connection using the default or 'confirmed' commitment.
-         // const blockhashDetails = await connection.getBlockHeight(originalBlockhashForConfirmation); // This call was causing a lint error if a second arg string was passed.
-         // We don't strictly need blockhashDetails here as confirmTransaction is robust with the original blockhash.
-         // The logic below fetches lastValidBlockHeight based on whether the originalBlockhashForConfirmation is still the latest.
-         originalLastValidBlockHeightForConfirmation = feeForMessage.context.slot;
+      originalBlockhashForConfirmation = legacyTransaction.recentBlockhash
+      if (legacyTransaction.lastValidBlockHeight === undefined) {
+        // If lastValidBlockHeight is not on the legacy tx, derive from a getFeeForMessage call with the blockhash
+        // This is a fallback; ideally, the client includes it or we parse it carefully from versioned if applicable.
+        // For now, we'll fetch it based on the blockhash if not present.
+        // This part might need refinement based on how client constructs legacy TX.
+        console.warn('lastValidBlockHeight not found on legacy transaction, fetching using blockhash. Client should include this.')
+        const feeForMessage = await connection.getFeeForMessage(legacyTransaction.compileMessage(), 'confirmed')
+        if (!feeForMessage || !feeForMessage.context || !feeForMessage.context.slot) {
+          throw new Error('Could not determine lastValidBlockHeight from legacy transaction blockhash.')
+        }
+        // A common heuristic: lastValidBlockHeight is often blockhash expiry block height, which is ~300 blocks from current.
+        // The most reliable way is if the client provides it, or we derive it from the blockhash string itself if it's a new format blockhash.
+        // For this fix, we rely on confirmTransaction's internal logic given the correct blockhash, or this fetch.
+        // Solana's `confirmTransaction` can often derive `lastValidBlockHeight` from `blockhash` if it's a `BlockhashWithExpiryBlockHeight` object.
+        // Let's try to get it from parsing the blockhash, or if not, fetch from connection using the default or 'confirmed' commitment.
+        // const blockhashDetails = await connection.getBlockHeight(originalBlockhashForConfirmation); // This call was causing a lint error if a second arg string was passed.
+        // We don't strictly need blockhashDetails here as confirmTransaction is robust with the original blockhash.
+        // The logic below fetches lastValidBlockHeight based on whether the originalBlockhashForConfirmation is still the latest.
+        originalLastValidBlockHeightForConfirmation = feeForMessage.context.slot
       } else {
-        originalLastValidBlockHeightForConfirmation = legacyTransaction.lastValidBlockHeight;
+        originalLastValidBlockHeightForConfirmation = legacyTransaction.lastValidBlockHeight
       }
     } catch (e) {
       // If legacy fails, assume it's a VersionedTransaction
-      const versionedTransaction = VersionedTransaction.deserialize(transactionBuffer);
-      originalBlockhashForConfirmation = versionedTransaction.message.recentBlockhash;
+      const versionedTransaction = VersionedTransaction.deserialize(transactionBuffer)
+      originalBlockhashForConfirmation = versionedTransaction.message.recentBlockhash
       // For VersionedTransaction, lastValidBlockHeight is implicitly handled by the library
       // when confirming with the blockhash. We need to fetch a current one for the confirmation parameters.
       // The key is that `originalBlockhashForConfirmation` (from the tx) is passed to `confirmTransaction`.
-      const latestBlockhashInfo = await connection.getLatestBlockhash('confirmed');
-      originalLastValidBlockHeightForConfirmation = latestBlockhashInfo.lastValidBlockHeight;
-       console.log(`Using original blockhash ${originalBlockhashForConfirmation} and current lastValidBlockHeight ${originalLastValidBlockHeightForConfirmation} for VersionedTransaction confirmation.`);
+      const latestBlockhashInfo = await connection.getLatestBlockhash('confirmed')
+      originalLastValidBlockHeightForConfirmation = latestBlockhashInfo.lastValidBlockHeight
+      console.log(`Using original blockhash ${originalBlockhashForConfirmation} and current lastValidBlockHeight ${originalLastValidBlockHeightForConfirmation} for VersionedTransaction confirmation.`)
     }
 
     // Send and confirm transaction
@@ -734,9 +736,9 @@ export const submitTokenAccountTransaction = async (serializedTransaction: strin
       skipPreflight: false, // Keep preflight for safety unless specific reason to skip
       preflightCommitment: 'confirmed',
       maxRetries: 5
-    });
+    })
 
-    console.log(`Token account transaction sent, signature: ${signature}, using original blockhash: ${originalBlockhashForConfirmation} for confirmation.`);
+    console.log(`Token account transaction sent, signature: ${signature}, using original blockhash: ${originalBlockhashForConfirmation} for confirmation.`)
 
     // Wait for confirmation using the original blockhash and lastValidBlockHeight from the transaction
     try {
@@ -747,109 +749,125 @@ export const submitTokenAccountTransaction = async (serializedTransaction: strin
           lastValidBlockHeight: originalLastValidBlockHeightForConfirmation // Use the LVBH from the client's transaction
         },
         'confirmed'
-      );
+      )
 
       if (confirmation.value.err) {
-        console.error(`Token account creation failed after confirmation: ${JSON.stringify(confirmation.value.err)}`, `Signature: ${signature}`);
-        throw new Error(`Failed to create token account: ${JSON.stringify(confirmation.value.err)}`);
+        console.error(`Token account creation failed after confirmation: ${JSON.stringify(confirmation.value.err)}`, `Signature: ${signature}`)
+        throw new Error(`Failed to create token account: ${JSON.stringify(confirmation.value.err)}`)
       }
-      console.log(`Token account(s) created successfully, tx: ${signature}`);
-      return signature;
+      console.log(`Token account(s) created successfully, tx: ${signature}`)
+      return signature
     } catch (confirmError) {
       console.error(
         `Error confirming token account transaction (sig: ${signature}): ${confirmError instanceof Error ? confirmError.message : String(confirmError)}`
-      );
+      )
 
       // Check if backup connection exists and try that
       if (backupConnection) {
-        console.log(`Attempting confirmation with backup RPC for signature: ${signature}`);
+        console.log(`Attempting confirmation with backup RPC for signature: ${signature}`)
         try {
           // For backup, still use original blockhash details
-          const backupConfirmation = await backupConnection.confirmTransaction(
-            {
-              signature,
-              blockhash: originalBlockhashForConfirmation,
-              lastValidBlockHeight: originalLastValidBlockHeightForConfirmation
-            },
-            'confirmed'
-          );
+          if (originalBlockhashForConfirmation && typeof originalLastValidBlockHeightForConfirmation === 'number') {
+            const backupConfirmation = await backupConnection.confirmTransaction(
+              {
+                signature,
+                blockhash: originalBlockhashForConfirmation,
+                lastValidBlockHeight: originalLastValidBlockHeightForConfirmation
+              },
+              'confirmed'
+            )
 
-          if (!backupConfirmation.value.err) {
-            console.log(`Successfully confirmed token account(s) with backup RPC, tx: ${signature}`);
-            return signature;
+            if (!backupConfirmation.value.err) {
+              console.log(`Successfully confirmed token account(s) with backup RPC, tx: ${signature}`)
+              return signature
+            }
+          } else {
+            console.error('Backup RPC: Cannot attempt confirmation because original blockhash details are missing. Throwing original error.');
+            // If original blockhash details weren't even extracted, re-throw the original error as backup confirmation isn't possible.
           }
         } catch (backupConfirmError) {
           console.error(
             `Backup RPC confirmation also failed (sig: ${signature}): ${backupConfirmError instanceof Error ? backupConfirmError.message : String(backupConfirmError)}`
-          );
+          )
         }
       }
 
       throw new Error(
         `Failed to confirm token account creation (sig: ${signature}): ${confirmError instanceof Error ? confirmError.message : String(confirmError)}`
-      );
+      )
     }
   } catch (error) {
     console.error(
       `Error submitting token account transaction: ${error instanceof Error ? error.message : String(error)}`
-    );
+    )
 
     // Try backup RPC if available and this is a network error (e.g. submission failed)
     if (backupConnection && error instanceof Error && (error.message.includes('network') || error.message.includes('failed to send'))) {
-      console.log('Outer catch: Trying backup RPC endpoint for sendRawTransaction...');
+      console.log('Outer catch: Trying backup RPC endpoint for sendRawTransaction...')
       try {
-        const transactionBuffer = Buffer.from(serializedTransaction, 'base64'); // re-buffer
-        // Extract original blockhash and LVBH again for backup send/confirm logic
-        let originalBlockhashForBackup: string;
-        let originalLastValidBlockHeightForBackup: number;
-        try {
-          const legacyTx = Transaction.from(transactionBuffer);
-          originalBlockhashForBackup = legacyTx.recentBlockhash!;
-          if(legacyTx.lastValidBlockHeight === undefined) {
-            const latestInfo = await backupConnection.getLatestBlockhash('confirmed');
-            originalLastValidBlockHeightForBackup = latestInfo.lastValidBlockHeight;
-          } else {
-            originalLastValidBlockHeightForBackup = legacyTx.lastValidBlockHeight;
-          }
-        } catch (e) {
-          const versionedTx = VersionedTransaction.deserialize(transactionBuffer);
-          originalBlockhashForBackup = versionedTx.message.recentBlockhash;
-          const latestInfo = await backupConnection.getLatestBlockhash('confirmed');
-          originalLastValidBlockHeightForBackup = latestInfo.lastValidBlockHeight;
-        }
-
-        const signature = await backupConnection.sendRawTransaction(transactionBuffer, {
-          skipPreflight: false,
+        const transactionBuffer = Buffer.from(serializedTransaction, 'base64') // re-buffer
+        // Re-attempt sendRawTransaction with backup
+        const backupSignature = await backupConnection.sendRawTransaction(transactionBuffer, {
+          skipPreflight: false, // Keep preflight
           preflightCommitment: 'confirmed',
-          maxRetries: 5
-        });
+          maxRetries: 3 // Fewer retries for backup
+        })
+        console.log(`Transaction sent via backup RPC, signature: ${backupSignature}`)
 
-        console.log(`Token account transaction sent via backup RPC: ${signature}, using original blockhash ${originalBlockhashForBackup}`);
+        // Attempt confirmation with backup (using original blockhash details)
+        if (originalBlockhashForConfirmation && typeof originalLastValidBlockHeightForConfirmation === 'number') {
+          const backupConfirmation = await backupConnection.confirmTransaction(
+            {
+              signature: backupSignature,
+              blockhash: originalBlockhashForConfirmation, // Now type-safe
+              lastValidBlockHeight: originalLastValidBlockHeightForConfirmation // Now type-safe
+            },
+            'confirmed'
+          )
 
-        const confirmation = await backupConnection.confirmTransaction(
-          {
-            signature,
-            blockhash: originalBlockhashForBackup,
-            lastValidBlockHeight: originalLastValidBlockHeightForBackup
-          },
-          'confirmed'
-        );
-
-        if (confirmation.value.err) {
-          console.error(`Backup RPC: Token account creation failed after confirmation: ${JSON.stringify(confirmation.value.err)}`, `Signature: ${signature}`);
-          throw new Error(`Backup RPC: Failed to create token account: ${JSON.stringify(confirmation.value.err)}`);
+          if (backupConfirmation.value.err) {
+            console.error(`Backup RPC: Token account creation failed after confirmation: ${JSON.stringify(backupConfirmation.value.err)}`)
+            // Fall through to throw original error if backup confirmation also fails
+          } else {
+            console.log(`Backup RPC: Token account(s) created successfully, tx: ${backupSignature}`)
+            return backupSignature // Success via backup
+          }
+        } else {
+          console.error('Backup RPC: Cannot attempt confirmation because original blockhash details are missing. Throwing original error.');
+          // If original blockhash details weren't even extracted, re-throw the original error as backup confirmation isn't possible.
         }
-        console.log(`Backup RPC: Token account(s) created successfully, tx: ${signature}`);
-        return signature;
       } catch (backupError) {
         console.error(
-          `Backup RPC send/confirm failed: ${backupError instanceof Error ? backupError.message : String(backupError)}`
-        );
-        // Re-throw original error if backup fails
-        throw error; 
+          `Backup RPC attempt failed: ${backupError instanceof Error ? backupError.message : String(backupError)}`
+        )
+        // Fall through to throw original error if backup also fails
       }
     }
-    // Re-throw original error if no backup or backup not applicable
-    throw error;
+
+    // If it's a SendTransactionError from the primary connection, try to get more details
+    if (error instanceof SendTransactionError) {
+      console.error('Detailed SendTransactionError Information:')
+      if (error.logs && error.logs.length > 0) {
+        error.logs.forEach((log, i) => console.error(`Log[${i}]: ${log}`))
+      } else {
+        console.error('No specific logs found on SendTransactionError. Attempting to fetch via getLogs().')
+        // The getLogs method might not be available directly on all SendTransactionError instances
+        // or might require the connection object. Web3.js error handling can be nuanced.
+        // This is a best-effort attempt.
+        if (typeof (error as any).getLogs === 'function') {
+          try {
+            // Assuming 'connection' is the primary connection object in scope
+            const logs = await (error as any).getLogs(connection)
+            if (logs) {
+              console.error("Solana SendTransactionError On-Chain Logs:", logs)
+            }
+          } catch (logErr) {
+            console.error("Failed to retrieve SendTransactionError on-chain logs:", logErr)
+          }
+        }
+      }
+    }
+
+    throw error // Re-throw the original error after logging and backup attempt
   }
-};
+}

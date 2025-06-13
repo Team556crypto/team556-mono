@@ -4,8 +4,11 @@ import React from 'react'
 import { ResponsiveNavigation } from '@/components/layout/ResponsiveNavigation'
 import { Colors } from '@/constants/Colors'
 import { Entypo, Ionicons } from '@expo/vector-icons'
+import { useAuthStore } from '@/store/authStore'
 
 export default function TabLayout() {
+  const isP1User = useAuthStore(state => state.isP1PresaleUser());
+
   return (
     <Tabs
       tabBar={props => <ResponsiveNavigation {...props} />}
@@ -28,13 +31,16 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Ionicons name='shield-checkmark' size={28} color={color} />
         }}
       />
-      <Tabs.Screen
-        name='pay'
-        options={{
-          title: 'Pay',
-          tabBarIcon: ({ color }) => <Ionicons name='card' size={28} color={color} />
-        }}
-      />
+      {/* Conditionally render the Pay tab */}
+      {isP1User && (
+        <Tabs.Screen
+          name='pay'
+          options={{
+            title: 'Pay',
+            tabBarIcon: ({ color }) => <Ionicons name='card' size={28} color={color} />
+          }}
+        />
+      )}
       <Tabs.Screen
         name='settings'
         options={{

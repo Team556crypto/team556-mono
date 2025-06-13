@@ -252,10 +252,15 @@ function team556_handle_get_block_payment_data_request() {
     if (isset($price_data['error'])) {
         $error_message = $price_data['error'];
     } elseif (isset($price_data['price'])) {
-        $token_price = (float) $price_data['price'];
-        if ($token_price > 0) {
-            $required_token_amount = $cart_total / $token_price;
-            $required_token_amount = round($required_token_amount, 6); 
+        $token_price_str = $price_data['price']; // Keep as string
+
+        // Ensure cart_total is a string for bcmath operations
+        $cart_total_str = (string) $cart_total;
+
+        // Use bccomp for comparing string numbers, 9 is the scale (decimal places)
+        if (is_numeric($token_price_str) && bccomp($token_price_str, '0', 9) > 0) {
+            // Calculate required token amount with 9 decimal places precision
+            $required_token_amount = bcdiv($cart_total_str, $token_price_str, 9);
         } else {
             $error_message = 'Token price is zero or invalid.';
         }
@@ -270,7 +275,7 @@ function team556_handle_get_block_payment_data_request() {
     // Parameters for the query string part of the Solana Pay URL
     $query_params = [
         'spl-token' => $token_mint,
-        'amount'    => $required_token_amount,
+        'amount'    => $required_token_amount, // This will be a string with 9 decimal places
         'label'     => get_bloginfo('name'),
         'message'   => sprintf(__('Payment for Order at %s', 'team556-pay'), get_bloginfo('name')),
     ];

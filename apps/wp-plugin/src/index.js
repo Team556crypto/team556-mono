@@ -50,7 +50,7 @@ const Content = () => {
         setPricingInfo({ tokenPrice: 0, currency: '', cartTotalFiat: 0, requiredTokenAmount: 0, loaded: false, error: null }); // Clear previous pricing info
         const ajaxUrl = window.ajaxurl || '/wp-admin/admin-ajax.php'; // Fallback just in case
         const params = new URLSearchParams({
-            action: 'team556_get_block_payment_data',
+            action: 'team556_handle_get_block_payment_data_request',
             // If you implement nonce later, add it here: 
             // security: settings.your_nonce_key_here 
         });
@@ -65,15 +65,15 @@ const Content = () => {
             .then(body => {
                 // WooCommerce AJAX typically wraps success in { success: true, data: ... } 
                 // or { success: false, data: ... } for errors handled by wp_send_json_error
-                if (body.success && body.data && body.data.paymentUrl) {
-                    setQrValue(body.data.paymentUrl);
+                if (body.success && body.data && body.data.solanaPayUrl) {
+                    setQrValue(body.data.solanaPayUrl);
                     setPricingInfo({
                         tokenPrice: parseFloat(body.data.tokenPrice) || 0,
                         currency: body.data.currency || '',
                         cartTotalFiat: parseFloat(body.data.cartTotalFiat) || 0,
                         requiredTokenAmount: parseFloat(body.data.requiredTokenAmount) || 0,
                         loaded: true,
-                        error: (parseFloat(body.data.tokenPrice) || 0) <= 0 && !body.data.paymentUrl ? __('Could not load token price.', 'team556-pay') : null
+                        error: (!body.data.requiredTokenAmount || parseFloat(body.data.requiredTokenAmount) <= 0) && !body.data.solanaPayUrl ? __('Could not load token price or calculate amount.', 'team556-pay') : body.data.errorMessage || null
                     });
                     // console.log('Team556 Pay: Payment URL received:', body.data.paymentUrl);
                     // console.log('Team556 Pay: Payment reference:', body.data.reference);
@@ -129,7 +129,7 @@ const Content = () => {
                         </p>
                     </>
                 )}
-                { pricingInfo.loaded && !pricingInfo.error && pricingInfo.tokenPrice <= 0 && qrValue && (
+                { pricingInfo.loaded && !pricingInfo.error && (!pricingInfo.requiredTokenAmount || pricingInfo.requiredTokenAmount <= 0) && qrValue && (
                      <p style={{ margin: '5px 0', fontSize: '14px' }}>{__('Could not retrieve current token price. Please refer to your wallet for the exact token amount based on the QR code.', 'team556-pay')}</p>
                 )}
             </div>

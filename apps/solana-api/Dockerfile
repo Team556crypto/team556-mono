@@ -39,7 +39,7 @@ COPY --from=builder /app/apps/solana-api/dist ./dist/
 COPY --from=builder /app/apps/solana-api/load-global-env.js ./load-global-env.js
 
 # Expose the port (set via SOLANA_API__PORT secret, defaults to 4000)
-EXPOSE 4000
+EXPOSE 6000
 
 # Command to run the application (using yarn start from solana-api's package.json)
 CMD [ "yarn", "start" ]

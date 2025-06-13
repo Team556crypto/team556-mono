@@ -13,7 +13,7 @@ if (!defined('ABSPATH')) {
  */
 class Team556_Pay_Gateway extends WC_Payment_Gateway {
     public $unavailability_reason = '';
-    public $logger;
+    public $logger = null;
     /**
      * Constructor
      */
@@ -74,6 +74,29 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         // Enqueue payment scripts
         add_action( 'wp_enqueue_scripts', array( $this, 'payment_scripts' ), 90 ); // Run a bit later
 
+        // Initialize logger if debug mode is enabled
+        if ($this->debug_mode === 'yes') {
+            if (class_exists('WC_Logger')) {
+                $this->logger = new WC_Logger();
+            } else {
+                // Fallback or error if WC_Logger is not available, though it should be in a WooCommerce context.
+                // For now, we'll just proceed without logging if WC_Logger isn't found.
+            }
+        }
+    }
+
+    /**
+     * Log debug messages if debug mode is enabled.
+     *
+     * @param string $message The message to log.
+     * @param string $context Optional context for the log entry (e.g., method name).
+     */
+    public function log_debug($message, $context = 'debug') {
+        if ($this->debug_mode === 'yes' && is_object($this->logger)) {
+            // Prepend context to the message for clarity in logs
+            $log_message = '[' . strtoupper($context) . '] ' . $message;
+            $this->logger->debug($log_message, array('source' => 'team556-pay'));
+        }
     }
 
     /**
@@ -523,53 +546,32 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
      * @return array|false Price data array ['price' => float, 'last_updated' => timestamp, 'source' => 'cache'|'api'] or false on failure.
      */
     public function fetch_team556_price_data() {
-        $transient_key = 'team556_alchemy_price_data';
+        $transient_key = 'team556_main_api_price_data'; // Changed transient key
         $cached_data = get_transient($transient_key);
 
         if (false !== $cached_data && isset($cached_data['price'])) {
-
+            $this->log_debug('TEAM556 Price: Returning cached data.');
             $cached_data['source'] = 'cache';
             return $cached_data;
         }
 
-        // Hardcoded API Key for debugging purposes
-        $alchemy_api_key = 'alcht_XfC06RTw4Rfydwbx6CnK9zazC2GEfS'; 
+        $this->log_debug('TEAM556 Price: Cache miss or expired, fetching from main-api.');
 
-        if (empty($alchemy_api_key)) { // This check will now likely always pass with a hardcoded key
-
-            return false;
-        }
-
-        $team556_token_mint = 'AMNfeXpjD6kXyyTDB4LMKzNWypqNHwtgJUACHUmuKLD5';
-        $network = 'solana-mainnet'; // Solana mainnet network identifier for Alchemy
-        
-        // Alchemy Prices API endpoint for token prices by address
-        $api_url = sprintf('https://api.g.alchemy.com/prices/v1/%s/tokens/by-address', $alchemy_api_key);
-
-        $request_body = [
-            'addresses' => [
-                [
-                    'network' => $network,
-                    'address' => $team556_token_mint
-                ]
-            ]
-        ];
+        // The main-api URL is hardcoded for deployment.
+        $main_api_base_url = 'http://localhost:3000'; 
+        $api_url = $main_api_base_url . '/api/price/team556-usdc';
 
         if ($this->debug_mode === 'yes') {
-
+            $this->log_debug('TEAM556 Price: Requesting URL: ' . $api_url);
         }
 
-        $response = wp_remote_post($api_url, array(
-            'timeout' => 10,
-            'headers' => array(
-                'Content-Type' => 'application/json',
-            ),
-            'body' => json_encode($request_body)
+        $response = wp_remote_get($api_url, array(
+            'timeout' => 10, // seconds
         ));
 
         if (is_wp_error($response)) {
             if ($this->debug_mode === 'yes') {
-
+                $this->log_debug('TEAM556 Price: WP Error fetching price: ' . $response->get_error_message());
             }
             return false;
         }
@@ -577,54 +579,52 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         $status_code = wp_remote_retrieve_response_code($response);
         $body = wp_remote_retrieve_body($response);
 
+        if ($this->debug_mode === 'yes') {
+            $this->log_debug('TEAM556 Price: Response Status Code: ' . $status_code);
+            $this->log_debug('TEAM556 Price: Response Body: ' . $body);
+        }
+
         if ($status_code !== 200) {
             if ($this->debug_mode === 'yes') {
-
+                $this->log_debug('TEAM556 Price: API returned non-200 status: ' . $status_code);
             }
             return false;
         }
 
         $data = json_decode($body, true);
 
-        // Alchemy response structure: {"data": [{"address": "...", "network": "...", "prices": [{"currency": "USD", "value": "0.123", "lastUpdatedAt": "..."}], "error": null}]}
-        if (empty($data['data']) || !isset($data['data'][0]['prices'][0]['value'])) {
+        // Expected main-api response structure: {"token":"TEAM556","price_usdc":0.00402045,"source":"alchemy","timestamp":"2024-07-15T20:05:56.17384Z"}
+        if (empty($data) || !isset($data['price_usdc']) || !is_numeric($data['price_usdc'])) {
             if ($this->debug_mode === 'yes') {
-
+                $this->log_debug('TEAM556 Price: Invalid data structure or missing price_usdc from main-api response.');
             }
             return false;
         }
 
-        $price_data = $data['data'][0];
-        
-        // Check for API errors
-        if (!empty($price_data['error'])) {
+        $price_str = $data['price_usdc']; // Keep as string
+
+        // Basic validation for the price string (e.g., is numeric, positive)
+        // Using BCMath for comparison to handle string numbers accurately.
+        if (!is_numeric($price_str) || bccomp($price_str, '0', 9) <= 0) { // 9 is the scale for comparison
+
             if ($this->debug_mode === 'yes') {
-
-            }
-            return false;
-        }
-
-        $price = floatval($price_data['prices'][0]['value']);
-
-        if ($price <= 0) {
-            if ($this->debug_mode === 'yes') {
-
+                $this->log_debug('TEAM556 Price: Price value is not positive: ' . $price_str);
             }
             return false;
         }
 
         $price_info = [
-            'price' => $price,
-            'last_updated' => time(),
-            'source' => 'api'
+            'price'        => $price_str, // Store the string price
+            'last_updated' => time(), // Use current time as last_updated from WP perspective
+            'source'       => 'api (via main-api: ' . (isset($data['source']) ? $data['source'] : 'unknown') . ')',
+            'api_timestamp'=> isset($data['timestamp']) ? $data['timestamp'] : null, // Store original timestamp from API
         ];
 
-        set_transient($transient_key, $price_info, 10); // Cache for 10 seconds
+        set_transient($transient_key, $price_info, 60); // Cache for 60 seconds (increased from 10)
 
         if ($this->debug_mode === 'yes') {
-            return $price_info; // Correctly indented return for debug mode
+            $this->log_debug('TEAM556 Price: Successfully fetched and cached. Price: ' . $price_str);
         }
-        // General success return for fetch_team556_price_data
         return $price_info;
     } // Closing brace for fetch_team556_price_data method
     

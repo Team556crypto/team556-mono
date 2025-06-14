@@ -168,7 +168,7 @@ class Team556_Pay_DB {
      */
     public function get_transactions($args = array()) {
         global $wpdb;
-        
+
         $defaults = array(
             'number'         => 20,
             'offset'         => 0,
@@ -177,48 +177,67 @@ class Team556_Pay_DB {
             'status'         => '',
             'wallet_address' => '',
             'order_id'       => null,
+            'search'         => '',
         );
-        
+
         $args = wp_parse_args($args, $defaults);
-        
+
+        // Sanitize orderby to prevent SQL injection
+        $allowed_orderby = array('id', 'amount', 'status', 'created_at', 'order_id');
+        $orderby = in_array($args['orderby'], $allowed_orderby) ? $args['orderby'] : 'id';
+        $order = strtoupper($args['order']) === 'ASC' ? 'ASC' : 'DESC';
+
         $sql = "SELECT * FROM {$this->transactions_table}";
         $where = array();
-        
+        $params = array();
+
+        // Add search term filter
+        if (!empty($args['search'])) {
+            $search_term = '%' . $wpdb->esc_like($args['search']) . '%';
+            $where[] = "(transaction_signature LIKE %s OR wallet_address LIKE %s OR order_id LIKE %s OR id LIKE %s)";
+            $params[] = $search_term;
+            $params[] = $search_term;
+            $params[] = $search_term;
+            $params[] = $search_term;
+        }
+
         // Add status filter
         if (!empty($args['status'])) {
-            $where[] = $wpdb->prepare("status = %s", $args['status']);
+            $where[] = "status = %s";
+            $params[] = $args['status'];
         }
-        
+
         // Add wallet address filter
         if (!empty($args['wallet_address'])) {
-            $where[] = $wpdb->prepare("wallet_address = %s", $args['wallet_address']);
+            $where[] = "wallet_address = %s";
+            $params[] = $args['wallet_address'];
         }
-        
+
         // Add order ID filter
         if (!is_null($args['order_id'])) {
-            $where[] = $wpdb->prepare("order_id = %d", $args['order_id']);
+            $where[] = "order_id = %d";
+            $params[] = $args['order_id'];
         }
-        
-        // Build where clause
+
         if (!empty($where)) {
             $sql .= ' WHERE ' . implode(' AND ', $where);
         }
-        
-        // Add order by
-        $sql .= " ORDER BY {$args['orderby']} {$args['order']}";
-        
-        // Add limit
-        $sql .= $wpdb->prepare(" LIMIT %d, %d", $args['offset'], $args['number']);
-        
-        $transactions = $wpdb->get_results($sql);
-        
+
+        $sql .= " ORDER BY {$orderby} {$order}";
+
+        $sql .= " LIMIT %d, %d";
+        $params[] = $args['offset'];
+        $params[] = $args['number'];
+
+        $transactions = $wpdb->get_results($wpdb->prepare($sql, $params));
+
         // Unserialize metadata
         foreach ($transactions as $transaction) {
             if (!empty($transaction->metadata)) {
                 $transaction->metadata = maybe_unserialize($transaction->metadata);
             }
         }
-        
+
         return $transactions;
     }
 
@@ -230,39 +249,53 @@ class Team556_Pay_DB {
      */
     public function count_transactions($args = array()) {
         global $wpdb;
-        
+
         $defaults = array(
             'status'         => '',
             'wallet_address' => '',
             'order_id'       => null,
+            'search'         => '',
         );
-        
+
         $args = wp_parse_args($args, $defaults);
-        
+
         $sql = "SELECT COUNT(*) FROM {$this->transactions_table}";
         $where = array();
-        
+        $params = array();
+
+        // Add search term filter
+        if (!empty($args['search'])) {
+            $search_term = '%' . $wpdb->esc_like($args['search']) . '%';
+            $where[] = "(transaction_signature LIKE %s OR wallet_address LIKE %s OR order_id LIKE %s OR id LIKE %s)";
+            $params[] = $search_term;
+            $params[] = $search_term;
+            $params[] = $search_term;
+            $params[] = $search_term;
+        }
+
         // Add status filter
         if (!empty($args['status'])) {
-            $where[] = $wpdb->prepare("status = %s", $args['status']);
+            $where[] = "status = %s";
+            $params[] = $args['status'];
         }
-        
+
         // Add wallet address filter
         if (!empty($args['wallet_address'])) {
-            $where[] = $wpdb->prepare("wallet_address = %s", $args['wallet_address']);
+            $where[] = "wallet_address = %s";
+            $params[] = $args['wallet_address'];
         }
-        
+
         // Add order ID filter
         if (!is_null($args['order_id'])) {
-            $where[] = $wpdb->prepare("order_id = %d", $args['order_id']);
+            $where[] = "order_id = %d";
+            $params[] = $args['order_id'];
         }
-        
-        // Build where clause
+
         if (!empty($where)) {
             $sql .= ' WHERE ' . implode(' AND ', $where);
         }
-        
-        return $wpdb->get_var($sql);
+
+        return $wpdb->get_var($wpdb->prepare($sql, $params));
     }
 
     /**

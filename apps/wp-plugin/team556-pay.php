@@ -1,4 +1,9 @@
 <?php
+// Exit if accessed directly
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 /**
  * Plugin Name: Team556 Pay
  * Plugin URI: https://team556.com
@@ -8,8 +13,6 @@
  * Text Domain: team556-pay
  */
 
-// Exit if accessed directly
-if (!defined('ABSPATH')) {
     exit;
 }
 

@@ -59,9 +59,8 @@ class Team556_Pay_Dashboard {
         add_submenu_page(
             'team556-pay',
             __('Transactions', 'team556-pay'),
-            __('Transactions', 'team556-pay'),
             'manage_options',
-            'team556-pay-transactions',
+            'team556-solana-pay-transactions',
             array($this, 'render_transactions_page')
         );
         
@@ -462,190 +461,33 @@ class Team556_Pay_Dashboard {
      * Render transactions page
      */
     public function render_transactions_page() {
-        // Get DB instance
-        $db = new Team556_Pay_DB();
-        
-        // Process actions
-        if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id']) && current_user_can('manage_options')) {
-            $transaction_id = intval($_GET['id']);
-            $nonce = isset($_GET['_wpnonce']) ? $_GET['_wpnonce'] : '';
-            
-            if (wp_verify_nonce($nonce, 'delete_transaction_' . $transaction_id)) {
-                $db->delete_transaction($transaction_id);
-                
-                // Redirect to remove the action from URL
-                wp_redirect(admin_url('admin.php?page=team556-solana-transactions&deleted=1'));
-                exit;
-            }
-        }
-        
-        // Get filter values
-        $status_filter = isset($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
-        $order_id_filter = isset($_GET['order_id']) ? intval($_GET['order_id']) : null;
-        
-        // Pagination
-        $per_page = 20;
-        $current_page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
-        $offset = ($current_page - 1) * $per_page;
-        
-        // Get transactions
-        $args = array(
-            'number' => $per_page,
-            'offset' => $offset,
-            'order' => 'DESC',
-            'orderby' => 'created_at'
-        );
-        
-        if (!empty($status_filter)) {
-            $args['status'] = $status_filter;
-        }
-        
-        if (!empty($order_id_filter)) {
-            $args['order_id'] = $order_id_filter;
-        }
-        
-        $transactions = $db->get_transactions($args);
-        $total_transactions = $db->count_transactions($args);
-        
-        $total_pages = ceil($total_transactions / $per_page);
-        
         ?>
-        <div class="wrap team556-admin-transactions team556-dark-theme-wrapper">
-            <h1 class="wp-heading-inline"><?php _e('Team556 Solana Pay Transactions', 'team556-pay'); ?></h1>
-            
-            <?php if (isset($_GET['deleted']) && $_GET['deleted'] == 1) : ?>
-                <div class="notice notice-success is-dismissible">
-                    <p><?php _e('Transaction deleted successfully.', 'team556-pay'); ?></p>
-                </div>
-            <?php endif; ?>
-            
-            <div class="team556-transactions-filters">
-                <form method="get" action="<?php echo esc_url(admin_url('admin.php')); ?>">
-                    <input type="hidden" name="page" value="team556-solana-transactions">
-                    
-                    <select name="status">
-                        <option value=""><?php _e('All Statuses', 'team556-pay'); ?></option>
-                        <option value="pending" <?php selected($status_filter, 'pending'); ?>><?php _e('Pending', 'team556-pay'); ?></option>
-                        <option value="completed" <?php selected($status_filter, 'completed'); ?>><?php _e('Completed', 'team556-pay'); ?></option>
-                        <option value="failed" <?php selected($status_filter, 'failed'); ?>><?php _e('Failed', 'team556-pay'); ?></option>
-                    </select>
-                    
-                    <input type="number" name="order_id" placeholder="<?php esc_attr_e('Order ID', 'team556-pay'); ?>" value="<?php echo esc_attr($order_id_filter !== null ? $order_id_filter : ''); ?>">
-                    
-                    <button type="submit" class="team556-button"><?php _e('Filter', 'team556-pay'); ?></button>
-                    
-                    <?php if (!empty($status_filter) || !empty($order_id_filter)) : ?>
-                        <a href="<?php echo esc_url(admin_url('admin.php?page=team556-solana-transactions')); ?>" class="team556-button outline"><?php _e('Reset', 'team556-pay'); ?></a>
-                    <?php endif; ?>
-                </form>
-            </div>
-            
-            <?php if (!empty($transactions)) : ?>
-                <table class="wp-list-table widefat fixed striped team556-transactions-table">
-                    <thead>
-                        <tr>
-                            <th><?php _e('ID', 'team556-pay'); ?></th>
-                            <th><?php _e('Transaction Signature', 'team556-pay'); ?></th>
-                            <th><?php _e('Wallet Address', 'team556-pay'); ?></th>
-                            <th><?php _e('Amount', 'team556-pay'); ?></th>
-                            <th><?php _e('Order ID', 'team556-pay'); ?></th>
-                            <th><?php _e('Status', 'team556-pay'); ?></th>
-                            <th><?php _e('Date', 'team556-pay'); ?></th>
-                            <th><?php _e('Actions', 'team556-pay'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($transactions as $transaction) : ?>
-                            <tr>
-                                <td><?php echo esc_html($transaction->id); ?></td>
-                                <td>
-                                    <span class="team556-signature-short">
-                                        <?php echo esc_html(substr($transaction->transaction_signature, 0, 8) . '...' . substr($transaction->transaction_signature, -8)); ?>
-                                    </span>
-                                    <span class="team556-clipboard-copy" data-clipboard="<?php echo esc_attr($transaction->transaction_signature); ?>">
-                                        <span class="dashicons dashicons-clipboard"></span>
-                                    </span>
-                                    <div class="row-actions">
-                                        <span class="view">
-                                            <?php 
-                                            $network = get_option('team556_solana_pay_network', 'mainnet');
-                                            $explorer_url = 'https://explorer.solana.com/tx/' . $transaction->transaction_signature;
-                                            
-                                            if ($network === 'devnet') {
-                                                $explorer_url .= '?cluster=devnet';
-                                            } elseif ($network === 'testnet') {
-                                                $explorer_url .= '?cluster=testnet';
-                                            }
-                                            ?>
-                                            <a href="<?php echo esc_url($explorer_url); ?>" target="_blank">
-                                                <?php _e('View on Explorer', 'team556-pay'); ?>
-                                            </a>
-                                        </span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="team556-wallet-short">
-                                        <?php echo esc_html(substr($transaction->wallet_address, 0, 8) . '...' . substr($transaction->wallet_address, -8)); ?>
-                                    </span>
-                                    <span class="team556-clipboard-copy" data-clipboard="<?php echo esc_attr($transaction->wallet_address); ?>">
-                                        <span class="dashicons dashicons-clipboard"></span>
-                                    </span>
-                                </td>
-                                <td><?php echo esc_html($transaction->amount); ?></td>
-                                <td>
-                                    <?php if (!empty($transaction->order_id)) : ?>
-                                        <a href="<?php echo esc_url(admin_url('post.php?post=' . $transaction->order_id . '&action=edit')); ?>" target="_blank">
-                                            <?php echo esc_html($transaction->order_id); ?>
-                                        </a>
-                                    <?php else : ?>
-                                        &mdash;
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <span class="team556-status team556-status-<?php echo esc_attr($transaction->status); ?>">
-                                        <?php echo esc_html(ucfirst($transaction->status)); ?>
-                                    </span>
-                                </td>
-                                <td><?php echo esc_html(date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($transaction->created_at))); ?></td>
-                                <td>
-                                    <a href="<?php echo esc_url(wp_nonce_url(admin_url('admin.php?page=team556-solana-transactions&action=delete&id=' . $transaction->id), 'delete_transaction_' . $transaction->id)); ?>" class="team556-delete-transaction" onclick="return confirm('<?php esc_attr_e('Are you sure you want to delete this transaction?', 'team556-pay'); ?>');">
-                                        <span class="dashicons dashicons-trash"></span>
-                                    </a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-                
-                <?php if ($total_pages > 1) : ?>
-                    <div class="tablenav">
-                        <div class="tablenav-pages">
-                            <?php
-                            echo paginate_links(array(
-                                'base' => add_query_arg('paged', '%#%'),
-                                'format' => '',
-                                'prev_text' => '&laquo;',
-                                'next_text' => '&raquo;',
-                                'total' => $total_pages,
-                                'current' => $current_page
-                            ));
-                            ?>
-                        </div>
-                    </div>
-                <?php endif; ?>
-                
-            <?php else : ?>
-                <div class="team556-empty-state">
-                    <p><?php _e('No transactions found.', 'team556-pay'); ?></p>
-                    <?php if (!empty($status_filter) || !empty($order_id_filter)) : ?>
-                        <p>
-                            <a href="<?php echo esc_url(admin_url('admin.php?page=team556-solana-transactions')); ?>" class="team556-button">
-                                <?php _e('Clear Filters', 'team556-pay'); ?>
-                            </a>
-                        </p>
-                    <?php endif; ?>
-                </div>
-            <?php endif; ?>
+        <div class="wrap team556-admin-page team556-transactions-page">
+            <h1 class="wp-heading-inline">
+                <?php _e('Team556 Pay Transactions', 'team556-pay'); ?>
+            </h1>
+
+            <?php
+            // Ensure the list table class is loaded
+            if (!class_exists('Team556_Pay_Transactions_List_Table')) {
+                require_once TEAM556_PAY_PLUGIN_DIR . 'includes/admin/class-team556-pay-transactions-list-table.php';
+            }
+
+            // Create an instance of our package class...
+            $transactions_list_table = new Team556_Pay_Transactions_List_Table();
+
+            // Fetch, prepare, sort, and filter our data...
+            $transactions_list_table->prepare_items();
+            ?>
+
+            <form id="transactions-filter" method="get">
+                <!-- For plugins, we also need to ensure that the form posts back to our current page -->
+                <input type="hidden" name="page" value="<?php echo esc_attr($_REQUEST['page']); ?>" />
+                <?php
+                $transactions_list_table->search_box(__('Search Transactions', 'team556-pay'), 'search_id');
+                $transactions_list_table->display();
+                ?>
+            </form>
         </div>
         <?php
     }

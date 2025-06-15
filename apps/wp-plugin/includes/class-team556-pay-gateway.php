@@ -557,8 +557,8 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
 
         $this->log_debug('TEAM556 Price: Cache miss or expired, fetching from main-api.');
 
-        // The main-api URL is hardcoded for deployment.
-        $main_api_base_url = 'http://localhost:3000'; 
+        // Main API is fixed for production deployment.
+        $main_api_base_url = 'https://team556-main-api.fly.dev';
         $api_url = $main_api_base_url . '/api/price/team556-usdc';
 
         if ($this->debug_mode === 'yes') {

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { getTeam556UsdcPrice } from '../controllers/price.controller';
 
-const router = Router();
+const router: Router = Router();
 
 // Rate limiter: 10 requests per minute per IP
 const priceApiLimiter = rateLimit({

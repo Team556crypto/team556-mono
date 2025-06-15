@@ -13,9 +13,6 @@ if (!defined('ABSPATH')) {
  * Text Domain: team556-pay
  */
 
-    exit;
-}
-
 // Define plugin constants
 define('TEAM556_PAY_VERSION', '1.0.0');
 define('TEAM556_PAY_PLUGIN_DIR', plugin_dir_path(__FILE__));
@@ -152,9 +149,13 @@ function team556_pay_init() {
     add_action('wp_ajax_team556_create_payment', 'team556_handle_create_payment_request');
     add_action('wp_ajax_nopriv_team556_create_payment', 'team556_handle_create_payment_request');
 
-    // AJAX handler for block-based checkout QR code data
+    // AJAX handler for block-based checkout QR code data (preferred action)
     add_action('wp_ajax_team556_get_block_payment_data', 'team556_handle_get_block_payment_data_request');
     add_action('wp_ajax_nopriv_team556_get_block_payment_data', 'team556_handle_get_block_payment_data_request');
+    
+    // Back-compat: older JS may still call the handler name directly as the action.
+    add_action('wp_ajax_team556_handle_get_block_payment_data_request', 'team556_handle_get_block_payment_data_request');
+    add_action('wp_ajax_nopriv_team556_handle_get_block_payment_data_request', 'team556_handle_get_block_payment_data_request');
 }
 add_action('plugins_loaded', 'team556_pay_init');
 
@@ -178,7 +179,7 @@ function team556_handle_get_block_payment_data_request() {
 
         }
         wp_send_json_error(['message' => 'Payment gateway error (file missing).', 'tokenPrice' => null, 'requiredTokenAmount' => null]);
-        return;
+        wp_die();
     }
     require_once $class_file;
 
@@ -189,7 +190,7 @@ function team556_handle_get_block_payment_data_request() {
 
         }
         wp_send_json_error(['message' => 'Payment gateway error (class not defined).', 'tokenPrice' => null, 'requiredTokenAmount' => null]);
-        return;
+        wp_die();
     }
 
     // Check if WooCommerce is active and WC()->cart is available
@@ -199,7 +200,7 @@ function team556_handle_get_block_payment_data_request() {
 
         }
         wp_send_json_error(['message' => 'WooCommerce cart not available.', 'tokenPrice' => null, 'requiredTokenAmount' => null]);
-        return;
+        wp_die();
     }
 
     $gateway = new Team556_Pay_Gateway();
@@ -211,7 +212,7 @@ function team556_handle_get_block_payment_data_request() {
 
         }
         wp_send_json_error(['message' => 'Payment gateway error (instantiation failed).', 'tokenPrice' => null, 'requiredTokenAmount' => null]);
-        return; 
+        wp_die(); 
     }
 
     // Fetch price data
@@ -248,7 +249,7 @@ function team556_handle_get_block_payment_data_request() {
                 'cartTotalFiat' => $cart_total,
                 'currency' => $currency
             ]);
-            return;
+            wp_die();
         }
     }
 
@@ -256,6 +257,7 @@ function team556_handle_get_block_payment_data_request() {
         $error_message = $price_data['error'];
     } elseif (isset($price_data['price'])) {
         $token_price_str = $price_data['price']; // Keep as string
+        $token_price = (float) $token_price_str; // Set numeric token price for response
 
         // Ensure cart_total is a string for bcmath operations
         $cart_total_str = (string) $cart_total;
@@ -306,6 +308,7 @@ function team556_handle_get_block_payment_data_request() {
         'requiredTokenAmount' => $required_token_amount,
         'errorMessage' => $error_message,
     ]);
+    wp_die();
 }
 
 

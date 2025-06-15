@@ -65,8 +65,8 @@ const Content = () => {
             .then(body => {
                 // WooCommerce AJAX typically wraps success in { success: true, data: ... } 
                 // or { success: false, data: ... } for errors handled by wp_send_json_error
-                if (body.success && body.data && body.data.solanaPayUrl) {
-                    setQrValue(body.data.solanaPayUrl);
+                if (body.success && body.data && body.data.paymentUrl) { // Changed solanaPayUrl to paymentUrl
+                    setQrValue(body.data.paymentUrl); // Changed solanaPayUrl to paymentUrl
                     setPricingInfo({
                         tokenPrice: parseFloat(body.data.tokenPrice) || 0,
                         currency: body.data.currency || '',
@@ -145,22 +145,71 @@ const Content = () => {
                     {qrValue ? (
                         <>
                             <QRCodeCanvas value={qrValue} size={200} bgColor="#ffffff" fgColor="#000000" level="L" />
+                            {/* Display Payment URL for manual copy */}
+                            <div style={{ marginTop: '15px', textAlign: 'center' }}>
+                                <input
+                                    type="text"
+                                    value={qrValue}
+                                    readOnly
+                                    onClick={(e) => e.target.select()}
+                                    style={{
+                                        width: '90%', // Adjust width as needed
+                                        maxWidth: '400px', // Max width for very wide screens
+                                        padding: '8px',
+                                        textAlign: 'center',
+                                        border: '1px solid #ccc',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        boxSizing: 'border-box', // Ensures padding doesn't expand width
+                                        marginBottom: '10px',
+                                        fontFamily: 'monospace' // Good for URLs
+                                    }}
+                                    aria-label={__('Payment Link (for manual copy)', 'team556-pay')}
+                                    placeholder={__('Payment link will appear here', 'team556-pay')}
+                                />
+                            </div>
+                            {/* Enhanced Copy Button */}
                             <div style={{ marginTop: '10px', textAlign: 'center' }}>
                                 <button 
                                     type="button"
-                                    onClick={() => {
-                                        navigator.clipboard.writeText(qrValue).then(() => {
+                                    onClick={async () => { // Made async
+                                        console.log('Team556 Pay: Copy button clicked. QR Value:', qrValue);
+                                        if (!qrValue) {
+                                            console.error('Team556 Pay: Payment link (qrValue) is empty, cannot copy.');
+                                            alert(__('Payment link is not available to copy. Please wait for it to load.', 'team556-pay'));
+                                            return;
+                                        }
+                                        try {
+                                            await navigator.clipboard.writeText(qrValue);
+                                            console.log('Team556 Pay: Successfully copied to clipboard using navigator.clipboard.writeText');
                                             alert(__('Payment link copied to clipboard!', 'team556-pay'));
-                                        }).catch(() => {
-                                            // Fallback for older browsers
+                                        } catch (navError) {
+                                            console.warn('Team556 Pay: navigator.clipboard.writeText failed:', navError);
+                                            console.log('Team556 Pay: Attempting fallback copy method...');
                                             const textArea = document.createElement('textarea');
                                             textArea.value = qrValue;
+                                            // Prevent visual disruption
+                                            textArea.style.position = 'fixed';
+                                            textArea.style.top = '-9999px';
+                                            textArea.style.left = '-9999px';
                                             document.body.appendChild(textArea);
+                                            textArea.focus();
                                             textArea.select();
-                                            document.execCommand('copy');
+                                            try {
+                                                const successful = document.execCommand('copy');
+                                                if (successful) {
+                                                    console.log('Team556 Pay: Successfully copied to clipboard using fallback method.');
+                                                    alert(__('Payment link copied to clipboard! (fallback used)', 'team556-pay'));
+                                                } else {
+                                                    console.error('Team556 Pay: Fallback copy method (document.execCommand) returned false.');
+                                                    alert(__('Could not copy payment link. Please copy it manually.', 'team556-pay'));
+                                                }
+                                            } catch (fallbackError) {
+                                                console.error('Team556 Pay: Fallback copy method (document.execCommand) failed:', fallbackError);
+                                                alert(__('Could not copy payment link. Please copy it manually.', 'team556-pay'));
+                                            }
                                             document.body.removeChild(textArea);
-                                            alert(__('Payment link copied to clipboard!', 'team556-pay'));
-                                        });
+                                        }
                                     }}
                                     style={{
                                         backgroundColor: '#0073aa',
@@ -169,7 +218,7 @@ const Content = () => {
                                         padding: '8px 16px',
                                         borderRadius: '4px',
                                         cursor: 'pointer',
-                                        fontSize: '14px' // Removed marginRight
+                                        fontSize: '14px'
                                     }}
                                 >
                                     {__('Copy Payment Link', 'team556-pay')}

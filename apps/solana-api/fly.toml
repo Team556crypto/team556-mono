@@ -12,7 +12,7 @@ console_command = '/bin/sh'
   dockerfile = "Dockerfile" # Path relative to this fly.toml file
 
 [http_service]
-  internal_port = 6000
+  internal_port = 4000
   force_https = true
   auto_stop_machines = 'off'
   auto_start_machines = false

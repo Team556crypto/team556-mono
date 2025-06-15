@@ -58,10 +58,11 @@ class Team556_Pay_Dashboard {
         // Transactions submenu
         add_submenu_page(
             'team556-pay',
-            __('Transactions', 'team556-pay'),
-            'manage_options',
-            'team556-solana-pay-transactions',
-            array($this, 'render_transactions_page')
+            __('Transactions', 'team556-pay'), // Page Title
+            __('Transactions', 'team556-pay'), // Menu Title
+            'manage_options',                  // Capability
+            'team556-solana-pay-transactions', // Menu Slug
+            array($this, 'render_transactions_page') // Function
         );
         
         // Settings submenu - link to the settings page in the options menu

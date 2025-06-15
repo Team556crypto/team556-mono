@@ -10,6 +10,7 @@ import (
 
 	"github.com/team556-mono/server/internal/config"
 	"github.com/gofiber/fiber/v2"
+	"strconv" // Added for price string validation
 )
 
 // PriceHandler handles price-related requests.
@@ -127,8 +128,31 @@ func (h *PriceHandler) HandleGetTeam556UsdcPriceAlchemy(c *fiber.Ctx) error {
 
 	priceStr := alchemyResponse.Data[0].Prices[0].Value
 
-	// Validate that priceStr is a valid number string if necessary, though Alchemy should provide valid data.
-	// For example, ensure it's not empty or non-numeric if strict validation is needed here.
+	// Validate priceStr from Alchemy
+	if priceStr == "" {
+		// Optionally log this server-side: log.Println("Error: Alchemy API returned an empty price string for token", team556TokenMint)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Alchemy API returned an empty price string",
+		})
+	}
+
+	priceFloat, err := strconv.ParseFloat(priceStr, 64)
+	if err != nil {
+		// Optionally log this server-side: log.Println("Error: Alchemy API returned a non-numeric price string '" + priceStr + "' for token", team556TokenMint, "Details:", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "Alchemy API returned a non-numeric price string",
+			"details": fmt.Sprintf("Invalid price format received: %s", priceStr),
+		})
+	}
+
+	if priceFloat <= 0 {
+		// Optionally log this server-side: log.Println("Error: Alchemy API returned a non-positive price value", priceFloat, "for token", team556TokenMint)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "Alchemy API returned a non-positive price",
+			"details": fmt.Sprintf("Invalid price value received: %f", priceFloat),
+		})
+	}
+	// priceStr is now validated as a string representing a positive number.
 
 	apiResponse := Team556PriceResponse{
 		Token:      team556TokenMint,

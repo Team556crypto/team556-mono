@@ -4,7 +4,7 @@ import swapRoutes from './swap.routes'
 import tokenRoutes from './token.routes';
 import priceRoutes from './price.routes';
 
-const router = Router()
+const router: Router = Router()
 
 // Base route
 router.get('/', (req: Request, res: Response) => {

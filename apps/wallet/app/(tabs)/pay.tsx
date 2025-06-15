@@ -25,13 +25,78 @@ interface PaymentDetails {
 }
 
 export default function PayScreen() {
+  const { user, token, isLoading: isLoadingAuth } = useAuthStore();
   const router = useRouter();
+  
+  // Calculate this explicitly within component for debugging
+  const isP1PresaleUser = !!user && user.presale_type === 1;
+  
+  // Detailed debugging
+  console.log('[PayScreen] Auth State:', {
+    isLoadingAuth,
+    hasUser: !!user,
+    presaleType: user?.presale_type,
+    isP1PresaleUser
+  });
+
+  // More aggressive immediate check and redirect
+  useEffect(() => {
+    console.log('[PayScreen] Access check running, isP1PresaleUser:', isP1PresaleUser);
+    
+    if ((!isLoadingAuth && !isP1PresaleUser) || (!isLoadingAuth && !user)) {
+      console.log('[PayScreen] Access denied! Redirecting to home');
+      // Force navigation immediately
+      router.replace('/');
+      
+      // If replace doesn't work, try push as a fallback
+      setTimeout(() => {
+        router.push('/');
+      }, 100);
+    }
+  }, [isLoadingAuth, user, router]);
+
+  // Force re-check on every render
+  if (!isLoadingAuth && !isP1PresaleUser) {
+    console.log('[PayScreen] Render blocked - not P1 user');
+    // Return without rendering payment elements
+    return (
+      <ScreenLayout title='Access Denied' headerIcon={<Ionicons name='warning' size={24} color={Colors.error} />}>
+        <View style={styles.centered}>
+          <Ionicons name="lock-closed" size={48} color={Colors.error} />
+          <Text style={[styles.permissionDeniedText, {fontSize: 20, fontWeight: 'bold', marginVertical: 16}]}>
+            Access Restricted
+          </Text>
+          <Text style={styles.permissionText}>
+            The payment feature is only available to presale type 1 users.
+          </Text>
+          <View style={{marginTop: 20}}>
+            <Button 
+              onPress={() => router.replace('/')} 
+              title="Return to Home" 
+              color={Colors.primary}
+            />
+          </View>
+        </View>
+      </ScreenLayout>
+    );
+  }
+  
+  if (isLoadingAuth) {
+    console.log('[PayScreen] Still loading auth state');
+    return (
+      <ScreenLayout title='Pay with TEAM' headerIcon={<Ionicons name='card' size={24} color={Colors.primary} />}>
+        <View style={styles.centered}>
+          <Text style={styles.permissionText}>Loading...</Text>
+        </View>
+      </ScreenLayout>
+    );
+  }
+
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false); 
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
   const [manualUrlInput, setManualUrlInput] = useState(''); 
-  const token = useAuthStore(state => state.token);
-  const user = useAuthStore(state => state.user);
+
 
   useEffect(() => {
     if (permission && permission.status === PermissionStatus.UNDETERMINED) {
@@ -99,6 +164,12 @@ export default function PayScreen() {
   };
 
   const handleConfirmPayment = async () => {
+    console.log('[PayScreen.handleConfirmPayment] Clicked. Checking conditions...');
+    console.log('[PayScreen.handleConfirmPayment] paymentDetails:', paymentDetails);
+    console.log('[PayScreen.handleConfirmPayment] token:', token);
+    console.log('[PayScreen.handleConfirmPayment] user:', user);
+    console.log('[PayScreen.handleConfirmPayment] user.wallets:', user?.wallets);
+
     if (!paymentDetails || !token || !user || !user.wallets || user.wallets.length === 0) {
       Alert.alert('Error', 'Missing payment details or user information.');
       return;

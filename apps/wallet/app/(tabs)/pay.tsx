@@ -190,11 +190,13 @@ export default function PayScreen() {
         }
 
         try {
-          const rpcEndpoint = process.env.EXPO_PUBLIC_SOLANA_RPC_ENDPOINT;
+          const rpcEndpoint = process.env.EXPO_PUBLIC_GLOBAL__MAINNET_RPC_URL;
           if (!rpcEndpoint) {
             throw new Error('Solana RPC endpoint is not configured.');
           }
-          const connection = new Connection(rpcEndpoint, 'confirmed');
+          console.log('[PayScreen.handleConfirmPayment] Using RPC Endpoint:', rpcEndpoint);
+
+        const connection = new Connection(rpcEndpoint, 'confirmed');
 
           const senderTokenAccount = await getAssociatedTokenAddress(
             TEAM556_MINT_ADDRESS,
@@ -279,8 +281,8 @@ export default function PayScreen() {
           Alert.alert('Success', `Payment of ${paymentDetails.amount.toString()} TEAM556 sent successfully!\nSignature: ${signature}`);
 
         } catch (error: any) {
-          console.error('Payment failed:', error);
-          Alert.alert('Payment Failed', error.message || 'An unknown error occurred during payment.');
+          console.error('Payment failed:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+          Alert.alert('Payment Failed', error.message || JSON.stringify(error, Object.getOwnPropertyNames(error), 2) || 'An unknown error occurred during payment.');
         } finally {
           setPaymentDetails(null); 
         }

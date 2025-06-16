@@ -102,7 +102,7 @@ class Team556_Pay_Dashboard {
             'team556-pay-admin',
             TEAM556_PAY_PLUGIN_URL . 'assets/css/team556-pay-admin.css',
             array(),
-            TEAM556_PAY_VERSION
+            TEAM556_PAY_VERSION . '.' . time()
         );
         
         // Enqueue admin scripts
@@ -134,7 +134,7 @@ class Team556_Pay_Dashboard {
         global $current_screen;
         
         // Add our class only to our plugin screens
-        if (strpos($current_screen->base, 'team556-solana') !== false) {
+        if (strpos($current_screen->base, 'team556-pay') !== false) { // Check for 'team556-pay' for all plugin pages
             $classes .= ' team556-dark-theme ';
         }
         
@@ -463,7 +463,7 @@ class Team556_Pay_Dashboard {
      */
     public function render_transactions_page() {
         ?>
-        <div class="wrap team556-admin-page team556-transactions-page">
+        <div class="wrap team556-admin-page team556-transactions-page team556-dark-theme-wrapper">
             <h1 class="wp-heading-inline">
                 <?php _e('Team556 Pay Transactions', 'team556-pay'); ?>
             </h1>

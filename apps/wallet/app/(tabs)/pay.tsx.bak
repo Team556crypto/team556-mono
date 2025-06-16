@@ -527,47 +527,39 @@ export default function PayScreen() {
   const handleReceiptClose = () => {
     setShowReceipt(false);
     setReceiptDetails(null);
-    setManualUrlInput(''); // Clear manual URL input
-    setScanned(false); // Reset scanned state
-    router.push('/'); // Navigate back to wallet tab (root)
   }
-  // Conditional rendering for receipt, payment confirmation, or main pay screen
-  if (showReceipt && receiptDetails) {
-    return (
-      <PaymentReceipt
-        amount={receiptDetails.amount}
-        recipient={receiptDetails.recipient}
-        recipientLabel={receiptDetails.recipientLabel}
-        message={receiptDetails.message}
-        signature={receiptDetails.signature}
-        timestamp={receiptDetails.timestamp}
-        onClose={handleReceiptClose}
-      />
-    );
+  if (!blockhash) {
+    throw new Error('Network connection error. Please check your internet connection and try again.');
+  }
+}
+
+console.log('[PayScreen.handleConfirmPayment] Latest blockhash for transaction:', blockhash, 'LastValidBlockHeight:', lastValidBlockHeight);
+transaction.recentBlockhash = blockhash;
+transaction.feePayer = senderPublicKey;
+console.log('[PayScreen.handleConfirmPayment] Transaction built. Instructions count:', transaction.instructions.length);
+
+if (transaction.instructions.length > 0) {
+  console.log('[PayScreen.handleConfirmPayment] First instruction program ID:', transaction.instructions[0].programId.toBase58());
+}
+      return (
+          <ScreenLayout title='Confirm Payment' headerIcon={<Ionicons name='card' size={24} color={Colors.primary} />}>
+              <View style={styles.centered}>
+                  <Text style={styles.confirmTitle}>Confirm TEAM Payment</Text>
+                  {paymentDetails.label && <Text style={styles.confirmLabel}>To: {paymentDetails.label}</Text>}
+                  <Text style={styles.confirmRecipient}>Recipient: {paymentDetails.recipient.toBase58()}</Text>
+                  <Text style={styles.confirmAmount}>
+                      Amount: {paymentDetails.amount ? paymentDetails.amount.toString() + ' TEAM' : 'Default Amount'}
+                  </Text>
+                  {paymentDetails.message && <Text style={styles.confirmMessage}>Message: {paymentDetails.message}</Text>}
+                  <View style={styles.buttonRow}>
+                       <Button title="Cancel" onPress={handleCancelPayment} color={Colors.error} />
+                       <Button title="Confirm & Send" onPress={handleConfirmPayment} color={Colors.primary} />
+                  </View>
+              </View>
+          </ScreenLayout>
+      )
   }
 
-  if (paymentDetails) {
-    // This is the payment confirmation screen
-    return (
-        <ScreenLayout title='Confirm Payment' headerIcon={<Ionicons name='card' size={24} color={Colors.primary} />}>
-            <View style={styles.centered}>
-                <Text style={styles.confirmTitle}>Confirm TEAM Payment</Text>
-                {paymentDetails.label && <Text style={styles.confirmLabel}>To: {paymentDetails.label}</Text>}
-                <Text style={styles.confirmRecipient}>Recipient: {paymentDetails.recipient.toBase58()}</Text>
-                <Text style={styles.confirmAmount}>
-                    Amount: {paymentDetails.amount ? paymentDetails.amount.toString() + ' TEAM' : 'Default Amount'}
-                </Text>
-                {paymentDetails.message && <Text style={styles.confirmMessage}>Message: {paymentDetails.message}</Text>}
-                <View style={styles.buttonRow}>
-                     <Button title="Cancel" onPress={handleCancelPayment} color={Colors.error} />
-                     <Button title="Confirm & Send" onPress={handleConfirmPayment} color={Colors.primary} />
-                </View>
-            </View>
-        </ScreenLayout>
-    );
-  }
-
-  // This is the main QR scanner / manual input screen
   return (
     <ScreenLayout title='Pay with TEAM' headerIcon={<Ionicons name='card' size={24} color={Colors.primary} />}>
       <Head>

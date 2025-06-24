@@ -26,7 +26,10 @@ class Team556_Pay_Transactions_List_Table extends WP_List_Table {
         $columns = [
             'cb'            => '<input type="checkbox" />',
             'order_id'      => __('Order ID', 'team556-pay'),
-            'amount'        => __('Amount', 'team556-pay'),
+            'amount'        => __('Token Amount', 'team556-pay'),
+            'fiat_amount'   => __('USD Amount', 'team556-pay'),
+            'wallet_address'=> __('Sender Wallet', 'team556-pay'),
+            'customer_name' => __('Customer', 'team556-pay'),
             'currency'      => __('Currency', 'team556-pay'),
             'status'        => __('Status', 'team556-pay'),
             'signature'     => __('Solana Signature', 'team556-pay'),
@@ -44,6 +47,7 @@ class Team556_Pay_Transactions_List_Table extends WP_List_Table {
     protected function get_sortable_columns() {
         $sortable_columns = [
             'order_id'   => ['order_id', false],
+            'fiat_amount'=> ['fiat_amount', false],
             'amount'     => ['amount', false],
             'status'     => ['status', false],
             'created_at' => ['created_at', true] // True for default sort
@@ -62,6 +66,9 @@ class Team556_Pay_Transactions_List_Table extends WP_List_Table {
         switch ($column_name) {
             case 'order_id':
             case 'amount':
+            case 'wallet_address':
+            case 'fiat_amount':
+            case 'customer_name':
             case 'currency':
             case 'status':
             case 'signature':
@@ -102,17 +109,69 @@ class Team556_Pay_Transactions_List_Table extends WP_List_Table {
      * Column for Solana Signature, making it linkable to explorer.
      */
     protected function column_signature($item) {
-        if (!empty($item->signature)) {
+        // Try DB field first
+        $sig = $item->signature;
+        // Fallback to order meta if empty
+        if (empty($sig) && $item->order_id) {
+            $order = wc_get_order($item->order_id);
+            if ($order) {
+                $sig = $order->get_meta('_team556_transaction_signature');
+            }
+        }
+        if (!empty($sig)) {
             $network = get_option('team556_solana_pay_network', 'mainnet');
-            $explorer_base_url = $network === 'mainnet' ? 'https://explorer.solana.com/tx/' : 'https://explorer.solana.com/tx/';
-            $explorer_cluster_param = $network === 'mainnet' ? '?cluster=mainnet-beta' : '?cluster=devnet';
-            $url = $explorer_base_url . esc_attr($item->signature) . $explorer_cluster_param;
-            return sprintf('<a href="%s" target="_blank" title="%s">%s...%s</a>',
-                esc_url($url),
-                esc_attr($item->signature),
-                esc_html(substr($item->signature, 0, 8)),
-                esc_html(substr($item->signature, -8))
+            $explorer_url = 'https://explorer.solana.com/tx/' . esc_attr($sig);
+            if ('devnet' === $network) {
+                $explorer_url .= '?cluster=devnet';
+            } elseif ('testnet' === $network) {
+                $explorer_url .= '?cluster=testnet';
+            }
+            return sprintf('<a href="%s" target="_blank" title="%s">%s…%s</a>',
+                esc_url($explorer_url),
+                esc_attr($sig),
+                esc_html(substr($sig, 0, 8)),
+                esc_html(substr($sig, -8))
             );
+        }
+        return __('N/A', 'team556-pay');
+    }
+
+
+    /**
+     * Column for Sender Wallet address.
+     */
+    protected function column_wallet_address($item) {
+        if (!empty($item->wallet_address)) {
+            return esc_html($item->wallet_address);
+        }
+        return __('N/A', 'team556-pay');
+    }
+
+    /**
+     * Column for USD amount derived from WC order.
+     */
+    protected function column_fiat_amount($item) {
+        if ($item->order_id) {
+            $order = wc_get_order($item->order_id);
+            if ($order) {
+                return wc_price($order->get_total());
+            }
+        }
+        return __('N/A', 'team556-pay');
+    }
+
+    /**
+     * Column for customer name from WC order.
+     */
+    protected function column_customer_name($item) {
+        if ($item->order_id) {
+            $order = wc_get_order($item->order_id);
+            if ($order) {
+                $name = trim($order->get_billing_first_name() . ' ' . $order->get_billing_last_name());
+                if (!empty($name)) {
+                    return esc_html($name);
+                }
+            }
         }
         return __('N/A', 'team556-pay');
     }

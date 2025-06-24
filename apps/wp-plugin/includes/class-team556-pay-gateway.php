@@ -204,6 +204,42 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
     }
 
     /**
+     * Display Team556 transaction data in the WooCommerce admin order screen (sidebar).
+     *
+     * @param WC_Order $order The order object.
+     */
+    public function display_transaction_data_in_admin( $order ) {
+        if ( ! $order || ! is_a( $order, 'WC_Order' ) ) {
+            return;
+        }
+
+        // Retrieve transaction signature – both current and legacy meta keys.
+        $signature = $order->get_meta( '_team556_transaction_signature' );
+        if ( empty( $signature ) ) {
+            $signature = $order->get_meta( '_team556_pay_signature' );
+        }
+
+        if ( empty( $signature ) ) {
+            return; // Nothing to display.
+        }
+
+        // Build Solana Explorer URL.
+        $network       = $this->network ? $this->network : 'mainnet';
+        $explorer_url  = 'https://explorer.solana.com/tx/' . $signature;
+        if ( 'devnet' === $network ) {
+            $explorer_url .= '?cluster=devnet';
+        } elseif ( 'testnet' === $network ) {
+            $explorer_url .= '?cluster=testnet';
+        }
+
+        echo '<p><strong>' . esc_html__( 'Team556 Transaction', 'team556-pay' ) . ':</strong></p>';
+        // Truncate signature for readability.
+        $short_sig = strlen( $signature ) > 20 ? substr( $signature, 0, 10 ) . '…' . substr( $signature, -10 ) : $signature;
+        echo '<p class="code" style="word-break:break-all;">' . esc_html( $short_sig ) . '</p>';
+        echo '<p><a href="' . esc_url( $explorer_url ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'View on Solana Explorer', 'team556-pay' ) . '</a></p>';
+    }
+
+    /**
      * Initialize form fields
      */
     public function init_form_fields() {
@@ -797,6 +833,23 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
      * Payment fields
      */
     public function payment_fields() {
+        // Check maximum order total limit and show error if exceeded (traditional checkout).
+        $team556_pay_options    = get_option( 'team556_pay_settings' );
+        $enable_max_total_limit = ! empty( $team556_pay_options['enable_max_order_total'] );
+        $max_total_setting      = $team556_pay_options['max_order_total'] ?? '';
+        $cart_total_fiat        = WC()->cart ? WC()->cart->get_total( 'raw' ) : 0;
+
+        if ( $enable_max_total_limit && $max_total_setting !== '' && is_numeric( $max_total_setting ) && (float) $max_total_setting > 0 && $cart_total_fiat > (float) $max_total_setting ) {
+            $error_message = sprintf(
+                /* translators: 1: cart total, 2: maximum allowed total */
+                __( 'Your order total %1$s exceeds the maximum allowed for Team556 Pay (%2$s). Please choose a different payment method or reduce your order total.', 'team556-pay' ),
+                wc_price( $cart_total_fiat ),
+                wc_price( (float) $max_total_setting )
+            );
+            echo '<div class="woocommerce-error">' . esc_html( $error_message ) . '</div>';
+            return;
+        }
+
         ?>
         <style>
             .team556-fields-container { border: 1px solid #e0e0e0; padding: 15px; border-radius: 5px; margin-top: 1em; }

@@ -739,6 +739,31 @@ class Team556_Pay_Verifier {
         $order->update_meta_data('_team556_transaction_signature', $signature);
         $order->save();
 
+        // ---------------------------------------------
+        // Record this payment in the Team556 dashboard
+        // ---------------------------------------------
+        require_once TEAM556_PAY_PLUGIN_DIR . 'includes/class-team556-pay-db.php';
+        $db = new Team556_Pay_DB();
+
+        // Attempt to calculate the amount of TEAM556 tokens at the time of payment
+        $amount_tokens = 0;
+        require_once TEAM556_PAY_PLUGIN_DIR . 'includes/class-team556-pay-gateway.php';
+        $gateway = new Team556_Pay_Gateway();
+        $price_data = $gateway->fetch_team556_price_data();
+        if ($price_data && isset($price_data['price']) && $price_data['price'] > 0) {
+            $fiat_total    = $order->get_total();
+            $token_price   = $price_data['price'];
+            $amount_tokens = $fiat_total / $token_price;
+        }
+
+        $db->log_transaction(array(
+            'transaction_signature' => $signature,
+            'wallet_address'        => '', // Wallet address not provided in webhook
+            'amount'                => $amount_tokens,
+            'order_id'              => $order_id,
+            'status'                => 'completed',
+        ));
+
         return new WP_REST_Response(array('status' => 'success', 'message' => 'Payment confirmed and order updated.'), 200);
 
         // Need to instantiate the gateway to get settings and calculate amount

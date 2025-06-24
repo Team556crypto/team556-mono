@@ -93,6 +93,7 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	// --- Presale Routes ---
 	presale.Get("/claim-status", presaleHandler.GetPresaleClaimStatus)
 	presale.Post("/claim/p1p1", presaleHandler.ClaimPresaleP1P1)
+	presale.Post("/claim/p1p2", presaleHandler.ClaimPresaleP1P2)
 
 	// --- Add other route groups here ---
 	v1.Post("/solana/payment-request", handlers.HandleCreateSolanaPaymentRequest)

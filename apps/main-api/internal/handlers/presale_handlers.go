@@ -166,3 +166,96 @@ func (h *PresaleHandler) ClaimPresaleP1P1(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{"message": "Tokens P1P1 claimed successfully", "signature": solanaResp.Signature})
 }
+
+func (h *PresaleHandler) ClaimPresaleP1P2(c *fiber.Ctx) error {
+	userID := c.Locals("userID").(uint)
+
+	var user models.User
+	if err := h.DB.Preload("Wallets").First(&user, userID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to retrieve user", "details": err.Error()})
+	}
+
+	if len(user.Wallets) == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "User has no registered wallet to receive tokens"})
+	}
+	targetWalletAddress := user.Wallets[0].Address // Use the first wallet
+
+	var presaleCode models.PresaleCode
+	dbTx := h.DB.Begin() // Start a transaction
+	if err := dbTx.Set("gorm:query_option", "FOR UPDATE").Where("user_id = ?", userID).First(&presaleCode).Error; err != nil {
+		dbTx.Rollback()
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Presale code not found for user"})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to retrieve presale code", "details": err.Error()})
+	}
+
+	if presaleCode.Type != 1 {
+		dbTx.Rollback()
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Not eligible for this presale type claim"})
+	}
+	if !presaleCode.Redeemed {
+		dbTx.Rollback()
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Presale code not yet redeemed"})
+	}
+	if presaleCode.TokensClaimedP1P2 {
+		dbTx.Rollback()
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "Tokens for this period already claimed"})
+	}
+
+	// Call Solana API to airdrop tokens
+	airdropPayload := SolanaAirdropRequest{RecipientAddress: targetWalletAddress}
+	payloadBytes, err := json.Marshal(airdropPayload)
+	if err != nil {
+		dbTx.Rollback()
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to prepare airdrop request", "details": err.Error()})
+	}
+
+	solanaAPIEndpoint := h.SolanaAPIURL + "/api/token/airdrop"
+	req, err := http.NewRequest("POST", solanaAPIEndpoint, bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		dbTx.Rollback()
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create airdrop HTTP request", "details": err.Error()})
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		dbTx.Rollback()
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to call Solana API", "details": err.Error()})
+	}
+	defer resp.Body.Close()
+
+	var solanaResp SolanaAirdropResponse
+	if err := json.NewDecoder(resp.Body).Decode(&solanaResp); err != nil {
+		dbTx.Rollback()
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to decode Solana API response", "details": err.Error()})
+	}
+
+	if resp.StatusCode != http.StatusOK || solanaResp.Error != "" {
+		dbTx.Rollback()
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":         "Airdrop failed on Solana API",
+			"solana_api_message": solanaResp.Message,
+			"solana_api_error":   solanaResp.Error,
+		})
+	}
+
+	// Update presale code status
+	presaleCode.TokensClaimedP1P2 = true
+	if err := dbTx.Save(&presaleCode).Error; err != nil {
+		dbTx.Rollback()
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update presale code claim status", "details": err.Error()})
+	}
+
+	if err := dbTx.Commit().Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to commit transaction", "details": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{"message": "Tokens P1P2 claimed successfully", "signature": solanaResp.Signature})
+}
+

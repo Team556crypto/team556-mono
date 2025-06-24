@@ -20,6 +20,17 @@ import { decodeEntities } from '@wordpress/html-entities';
 import { useState, useEffect } from '@wordpress/element';
 import { QRCodeCanvas } from 'qrcode.react';
 import { __ } from '@wordpress/i18n';
+
+// Expose QRCodeCanvas globally for use on the payment page
+window.QRCodeCanvas = QRCodeCanvas;
+// Also expose React and ReactDOM if not already available
+if (typeof window.React === 'undefined') {
+    window.React = require('react');
+}
+if (typeof window.ReactDOM === 'undefined') {
+    window.ReactDOM = require('react-dom');
+}
+
 console.log('Team556 Pay: Block integration script loaded (src/index.js).');
 
 // Get settings passed from PHP (via get_payment_method_data in the integration class)
@@ -63,176 +74,77 @@ const Content = () => {
                 return response.json();
             })
             .then(body => {
-                // WooCommerce AJAX typically wraps success in { success: true, data: ... } 
-                // or { success: false, data: ... } for errors handled by wp_send_json_error
-                if (body.success && body.data && body.data.paymentUrl) { // Changed solanaPayUrl to paymentUrl
-                    setQrValue(body.data.paymentUrl); // Changed solanaPayUrl to paymentUrl
+                if (body.success && body.data) {
                     setPricingInfo({
                         tokenPrice: parseFloat(body.data.tokenPrice) || 0,
                         currency: body.data.currency || '',
                         cartTotalFiat: parseFloat(body.data.cartTotalFiat) || 0,
                         requiredTokenAmount: parseFloat(body.data.requiredTokenAmount) || 0,
                         loaded: true,
-                        error: (!body.data.requiredTokenAmount || parseFloat(body.data.requiredTokenAmount) <= 0) && !body.data.solanaPayUrl ? __('Could not load token price or calculate amount.', 'team556-pay') : body.data.errorMessage || null
+                        // Use errorMessage from AJAX if present, otherwise check if critical data is missing
+                        error: body.data.errorMessage || 
+                               (!body.data.requiredTokenAmount || parseFloat(body.data.requiredTokenAmount) <= 0 || !body.data.tokenPrice || parseFloat(body.data.tokenPrice) <= 0) 
+                               ? __('Could not load token price or calculate amount. Please ensure cart is not empty.', 'team556-pay') 
+                               : null
                     });
-                    // console.log('Team556 Pay: Payment URL received:', body.data.paymentUrl);
-                    // console.log('Team556 Pay: Payment reference:', body.data.reference);
-                    // console.log('Team556 Pay: Pricing info:', body.data);
                 } else {
-                    setPricingInfo({
-                        tokenPrice: 0,
-                        currency: '',
-                        cartTotalFiat: 0,
-                        requiredTokenAmount: 0,
-                        loaded: true,
-                        error: (body.data && body.data.message) || body.message || __('Error fetching payment details.', 'team556-pay')
-                    });
-                    console.error('Team556 Pay: Invalid or unsuccessful response from payment data endpoint.', body);
-                    // TODO: Display a user-friendly error message in the UI
+                    const errorMessage = body.data && body.data.errorMessage ? body.data.errorMessage : __('Failed to load payment details. Please try again.', 'team556-pay');
+                    console.error('Team556 Pay: Error fetching payment data:', body);
+                    setPricingInfo({ tokenPrice: 0, currency: '', cartTotalFiat: 0, requiredTokenAmount: 0, loaded: true, error: errorMessage });
                 }
             })
             .catch(error => {
-                console.error('Team556 Pay: Error fetching payment data:', error);
-                setPricingInfo({
-                    tokenPrice: 0,
-                    currency: '',
-                    cartTotalFiat: 0,
-                    requiredTokenAmount: 0,
-                    loaded: true,
-                    error: __('Network error or server unavailable while fetching payment details.', 'team556-pay')
-                });
+                console.error('Team556 Pay: Network error fetching payment data:', error);
+                setPricingInfo({ tokenPrice: 0, currency: '', cartTotalFiat: 0, requiredTokenAmount: 0, loaded: true, error: __('Network error. Please check your connection and try again.', 'team556-pay') });
             });
-        // You might also start polling for payment status here, using the reference from the response.
-    }, []); // Empty dependency array means this runs once on mount. Consider re-fetching if cart changes.
+    }, []);
 
-    const description = decodeEntities( settings.description || '' );
+    const { description } = settings;
+
+    if (!pricingInfo.loaded) {
+        return <p>{__('Loading payment information...', 'team556-pay')}</p>;
+    }
+
     return (
         <>
-            { description && <p>{ description }</p> }
-
-            <div className="team556-pay-pricing-info" style={{ marginBottom: '20px', padding: '10px', border: '1px solid #e0e0e0', borderRadius: '4px', background: '#f9f9f9' }}>
-                { !pricingInfo.loaded && <p>{__('Loading payment details...', 'team556-pay')}</p> }
-                { pricingInfo.loaded && pricingInfo.error && 
-                    <p style={{ color: 'red' }}>
-                        <strong>{__('Error:', 'team556-pay')}</strong> {pricingInfo.error}
-                    </p> }
-                { pricingInfo.loaded && !pricingInfo.error && pricingInfo.tokenPrice > 0 && (
+            {description && <p>{decodeEntities(description)}</p>}
+            <div className="team556-pay-block-info" style={{ padding: '10px', border: '1px solid #e0e0e0', borderRadius: '4px', backgroundColor: '#f9f9f9' }}>
+                {pricingInfo.error ? (
+                    <p style={{ color: 'red' }}><strong>{__('Error:', 'team556-pay')}</strong> {pricingInfo.error}</p>
+                ) : (
                     <>
-                        <p style={{ margin: '5px 0', fontSize: '14px' }}>
-                            <strong>{__('Order Total:', 'team556-pay')}</strong> {pricingInfo.cartTotalFiat.toFixed(2)} {pricingInfo.currency}
-                        </p>
-                        <p style={{ margin: '5px 0', fontSize: '14px' }}>
-                            <strong>{__('Current Price:', 'team556-pay')}</strong> 1 TEAM556 ≈ {pricingInfo.tokenPrice.toFixed(6)} {pricingInfo.currency}
-                        </p>
-                        <p style={{ margin: '5px 0', fontSize: '16px' }}>
-                            <strong>{__('Amount Due:', 'team556-pay')}</strong> {pricingInfo.requiredTokenAmount.toFixed(6)} TEAM556
-                        </p>
+                        {pricingInfo.tokenPrice > 0 && (
+                            <p>
+                                <strong>{__('Current Price:', 'team556-pay')}</strong> 1 TEAM556 = {pricingInfo.tokenPrice.toFixed(6)} {pricingInfo.currency}
+                            </p>
+                        )}
+                        {pricingInfo.cartTotalFiat > 0 && (
+                            <p>
+                                <strong>{__('Order Total:', 'team556-pay')}</strong> {pricingInfo.cartTotalFiat.toFixed(2)} {pricingInfo.currency}
+                            </p>
+                        )}
+                        {pricingInfo.requiredTokenAmount > 0 && (
+                            <p>
+                                <strong>{__('Amount Due:', 'team556-pay')}</strong> {pricingInfo.requiredTokenAmount.toFixed(9)} TEAM556
+                            </p>
+                        )}
                     </>
                 )}
-                { pricingInfo.loaded && !pricingInfo.error && (!pricingInfo.requiredTokenAmount || pricingInfo.requiredTokenAmount <= 0) && qrValue && (
-                     <p style={{ margin: '5px 0', fontSize: '14px' }}>{__('Could not retrieve current token price. Please refer to your wallet for the exact token amount based on the QR code.', 'team556-pay')}</p>
-                )}
-            </div>
+                
+                <hr style={{ margin: '15px 0' }} />
 
-            <div className="team556-pay-payment-instructions" style={{ marginTop: '15px' }}>
-                <h4>Instructions:</h4>
-                <ol>
-                    <li>Open your Team556 Digital Armory and select the Pay Tab.</li>
-                    <li>Scan the QR code below or paste the link in the Pay Tab to initiate the payment.</li>
-                    <li>Confirm the transaction in your wallet.</li>
+                <p><strong>{__('Instructions:', 'team556-pay')}</strong></p>
+                <ol style={{ paddingLeft: '20px', marginTop: '5px', marginBottom: '15px' }}>
+                    <li>{__('After clicking "Place Order", you will be taken to the payment page.', 'team556-pay')}</li>
+                    <li>{__('On the payment page, you will see a QR code and a payment link.', 'team556-pay')}</li>
+                    <li>{__('Open your Team556 Digital Armory and select the Pay Tab.', 'team556-pay')}</li>
+                    <li>{__('Scan the QR code or paste the payment link to initiate the payment.', 'team556-pay')}</li>
+                    <li>{__('Confirm the transaction in your wallet.', 'team556-pay')}</li>
                 </ol>
-                <div className="team556-pay-qr-code-area" style={{ marginTop: '15px', marginBottom: '15px', textAlign: 'center' }}>
-                    {qrValue ? (
-                        <>
-                            <QRCodeCanvas value={qrValue} size={200} bgColor="#ffffff" fgColor="#000000" level="L" />
-                            {/* Display Payment URL for manual copy */}
-                            <div style={{ marginTop: '15px', textAlign: 'center' }}>
-                                <input
-                                    type="text"
-                                    value={qrValue}
-                                    readOnly
-                                    onClick={(e) => e.target.select()}
-                                    style={{
-                                        width: '90%', // Adjust width as needed
-                                        maxWidth: '400px', // Max width for very wide screens
-                                        padding: '8px',
-                                        textAlign: 'center',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        fontSize: '12px',
-                                        boxSizing: 'border-box', // Ensures padding doesn't expand width
-                                        marginBottom: '10px',
-                                        fontFamily: 'monospace' // Good for URLs
-                                    }}
-                                    aria-label={__('Payment Link (for manual copy)', 'team556-pay')}
-                                    placeholder={__('Payment link will appear here', 'team556-pay')}
-                                />
-                            </div>
-                            {/* Enhanced Copy Button */}
-                            <div style={{ marginTop: '10px', textAlign: 'center' }}>
-                                <button 
-                                    type="button"
-                                    onClick={async () => { // Made async
-                                        console.log('Team556 Pay: Copy button clicked. QR Value:', qrValue);
-                                        if (!qrValue) {
-                                            console.error('Team556 Pay: Payment link (qrValue) is empty, cannot copy.');
-                                            alert(__('Payment link is not available to copy. Please wait for it to load.', 'team556-pay'));
-                                            return;
-                                        }
-                                        try {
-                                            await navigator.clipboard.writeText(qrValue);
-                                            console.log('Team556 Pay: Successfully copied to clipboard using navigator.clipboard.writeText');
-                                            alert(__('Payment link copied to clipboard!', 'team556-pay'));
-                                        } catch (navError) {
-                                            console.warn('Team556 Pay: navigator.clipboard.writeText failed:', navError);
-                                            console.log('Team556 Pay: Attempting fallback copy method...');
-                                            const textArea = document.createElement('textarea');
-                                            textArea.value = qrValue;
-                                            // Prevent visual disruption
-                                            textArea.style.position = 'fixed';
-                                            textArea.style.top = '-9999px';
-                                            textArea.style.left = '-9999px';
-                                            document.body.appendChild(textArea);
-                                            textArea.focus();
-                                            textArea.select();
-                                            try {
-                                                const successful = document.execCommand('copy');
-                                                if (successful) {
-                                                    console.log('Team556 Pay: Successfully copied to clipboard using fallback method.');
-                                                    alert(__('Payment link copied to clipboard! (fallback used)', 'team556-pay'));
-                                                } else {
-                                                    console.error('Team556 Pay: Fallback copy method (document.execCommand) returned false.');
-                                                    alert(__('Could not copy payment link. Please copy it manually.', 'team556-pay'));
-                                                }
-                                            } catch (fallbackError) {
-                                                console.error('Team556 Pay: Fallback copy method (document.execCommand) failed:', fallbackError);
-                                                alert(__('Could not copy payment link. Please copy it manually.', 'team556-pay'));
-                                            }
-                                            document.body.removeChild(textArea);
-                                        }
-                                    }}
-                                    style={{
-                                        backgroundColor: '#0073aa',
-                                        color: 'white',
-                                        border: 'none',
-                                        padding: '8px 16px',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        fontSize: '14px'
-                                    }}
-                                >
-                                    {__('Copy Payment Link', 'team556-pay')}
-                                </button>
-                            </div>
-                        </>
-                    ) : (
-                        <p>{__('Generating QR Code...', 'team556-pay')}</p>
-                    )}
-                </div>
+
                 <p style={{ fontStyle: 'italic', fontSize: '0.9em' }}>
-                    {__( 'Your order will be processed once the payment is confirmed on the network.', 'team556-pay' )}
+                    {__( 'Your order will be processed once the payment is confirmed on the network. The QR code and payment link will be shown on the next page after you place your order.', 'team556-pay' )}
                 </p>
-                {/* Payment status updates could appear here */}
             </div>
         </>
     );

@@ -50,7 +50,7 @@
             // --- AJAX Request --- 
             $.post(team556_ajax_obj.ajax_url, {
                 action: 'team556_create_payment', // Matches PHP hook: wp_ajax_team556_create_payment
-                // nonce: team556_ajax_obj.nonce, // Uncomment if using nonce verification
+                nonce: team556_ajax_obj.nonce,
                 amount: amount,
                 description: description,
                 order_id: orderId
@@ -60,7 +60,22 @@
                 if (response.success && response.data && response.data.solana_pay_url) {
                     displayMessage('Scan the QR code with a compatible wallet.', false, $messageContainer);
                     generateQrCode(response.data.solana_pay_url, $qrContainer);
-                    // Optional: Start polling for payment confirmation here if needed
+                    
+                    // Start polling for payment confirmation
+                    if (response.data.reference || response.data.order_id) {
+                        // First show a status message
+                        displayMessage('QR code generated. Waiting for payment confirmation...', false, $messageContainer);
+                        console.log('Starting payment polling for order:', response.data.order_id, 'reference:', response.data.reference);
+                        
+                        // Then start polling
+                        startPaymentStatusPolling(
+                            response.data.reference || '',
+                            response.data.order_id || '',
+                            response.data.success_url || '',
+                            $messageContainer,
+                            $button
+                        );
+                    }
                 } else {
                     const errorMessage = response.data && response.data.message ? response.data.message : 'An unknown error occurred.';
                     displayMessage('Error: ' + errorMessage, true, $messageContainer);
@@ -85,6 +100,117 @@
 
         // --- Helper Functions --- 
 
+        /**
+         * Starts polling for payment status updates
+         * @param {string} reference - The payment reference ID
+         * @param {string} orderId - The WooCommerce order ID
+         * @param {string} successUrl - The URL to redirect to after successful payment
+         * @param {jQuery} $messageContainer - The jQuery object of the message container
+         * @param {jQuery} $button - The payment button object
+         */
+        function startPaymentStatusPolling(reference, orderId, successUrl, $messageContainer, $button) {
+            console.log('Starting payment polling with params:', { reference, orderId, successUrl });
+            
+            // Initialize variables
+            const pollingInterval = 3000; // 3 seconds
+            const maxAttempts = 60; // 60 attempts = 3 minutes total polling time
+            let attempts = 0;
+            let pollTimer = null;
+            
+            // Display initial message
+            displayMessage('Waiting for payment confirmation...', false, $messageContainer);
+            
+            // Create a status indicator element
+            const $statusIndicator = $('<div class="team556-payment-status">Status: <span class="status-text">Checking payment...</span></div>');
+            $messageContainer.after($statusIndicator);
+            
+            // Start polling
+            pollTimer = setInterval(function() {
+                attempts++;
+                $statusIndicator.find('.status-text').text('Checking payment... Attempt ' + attempts);
+                
+                // Update message every 5 attempts (15 seconds)
+                if (attempts % 5 === 0) {
+                    console.log('Team556 Pay: Still polling after ' + attempts + ' attempts');
+                    displayMessage(`Still waiting for payment confirmation... (${Math.floor(attempts/20)} minute${attempts >= 20 ? 's' : ''})`, false, $messageContainer);
+                }
+                
+                // Check if max attempts reached
+                if (attempts >= maxAttempts) {
+                    clearInterval(pollTimer);
+                    $statusIndicator.remove();
+                    displayMessage('Payment confirmation timed out. If you completed the payment, please contact customer support.', true, $messageContainer);
+                    $button.removeClass('team556-loading').prop('disabled', false);
+                    return;
+                }
+                
+                // Make the AJAX call to check payment status
+                $.ajax({
+                    url: team556_ajax_obj.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'team556_pay_check_order_status',
+                        nonce: team556_ajax_obj.nonce,
+                        reference: reference,
+                        order_id: orderId
+                    },
+                    success: function(response) {
+                        console.log('Team556 Pay: Status check response:', response);
+                        if (response && response.success) {
+                            if (response.data && response.data.status === 'paid') {
+                                // Payment confirmed!
+                                clearInterval(pollTimer);
+                                $statusIndicator.find('.status-text').text('Payment confirmed!');
+                                $statusIndicator.addClass('success');
+                                displayMessage('Payment confirmed! Redirecting to confirmation page...', false, $messageContainer);
+                                console.log('Team556 Pay: Payment confirmed. Signature:', response.data.signature);
+                                
+                                // Show success message and redirect
+                                $messageContainer.append('<div class="team556-success-message" style="color: green; font-weight: bold; margin-top: 10px;">✓ Payment successfully processed!</div>');
+                                
+                                // Redirect to success page after a short delay
+                                setTimeout(function() {
+                                    // If we have a redirect URL in the response, use it first
+                                    if (response.data && response.data.redirect_url) {
+                                        console.log('Team556 Pay: Redirecting to:', response.data.redirect_url);
+                                        window.location.href = response.data.redirect_url;
+                                    }
+                                    // Otherwise, if we have a success URL from the initial request
+                                    else if (successUrl) {
+                                        console.log('Team556 Pay: Redirecting to success URL:', successUrl);
+                                        window.location.href = successUrl;
+                                    }
+                                    // Last resort - if we have an order ID, construct a standard WooCommerce URL
+                                    else if (orderId) {
+                                        console.log('Team556 Pay: Redirecting to order received page');
+                                        window.location.href = '/checkout/order-received/' + orderId;
+                                    } 
+                                    // Very last resort - just reload the page
+                                    else {
+                                        console.log('Team556 Pay: No redirect URL available, reloading page');
+                                        window.location.reload();
+                                    }
+                                }, 2000);
+                            } else {
+                                // Still waiting...
+                                console.log('Team556 Pay: Payment status check - still pending');
+                            }
+                        } else {
+                            console.error('Team556 Pay: Error checking payment status:', response);
+                            // Don't stop polling on error, just log it
+                        }
+                    },
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        console.error('Team556 Pay: AJAX error checking payment status:', textStatus, errorThrown, jqXHR.responseText);
+                        // Don't stop polling on error, just log it
+                    }
+                });
+            }, pollingInterval);
+            
+            // Return the timer ID in case we need to cancel it externally
+            return pollTimer;
+        }
+        
         /**
          * Displays a message to the user.
          * @param {string} message - The message text.
@@ -111,39 +237,35 @@
                 console.error('QR code container not found.');
                 return;
             }
-            
-            // Check if QR code library is available (example using kjua)
-            if (typeof kjua === 'undefined') {
-                 console.error('QR code library (kjua) not loaded.');
-                 $container.text('Error: QR code library not loaded. Please install/enqueue it. URL: ' + text).addClass('error').show();
-                 // Provide the raw link as a fallback
-                 let fallbackLink = $('<a>').attr('href', text).text('Click here to pay');
-                 $container.append('<br>').append(fallbackLink);
-                 return;
-             }
+
+            // Check if QRCode library is available (from qrcode.min.js)
+            if (typeof QRCode === 'undefined') {
+                console.error('QR code library (QRCode.js) not loaded.');
+                $container.text('Error: QR code library not loaded. URL: ' + text).addClass('error').show();
+                // Provide the raw link as a fallback
+                let fallbackLink = $('<a>').attr('href', text).text('Click here to pay');
+                $container.append('<br>').append(fallbackLink);
+                return;
+            }
 
             try {
-                const qrElement = kjua({
-                    render: 'canvas', // or 'svg'
-                    crisp: true,
-                    minVersion: 1,
-                    ecLevel: 'L', // Error correction level (L, M, Q, H)
-                    size: 256, // Size in pixels
-                    ratio: null,
-                    fill: '#333', // QR code color
-                    back: '#fff', // Background color
+                $container.empty(); // Clear previous QR code
+                new QRCode($container[0], {
                     text: text,
-                    rounded: 0, // Rounding factor (0-100)
-                    quiet: 1, // Quiet zone (modules)
-                    mode: 'plain' // 'plain', 'label', 'image'
+                    width: 256,
+                    height: 256,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H // High error correction
                 });
-                $container.empty().append(qrElement).fadeIn();
+                $container.fadeIn();
+                console.log('Team556 Pay: QR Code generated for:', text);
             } catch (error) {
-                console.error('Error generating QR code:', error);
+                console.error('Error generating QR code with QRCode.js:', error);
                 displayMessage('Error generating QR code.', true, $container);
-                 // Provide the raw link as a fallback
-                 let fallbackLink = $('<a>').attr('href', text).text('Click here to pay');
-                 $container.append('<br>').append(fallbackLink);
+                // Provide the raw link as a fallback
+                let fallbackLink = $('<a>').attr('href', text).text('Click here to pay');
+                $container.append('<br>').append(fallbackLink);
             }
         }
 

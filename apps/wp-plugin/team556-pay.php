@@ -19,6 +19,11 @@ define('TEAM556_PAY_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('TEAM556_PAY_PLUGIN_URL', plugin_dir_url(__FILE__));
 // Token mint address is now hardcoded in relevant files for security
 define('TEAM556_PAY_TEAM556_TOKEN_MINT', 'AMNfeXpjD6kXyyTDB4LMKzNWypqNHwtgJUACHUmuKLD5');
+// Define the main API URL - this should point to the main-api (Go Fiber server) 
+// which acts as a proxy for the solana-api service
+if (!defined('TEAM556_MAIN_API_URL')) {
+    define('TEAM556_MAIN_API_URL', 'https://team556-main-api.fly.dev/api/');
+}
 
 // Include required files
 require_once TEAM556_PAY_PLUGIN_DIR . 'includes/class-team556-pay-db.php';
@@ -125,8 +130,13 @@ add_action('update_option_team556_pay_settings', 'team556_sync_global_settings_t
 
 // Initialize the plugin
 function team556_pay_init() {
+    // Load plugin textdomain for translations
+    load_plugin_textdomain('team556-pay', false, dirname(plugin_basename(__FILE__)) . '/languages/');
+
     // Start the plugin
-    $plugin = new Team556_Pay();
+    // Get the singleton instance. This will run the constructor once
+    // and register the rest_api_init action.
+    $plugin = Team556_Pay::get_instance();
     $plugin->init();
     
     // Initialize admin dashboard if in admin area
@@ -158,6 +168,18 @@ function team556_pay_init() {
     add_action('wp_ajax_nopriv_team556_handle_get_block_payment_data_request', 'team556_handle_get_block_payment_data_request');
 }
 add_action('plugins_loaded', 'team556_pay_init');
+
+/**
+ * Returns the main instance of Team556_Pay.
+ *
+ * @return Team556_Pay
+ */
+function team556_pay() {
+    return Team556_Pay::get_instance();
+}
+
+// Initialize the plugin instance.
+team556_pay();
 
 /**
  * Handle AJAX request to get payment data for block-based checkout QR code.

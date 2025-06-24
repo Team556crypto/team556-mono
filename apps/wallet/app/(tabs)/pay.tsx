@@ -18,11 +18,43 @@ import { PaymentReceipt } from '@/components/PaymentReceipt';
 
 const TEAM556_MINT_ADDRESS = new PublicKey('AMNfeXpjD6kXyyTDB4LMKzNWypqNHwtgJUACHUmuKLD5');
 
+const RPC_ENDPOINTS = [
+  process.env.EXPO_PUBLIC_GLOBAL__HELIUS_RPC_URL || 'https://rpc.helius.xyz?api-key=YOUR_API_KEY_HERE',
+  process.env.EXPO_PUBLIC_GLOBAL__BACKUP_RPC_URL_1 || 'https://api.mainnet-beta.solana.com',
+  process.env.EXPO_PUBLIC_GLOBAL__BACKUP_RPC_URL_2 || 'https://try-rpc.mainnet.solana.blockdaemon.tech/',
+  process.env.EXPO_PUBLIC_GLOBAL__BACKUP_RPC_URL_3 || 'https://solana-mainnet.g.alchemy.com/v2/YOUR_ALCHEMY_API_KEY',
+];
+
+async function createResilientConnection(endpoints: string[]): Promise<Connection> {
+  for (const endpoint of endpoints) {
+    try {
+      const connection = new Connection(endpoint, {
+        commitment: 'confirmed',
+        confirmTransactionInitialTimeout: 60000,
+      });
+      // Perform a quick version check to ensure the endpoint is responsive
+      await connection.getVersion();
+      console.log(`Successfully connected to RPC endpoint: ${endpoint}`);
+      return connection;
+    } catch (error) {
+      console.warn(`Failed to connect to RPC endpoint: ${endpoint}. Trying next...`);
+    }
+  }
+  throw new Error('Failed to connect to any available RPC endpoints.');
+}
+
 interface PaymentDetails {
     recipient: PublicKey;
-    amount: BigNumber | undefined; 
+    amount: BigNumber | undefined;
     label?: string;
     message?: string;
+    /**
+     * Webhook callback URL provided by the merchant. The wallet should POST the
+     * transaction signature to this URL after payment confirmation so the
+     * merchant site (e.g., Team556 Pay WordPress plugin) can mark the order
+     * as paid.
+     */
+    webhookUrl?: string;
 }
 
 export default function PayScreen() {
@@ -34,19 +66,14 @@ export default function PayScreen() {
   const isP1PresaleUser = !!user && user.presale_type === 1;
   
   // Detailed debugging
-  console.log('[PayScreen] Auth State:', {
-    isLoadingAuth,
-    hasUser: !!user,
-    presaleType: user?.presale_type,
-    isP1PresaleUser
-  });
+
 
   // More aggressive immediate check and redirect
   useEffect(() => {
-    console.log('[PayScreen] Access check running, isP1PresaleUser:', isP1PresaleUser);
+
     
     if ((!isLoadingAuth && !isP1PresaleUser) || (!isLoadingAuth && !user)) {
-      console.log('[PayScreen] Access denied! Redirecting to home');
+
       // Force navigation immediately
       router.replace('/');
       
@@ -59,7 +86,6 @@ export default function PayScreen() {
 
   // Force re-check on every render
   if (!isLoadingAuth && !isP1PresaleUser) {
-    console.log('[PayScreen] Render blocked - not P1 user');
     // Return without rendering payment elements
     return (
       <ScreenLayout title='Access Denied' headerIcon={<Ionicons name='warning' size={24} color={Colors.error} />}>
@@ -84,7 +110,6 @@ export default function PayScreen() {
   }
   
   if (isLoadingAuth) {
-    console.log('[PayScreen] Still loading auth state');
     return (
       <ScreenLayout title='Pay with TEAM' headerIcon={<Ionicons name='card' size={24} color={Colors.primary} />}>
         <View style={styles.centered}>
@@ -148,13 +173,28 @@ export default function PayScreen() {
       const parsed = parseURL(correctedData) as TransferRequestURL; 
       console.log('Parsed Team556 Pay URL:', parsed);
 
+        // Extract the optional webhook callback URL from the *raw* URL string. The
+        // `@solana/pay` parser drops unknown query parameters like `url=` so we
+        // must manually parse it before calling `parseURL`.
+        let webhookUrl: string | undefined;
+        const urlMatch = correctedData.match(/[?&]url=([^&]+)/);
+        if (urlMatch && urlMatch[1]) {
+            try {
+                webhookUrl = decodeURIComponent(urlMatch[1]);
+                console.log('Extracted webhook URL:', webhookUrl);
+            } catch (decodeErr) {
+                console.warn('Failed to decode webhook URL', decodeErr);
+            }
+        }
+
       if (parsed.splToken && parsed.splToken.equals(TEAM556_MINT_ADDRESS)) {
           setPaymentDetails({
-              recipient: parsed.recipient,
-              amount: parsed.amount,
-              label: parsed.label,
-              message: parsed.message
-          });
+               recipient: parsed.recipient,
+               amount: parsed.amount,
+               label: parsed.label,
+               message: parsed.message,
+               webhookUrl,
+           });
       } else if (parsed.splToken) {
            Alert.alert('Invalid Token', `This request is for a different token, not TEAM556. (${parsed.splToken.toBase58()})`);
       } else {
@@ -177,21 +217,15 @@ export default function PayScreen() {
   };
 
   const handleConfirmPayment = async () => {
-    console.log('[PayScreen.handleConfirmPayment] Clicked. Checking conditions...');
-    console.log('[PayScreen.handleConfirmPayment] paymentDetails:', paymentDetails);
-    console.log('[PayScreen.handleConfirmPayment] token:', token);
-    console.log('[PayScreen.handleConfirmPayment] user:', user);
-    console.log('[PayScreen.handleConfirmPayment] user.wallets:', user?.wallets);
-
     if (!paymentDetails || !token || !user || !user.wallets || user.wallets.length === 0) {
       Alert.alert('Error', 'Missing payment details or user information.');
       return;
     }
 
-    const senderWallet = user.wallets[0]; 
+    const senderWallet = user.wallets[0];
     const senderPublicKey = new PublicKey(senderWallet.address);
-    const recipientPublicKey = paymentDetails.recipient; 
-    const message = paymentDetails.message; 
+    const recipientPublicKey = paymentDetails.recipient;
+
 
     Alert.prompt(
       'Confirm Transaction',
@@ -203,324 +237,167 @@ export default function PayScreen() {
         }
 
         try {
-          console.log('[PayScreen.handleConfirmPayment] Processing payment within try block. Current paymentDetails:', JSON.stringify(paymentDetails, (key, value) => {
-          if (value instanceof PublicKey) return value.toBase58();
-          if (value instanceof BigNumber) return value.toString();
-          // Add other custom types if needed, e.g., for BigInt if not handled by default JSON.stringify
-          if (typeof value === 'bigint') return value.toString(); 
-          return value;
-        }, 2));
-          const rpcEndpoint = 'https://api.mainnet-beta.solana.com'; // Switch to reliable official Solana RPC
-          if (!rpcEndpoint) {
-            throw new Error('Solana RPC endpoint is not configured.');
-          }
-          
-          console.log('[PayScreen.handleConfirmPayment] Original RPC Endpoint:', rpcEndpoint);
-          
-          // Create connection with retry options
-          const connection = new Connection(rpcEndpoint, {
-            commitment: 'confirmed',
-            confirmTransactionInitialTimeout: 60000, // 60 seconds
-            disableRetryOnRateLimit: false,
-          });
-        
-          // Create backup connections to GenesysGo, QuickNode, and other providers if available
-          const backupEndpoints = [
-            process.env.EXPO_PUBLIC_GLOBAL__BACKUP_RPC_URL_1 || 'https://crystaleyes.spl_gdn.api.mainnet-beta.solana.com',
-            process.env.EXPO_PUBLIC_GLOBAL__BACKUP_RPC_URL_2 || 'https://api.mainnet-beta.solana.com',
-            process.env.EXPO_PUBLIC_GLOBAL__BACKUP_RPC_URL_3 || 'https://spl_gdn.dsril.com',
-          ];
-          const backupConnections = backupEndpoints.map((endpoint) => endpoint ? new Connection(endpoint, 'confirmed') : null).filter(Boolean) as Connection[];
-
-          // Add a small delay to allow network to initialize properly
-          // This sometimes helps in React Native with connection stability
-          await new Promise(resolve => setTimeout(resolve, 100));
-
-          console.log('[PayScreen.handleConfirmPayment] Getting sender token account...');
+          const connection = await createResilientConnection(RPC_ENDPOINTS);
           const senderTokenAccount = await getAssociatedTokenAddress(
             TEAM556_MINT_ADDRESS,
             senderPublicKey
           );
-          console.log('[PayScreen.handleConfirmPayment] Sender token account:', senderTokenAccount.toBase58());
-
-          console.log('[PayScreen.handleConfirmPayment] Getting recipient token account...');
           const recipientTokenAccount = await getAssociatedTokenAddress(
             TEAM556_MINT_ADDRESS,
             recipientPublicKey
           );
-          console.log('[PayScreen.handleConfirmPayment] Recipient token account:', recipientTokenAccount.toBase58());
 
-          // Check if recipient ATA exists
-          let recipientATAInfo;
-          let successfulConnection = connection; // Track which connection worked
-          const getAccountInfoWithRetry = async (connection: Connection, retries = 3, initialDelay = 1000) => {
+          // Simplified retry function
+          const getAccountInfoWithRetry = async (conn: Connection, account: PublicKey, retries = 3, initialDelay = 1000) => {
             let lastError;
             for (let i = 0; i < retries; i++) {
               try {
-                console.log(`[PayScreen.handleConfirmPayment] Attempt ${i+1} to get account info...`);
-                recipientATAInfo = await connection.getAccountInfo(recipientTokenAccount);
-                console.log('[PayScreen.handleConfirmPayment] Recipient ATA info retrieved:', recipientATAInfo);
-                return recipientATAInfo;
+                return await conn.getAccountInfo(account);
               } catch (error) {
-                console.error(`[PayScreen.handleConfirmPayment] Attempt ${i+1} failed:`, error);
+                console.warn(`Attempt ${i + 1} to get account info failed:`, error);
                 lastError = error;
-                // Wait with exponential backoff before retry
                 const delay = initialDelay * Math.pow(2, i);
-                console.log(`[PayScreen.handleConfirmPayment] Waiting ${delay}ms before retry...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
               }
             }
             throw lastError || new Error('Failed to get account info after multiple attempts');
           };
 
-          try {
-            // Try primary connection with retry
-            console.log('[PayScreen.handleConfirmPayment] Getting account info with retry mechanism...');
-            recipientATAInfo = await getAccountInfoWithRetry(connection);
-            console.log('[PayScreen.handleConfirmPayment] Successfully used primary RPC connection:', rpcEndpoint);
-          } catch (primaryError) {
-            console.error('[PayScreen.handleConfirmPayment] Primary RPC connection failed after retries:', primaryError);
-            
-            // Try backup connections if available
-            for (const backupConnection of backupConnections) {
-              console.log('[PayScreen.handleConfirmPayment] Falling back to backup RPC endpoint...');
-              try {
-                recipientATAInfo = await getAccountInfoWithRetry(backupConnection);
-                successfulConnection = backupConnection; // Use this connection for sending
-                console.log('[PayScreen.handleConfirmPayment] Successfully used backup RPC connection:', backupConnection.rpcEndpoint);
-                break;
-              } catch (backupError) {
-                console.error('[PayScreen.handleConfirmPayment] Backup RPC also failed:', backupError);
-              }
-            }
-            if (!recipientATAInfo) {
-              throw new Error('Network connection error. Please check your internet connection and try again.');
-            }
-          }
-
-          if (!recipientATAInfo) {
-            console.log('[PayScreen.handleConfirmPayment] Recipient ATA does not exist, adding create ATA instruction to main transaction...');
-          }
+          const recipientATAInfo = await getAccountInfoWithRetry(connection, recipientTokenAccount);
 
           if (!paymentDetails?.amount) {
             throw new Error('Payment amount details became unavailable.');
           }
 
-          const decimals = parseInt(process.env.EXPO_PUBLIC_GLOBAL__MINT_DECIMALS || '9', 10); // TEAM556 token decimals from env
+          const decimals = parseInt(process.env.EXPO_PUBLIC_GLOBAL__MINT_DECIMALS || '9', 10);
           const amountInLamports = new BigNumber(paymentDetails.amount).multipliedBy(Math.pow(10, decimals)).integerValue(BigNumber.ROUND_FLOOR);
-          
-          console.log('[PayScreen.handleConfirmPayment] Amount conversion: original=', paymentDetails.amount, 'lamports=', amountInLamports.toString());
 
-          console.log('[PayScreen.handleConfirmPayment] Building transaction with createTransfer...');
           const transaction = new Transaction();
           const instructions = [];
 
-          // Add create ATA instruction if needed (must come before transfer)
           if (!recipientATAInfo) {
-            console.log('[PayScreen.handleConfirmPayment] Adding create ATA instruction...');
             instructions.push(
               createAssociatedTokenAccountInstruction(
-                senderPublicKey,          // Payer
-                recipientTokenAccount,    // ATA address
-                recipientPublicKey,       // Owner
-                TEAM556_MINT_ADDRESS      // Mint
+                senderPublicKey,
+                recipientTokenAccount,
+                recipientPublicKey,
+                TEAM556_MINT_ADDRESS
               )
             );
           }
 
-          // Add transfer instruction
           const transferAmount = BigInt(amountInLamports.toString());
-          console.log('[PayScreen.handleConfirmPayment] Transfer amount as BigInt:', transferAmount.toString());
-          console.log('[PayScreen.handleConfirmPayment] Creating transfer instruction with:');
-          console.log('  - From:', senderTokenAccount.toBase58());
-          console.log('  - To:', recipientTokenAccount.toBase58());
-          console.log('  - Owner:', senderPublicKey.toBase58());
-          console.log('  - Amount (BigInt):', transferAmount.toString());
-          
           instructions.push(
             createTransferInstruction(
-              senderTokenAccount,       // Source ATA
-              recipientTokenAccount,    // Destination ATA
-              senderPublicKey,          // Owner of source ATA
-              transferAmount,           // Amount as BigInt
-              [],                       // Multi-signers (usually empty)
-              TOKEN_PROGRAM_ID          // SPL Token Program ID
+              senderTokenAccount,
+              recipientTokenAccount,
+              senderPublicKey,
+              transferAmount,
+              [],
+              TOKEN_PROGRAM_ID
             )
           );
-          console.log('[PayScreen.handleConfirmPayment] Added transfer instruction');
           
-          // Add instructions to the transaction
           transaction.add(...instructions);
-          
-          // Get latest blockhash using direct JSON-RPC call to bypass potential Connection issues
-          console.log('[PayScreen.handleConfirmPayment] Getting latest blockhash for transaction...');
-          
-          let blockhash, lastValidBlockHeight;
-          let successfulConnectionForBlockhash = connection; // Track which connection worked
-        
-          // Function to try getting blockhash with exponential backoff
-          const getBlockhashWithRetry = async (connection: Connection, retries = 3, initialDelay = 1000) => {
+
+          // Simplified retry function for blockhash
+          const getBlockhashWithRetry = async (conn: Connection, retries = 3, initialDelay = 1000) => {
             let lastError;
             for (let i = 0; i < retries; i++) {
               try {
-                console.log(`[PayScreen.handleConfirmPayment] Attempt ${i+1} to get blockhash...`);
-                const result = await connection.getLatestBlockhash('confirmed');
-                console.log('[PayScreen.handleConfirmPayment] Blockhash retrieved:', result.blockhash);
-                return result;
+                return await conn.getLatestBlockhash('confirmed');
               } catch (error) {
-                console.error(`[PayScreen.handleConfirmPayment] Attempt ${i+1} failed:`, error);
+                console.warn(`Attempt ${i + 1} to get blockhash failed:`, error);
                 lastError = error;
-                // Wait with exponential backoff before retry
                 const delay = initialDelay * Math.pow(2, i);
-                console.log(`[PayScreen.handleConfirmPayment] Waiting ${delay}ms before retry...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
               }
             }
             throw lastError || new Error('Failed to get blockhash after multiple attempts');
           };
 
-          try {
-            // Try primary connection with retry
-            console.log('[PayScreen.handleConfirmPayment] Getting latest blockhash with retry mechanism...');
-            const result = await getBlockhashWithRetry(connection);
-            blockhash = result.blockhash;
-            lastValidBlockHeight = result.lastValidBlockHeight;
-            console.log('[PayScreen.handleConfirmPayment] Successfully used primary RPC connection:', rpcEndpoint);
-          } catch (primaryError) {
-            console.error('[PayScreen.handleConfirmPayment] Primary RPC connection failed after retries:', primaryError);
-            
-            // Try backup connections if available
-            for (const backupConnection of backupConnections) {
-              console.log('[PayScreen.handleConfirmPayment] Falling back to backup RPC endpoint...');
-              try {
-                const result = await getBlockhashWithRetry(backupConnection);
-                blockhash = result.blockhash;
-                lastValidBlockHeight = result.lastValidBlockHeight;
-                successfulConnectionForBlockhash = backupConnection; // Use this connection for sending
-                console.log('[PayScreen.handleConfirmPayment] Successfully used backup RPC connection:', backupConnection.rpcEndpoint);
-                break;
-              } catch (backupError) {
-                console.error('[PayScreen.handleConfirmPayment] Backup RPC also failed:', backupError);
-              }
-            }
-            if (!blockhash) {
-              throw new Error('Network connection error. Please check your internet connection and try again.');
-            }
-          }
-        
-          console.log('[PayScreen.handleConfirmPayment] Latest blockhash for transaction:', blockhash, 'LastValidBlockHeight:', lastValidBlockHeight);
+
+          const { blockhash, lastValidBlockHeight } = await getBlockhashWithRetry(connection);
+
           transaction.recentBlockhash = blockhash;
           transaction.feePayer = senderPublicKey;
-          console.log('[PayScreen.handleConfirmPayment] Transaction built. Instructions count:', transaction.instructions.length);
-        
-          if (transaction.instructions.length > 0) {
-            console.log('[PayScreen.handleConfirmPayment] First instruction program ID:', transaction.instructions[0].programId.toBase58());
-          }
 
-          console.log('[PayScreen.handleConfirmPayment] Serializing transaction...');
           const serializedTransaction = transaction.serialize({
-            requireAllSignatures: false, 
+            requireAllSignatures: false,
             verifySignatures: false,
           });
           const base64Transaction = serializedTransaction.toString('base64');
 
-          console.log('[PayScreen.handleConfirmPayment] Signing transaction...');
+
           const signResponse = await signTransaction(token, password, base64Transaction);
           const signedTxBase64 = signResponse.signedTransaction;
 
           const signedTxBytes = Buffer.from(signedTxBase64, 'base64');
-          console.log('[PayScreen.handleConfirmPayment] Transaction signed by backend/service. Signed TX length:', signedTxBytes.length);
-          console.log('[PayScreen.handleConfirmPayment] Raw signed transaction bytes ready. Length:', signedTxBytes.length);
-          console.log('[PayScreen.handleConfirmPayment] Sending raw transaction...');
-          const signature = await successfulConnectionForBlockhash.sendRawTransaction(signedTxBytes, {
-           skipPreflight: false 
-        });
-        console.log('[PayScreen.handleConfirmPayment] Raw transaction sent. Signature:', signature);
 
-        if (lastValidBlockHeight) {
-          // The blockhash used for sending and confirming should be the one set in transaction.recentBlockhash
-          // However, confirmTransaction also takes lastValidBlockHeight which we fetched with that blockhash.
-          // So, we use the 'blockhash' and 'lastValidBlockHeight' variables obtained before signing.
+          const signature = await connection.sendRawTransaction(signedTxBytes, {
+            skipPreflight: false
+          });
 
-          console.log('[PayScreen.handleConfirmPayment] Confirming transaction with signature:', signature);
+
+
+          const confirmationResult = await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
           
-          try {
-            // Explicitly set timeout to avoid waiting indefinitely
-            const confirmationResult = await Promise.race([
-              successfulConnectionForBlockhash.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed'),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('Transaction confirmation timed out')), 60000))
-            ]);
-            
-            console.log('[PayScreen.handleConfirmPayment] Transaction confirmation result:', JSON.stringify(confirmationResult, null, 2));
-          // Check if there was a transaction error
-          // TypeScript safe check for confirmation result structure
           const confirmValue = confirmationResult as { value?: { err?: any } };
           if (confirmValue?.value?.err) {
             throw new Error(`Transaction confirmation failed: ${JSON.stringify(confirmValue.value.err)}`);
           }
+          showToast(`Payment successful!`, 'success', 3000);
 
-            console.log('Transaction confirmed successfully!');
-            showToast(`Payment successful!`, 'success', 3000);
-            
-            // Set receipt details and show receipt screen
-            setReceiptDetails({
-              amount: paymentDetails.amount.toString(),
-              recipient: paymentDetails.recipient.toBase58(),
-              recipientLabel: paymentDetails.label,
-              message: paymentDetails.message,
-              signature: signature,
-              timestamp: new Date()
-            });
-            setShowReceipt(true);
-          } catch (confirmError) {
-            console.error('[PayScreen.handleConfirmPayment] Transaction confirmation error:', confirmError);
-            // Transaction might still be successful even if confirmation times out
-            Alert.alert(
-              'Payment Status Unknown', 
-              `Your payment of ${paymentDetails.amount.toString()} TEAM was sent, but confirmation timed out. ` +
-              `Check your balance later to verify. Transaction signature: ${signature}`
-            );
+            // Send webhook callback so the merchant site can confirm the payment
+            if (paymentDetails.webhookUrl) {
+              try {
+                await fetch(paymentDetails.webhookUrl, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ transaction: signature }),
+                });
+                console.log('Webhook POST sent to', paymentDetails.webhookUrl);
+              } catch (webhookErr) {
+                console.warn('Failed to send payment webhook', webhookErr);
+              }
+            }
+
+          setReceiptDetails({
+            amount: paymentDetails.amount.toString(),
+            recipient: paymentDetails.recipient.toBase58(),
+            recipientLabel: paymentDetails.label,
+            message: paymentDetails.message,
+            signature: signature,
+            timestamp: new Date()
+          });
+          setShowReceipt(true);
+
+        } catch (error: any) {
+          console.error('[PayScreen.handleConfirmPayment] Payment failed. Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+          let userErrorMessage = 'An unknown error occurred during payment.';
+          if (error.message) {
+            if (error.message.includes('RPC') || error.message.includes('Network request failed') || error.message.includes('blockhash')) {
+              userErrorMessage = 'Network connection error. Please check your internet connection and try again.';
+            } else if (error.message.includes('insufficient funds')) {
+              userErrorMessage = 'Insufficient funds for this transaction.';
+            } else if (error.message.includes('password')) {
+              userErrorMessage = 'Invalid password.';
+            } else {
+              userErrorMessage = error.message;
+            }
           }
-        } else {
-          console.log('Transaction sent but confirmation failed due to missing lastValidBlockHeight.');
-          Alert.alert(
-            'Payment Status Unknown', 
-            `Your payment of ${paymentDetails.amount.toString()} TEAM was sent, but confirmation failed. ` +
-            `Check your balance later to verify. Transaction signature: ${signature}`
-          );
+          Alert.alert('Payment Failed', userErrorMessage);
+        } finally {
+          setPaymentDetails(null);
         }
-
-      } catch (error: any) {
-      console.error('[PayScreen.handleConfirmPayment] Payment failed. Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
-      console.error('[PayScreen.handleConfirmPayment] Error Name:', error.name, 'Message:', error.message, 'Stack:', error.stack);
-      
-      // More user-friendly error messages
-      let userErrorMessage = 'An unknown error occurred during payment.';
-      if (error.message) {
-        if (error.message.includes('Network request failed') || error.message.includes('blockhash')) {
-          userErrorMessage = 'Network connection error. Please check your internet connection and try again.';
-        } else if (error.message.includes('insufficient funds')) {
-          userErrorMessage = 'Insufficient funds for this transaction.';
-        } else if (error.message.includes('Transaction simulation failed')) {
-          userErrorMessage = 'Transaction simulation failed. The recipient account may not exist or there may be an issue with the transaction.';
-        } else {
-          userErrorMessage = error.message;
-        }
-      }
-      
-      Alert.alert('Payment Failed', userErrorMessage);
-    } finally {
-        setPaymentDetails(null); 
-      }
-    },
-    Platform.OS === 'ios' ? 'secure-text' : 'default', 
-    '', 
-    'default' 
-  );
-};
+      },
+      Platform.OS === 'ios' ? 'secure-text' : 'default',
+      '',
+      'default'
+    );
+  };
 
   const handleCancelPayment = () => {
-      console.log('Payment Cancelled');
       setPaymentDetails(null); 
   }
   

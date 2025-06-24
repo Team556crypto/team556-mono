@@ -13,7 +13,7 @@ export const Badge = ({ label, isActive, style, ...rest }: BadgeProps) => {
   const { colors } = useTheme()
 
   const backgroundColor = isActive ? colors.primary : colors.backgroundCard
-  const textColor = isActive ? colors.background : colors.text
+  const textColor = isActive ? colors.text : colors.text
   const textWeight = isActive ? 'bold' : '500'
 
   const borderColor = colors.backgroundSubtle

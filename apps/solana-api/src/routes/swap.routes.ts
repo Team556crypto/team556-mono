@@ -1,7 +1,7 @@
-import express from 'express';
+import express, { Router } from 'express';
 import { handleGetQuote, handlePostSwap, handleCreateTokenAccounts } from '../controllers/swap.controller';
 
-const router = express.Router();
+const router: Router = express.Router();
 
 // Route to get swap quote
 // POST because we send parameters in the request body

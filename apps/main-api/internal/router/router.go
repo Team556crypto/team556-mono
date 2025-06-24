@@ -4,11 +4,13 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/team556-mono/server/internal/config"
 	"github.com/team556-mono/server/internal/email"
 	"github.com/team556-mono/server/internal/handlers"
 	"github.com/team556-mono/server/internal/middleware"
 	"gorm.io/gorm"
+	"time"
 )
 
 func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *email.Client) {
@@ -27,6 +29,7 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(db, cfg.JWTSecret, emailClient)
 	swapHandler := handlers.NewSwapHandler(db, cfg)
+	priceHandler := handlers.NewPriceHandler(cfg)
 	presaleHandler := handlers.NewPresaleHandler(db, cfg.JWTSecret, cfg.SolanaAPIURL)
 
 	// Groups Routes
@@ -36,6 +39,22 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	firearms := api.Group("/firearms", middleware.AuthMiddleware(cfg.JWTSecret))
 	presale := api.Group("/presale", middleware.AuthMiddleware(cfg.JWTSecret))
 	v1 := api.Group("/v1")
+
+	// Public, Rate-Limited Routes
+	// Price endpoint (unauthenticated, rate-limited)
+	priceLimiter := limiter.New(limiter.Config{
+		Max:        10, // Max requests per duration
+		Expiration: 1 * time.Minute,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP() // Use IP address for rate limiting
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"error": "Too many requests, please try again later.",
+			})
+		},
+	})
+	api.Get("/price/team556-usdc", priceLimiter, priceHandler.HandleGetTeam556UsdcPriceAlchemy)
 
 	// Auth Routes
 	auth.Post("/register", authHandler.Register)

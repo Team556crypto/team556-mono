@@ -1,9 +1,10 @@
 import { Router, Request, Response } from 'express'
 import walletRoutes from './walletRoutes'
 import swapRoutes from './swap.routes'
-import tokenRoutes from './token.routes'
+import tokenRoutes from './token.routes';
+import priceRoutes from './price.routes';
 
-const router = Router()
+const router: Router = Router()
 
 // Base route
 router.get('/', (req: Request, res: Response) => {
@@ -20,6 +21,9 @@ router.use('/wallet', walletRoutes)
 router.use('/swap', swapRoutes)
 
 // Token routes
-router.use('/token', tokenRoutes)
+router.use('/token', tokenRoutes);
+
+// Price routes (unauthenticated, rate-limited)
+router.use('/price', priceRoutes);
 
 export default router

@@ -17,6 +17,7 @@ type Config struct {
 	ArmorySecret      string
 	UploadthingSecret string // For GLOBAL__UPLOADTHING_SECRET
 	UploadthingApiURL string // For GLOBAL__UPLOADTHING_API_URL
+	AlchemyAPIKey     string // For GLOBAL__ALCHEMY_API_KEY
 }
 
 // LoadConfig loads environment variables from the .env file at the project root.
@@ -43,6 +44,7 @@ func LoadConfig() (*Config, error) {
 		ArmorySecret:      os.Getenv("MAIN_API__ARMORY_SECRET"),
 		UploadthingSecret: os.Getenv("GLOBAL__UPLOADTHING_SECRET"),
 		UploadthingApiURL: os.Getenv("GLOBAL__UPLOADTHING_API_URL"), // Or use GetEnv with a default
+		AlchemyAPIKey:     os.Getenv("GLOBAL__ALCHEMY_API_KEY"),
 	}
 
 	if cfg.DatabaseURL == "" {
@@ -68,6 +70,11 @@ func LoadConfig() (*Config, error) {
 		// Depending on requirements, you might want to log.Fatal here if uploads are critical
 	}
 	// cfg.UploadthingApiURL can be optional if there's a fallback in the handler
+
+	if cfg.AlchemyAPIKey == "" {
+		log.Println("Warning: GLOBAL__ALCHEMY_API_KEY environment variable not set. Price fetching via Alchemy will fail.")
+		// Depending on requirements, you might want to log.Fatal here if price fetching is critical
+	}
 
 	return cfg, nil
 }

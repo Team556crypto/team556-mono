@@ -249,11 +249,11 @@ export default function RedeemDashboard() {
               vestedDate={p1p2ClaimStartTime} // Use specific claim start time
               tokenAmount={500000}
               isEnabled={
-                false // P1P2 claim logic not yet implemented
-                // (claimStatus?.hasPresaleCode ?? false) &&
-                // presaleType === 1 &&
-                // !(claimStatus?.tokensClaimedP1P2 ?? false) &&
-                // new Date() >= p1p2ClaimStartTime
+                // false // P1P2 claim logic not yet implemented
+                (claimStatus?.hasPresaleCode ?? false) &&
+                presaleType === 1 &&
+                !(claimStatus?.tokensClaimedP1P2 ?? false) &&
+                new Date() >= p1p2ClaimStartTime
               }
               onClaim={() => showToast('P1P2 Claim not yet implemented.', 'info')}
               isLoading={claimStatusLoading}

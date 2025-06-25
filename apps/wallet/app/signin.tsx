@@ -9,6 +9,7 @@ import { Ionicons, Feather } from '@expo/vector-icons'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useAuthStore } from '@/store/authStore'
 import LogoSvg from '@/assets/images/logo-wide.svg'
+import LogoIconSvg from '@/assets/images/logo.svg'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const SignInScreen = () => {
@@ -235,11 +236,22 @@ const SignInScreen = () => {
         <title>Sign In | Team556 Wallet</title>
       </Head>
       <View style={styles.formContainer}>
+        {!isTabletOrLarger && (
+          <View style={styles.brandContainer}>
+            <LogoIconSvg width={120} height={120} />
+              <Text style={styles.welcomeTitle}>Welcome to Team556</Text>
+            <Text style={styles.welcomeSubtitle}>Sign in to access your Digital Armory</Text>
+          </View>
+        )}
         <View style={styles.formCard}>
-          <Text preset='h2' style={styles.formTitle}>
+          {isTabletOrLarger && (
+            <> 
+              <Text preset='h2' style={styles.formTitle}>
             Welcome Back
           </Text>
-          <Text style={styles.formSubtitle}>Sign in to access your secure digital vault</Text>
+              <Text style={styles.formSubtitle}>Sign in to access your secure digital vault</Text>
+            </>
+          )}
 
           {authError && (
             <View style={styles.errorContainer}>
@@ -247,9 +259,9 @@ const SignInScreen = () => {
             </View>
           )}
 
-          <Text style={styles.label}>Email</Text>
+          <Text style={styles.label}>Email or Username</Text>
           <Input
-            placeholder='your@email.com'
+            placeholder='Email or Username'
             value={email}
             onChangeText={setEmail}
             keyboardType='email-address'
@@ -512,7 +524,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.backgroundDarkest,
     padding: Platform.OS === 'web' ? 40 : 20
   },
   formCard: {
@@ -520,7 +532,7 @@ const styles = StyleSheet.create({
     maxWidth: 420,
     backgroundColor: Colors.backgroundDark,
     borderWidth: 1,
-    borderColor: Colors.backgroundLight,
+    borderColor: Colors.border,
     borderRadius: 12,
     padding: 30,
     shadowColor: '#000',
@@ -632,6 +644,24 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: 14,
     fontWeight: '500'
+  },
+  // Branding styles for mobile landing
+  brandContainer: {
+    alignItems: 'center',
+    marginBottom: 32
+  },
+  welcomeTitle: {
+    color: Colors.text,
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 24,
+    textAlign: 'center'
+  },
+  welcomeSubtitle: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    marginBottom: 24,
+    textAlign: 'center'
   }
 })
 

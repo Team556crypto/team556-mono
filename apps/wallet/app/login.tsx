@@ -6,6 +6,7 @@ import { Button, Text } from '@team556/ui'
 import LogoSvg from '@/assets/images/logo.svg'
 import { Colors } from '@/constants/Colors'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
+import SignInScreen from './signin'
 
 import {
   LandingHeader,
@@ -19,34 +20,8 @@ import {
 } from '@/components/landing'
 
 const MobileLandingScreen = () => {
-  const router = useRouter()
-  const { isTabletOrLarger } = useBreakpoint()
-
-  const handleSignInPress = () => {
-    // router.push('/signin')
-    router.replace('/signin')
-  }
-
-  const handleSignUpPress = () => {
-    // router.push('/signup')
-    router.replace('/signup')
-  }
-
-  return (
-    <SafeAreaView style={styles.safeAreaMobile}>
-      <View style={[styles.containerMobile, isTabletOrLarger && styles.containerMobileTablet]}>
-        <View style={styles.logoContainerMobile}>
-          <LogoSvg width={150} height={150} />
-        </View>
-        <View style={[styles.buttonContainerMobile, isTabletOrLarger && styles.buttonContainerMobileTablet]}>
-          <Button title='Sign In' onPress={handleSignInPress} style={styles.signInButtonMobile} fullWidth />
-          <TouchableOpacity onPress={handleSignUpPress} style={styles.signUpButtonMobile}>
-            <Text style={styles.signUpTextMobile}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </SafeAreaView>
-  )
+  // Render the full sign-in UI directly as the landing screen
+  return <SignInScreen />
 }
 
 const WebLandingPage = () => {

@@ -16,6 +16,7 @@
     const spinner = $('.team556-qrcode-spinner');
     const reference = $('#team556_reference').val();
     const solanaPayUrl = $('#team556_solana_pay_url').val();
+    const orderId = $('#team556_order_id').val() || '';
 
     // Initialize the QR code when the page loads
     function initQrCode() {
@@ -74,37 +75,70 @@
 
     // Check payment status via AJAX
     function checkPaymentStatus() {
+        console.log('Checking payment status for reference:', reference);
+        
         $.ajax({
             url: team556_solana_pay_params.ajax_url,
             type: 'POST',
             data: {
                 action: 'team556_solana_pay_check_payment',
                 reference: reference,
+                order_id: orderId || '',
                 nonce: team556_solana_pay_params.nonce
             },
             success: function(response) {
+                console.log('Payment status response:', response);
+                
                 if (response.success) {
-                    if (response.data.status === 'completed') {
-                        // Payment completed - update UI
+                    // Handle different payment statuses
+                    if (response.data.status === 'paid' || response.data.status === 'completed') {
+                        // Payment completed - update UI and stop polling
                         clearInterval(paymentInterval);
-                        statusContainer.html('Payment completed! Redirecting...').attr('data-status', 'success');
+                        statusContainer.html('Payment confirmed! Redirecting...').attr('data-status', 'success');
                         
-                        // Store signature and submit
-                        $('#team556_signature').val(response.data.signature);
+                        // Store signature if available
+                        if (response.data.signature) {
+                            $('#team556_signature').val(response.data.signature);
+                        }
                         
-                        // Redirect to order received page or complete the order
+                        // Handle redirect based on response or form submission
                         setTimeout(function() {
-                            $('form.checkout').submit();
+                            if (response.data.redirect_url) {
+                                // Use the redirect URL provided by the server
+                                window.location.href = response.data.redirect_url;
+                            } else if ($('form.checkout').length) {
+                                // Submit the checkout form if it exists
+                                $('form.checkout').submit();
+                            } else {
+                                // Fallback to refreshing the current page
+                                window.location.reload();
+                            }
                         }, 1500);
-                    } else if (response.data.status === 'processing') {
+                    } 
+                    // Handle processing status
+                    else if (response.data.status === 'processing') {
                         statusContainer.html('Payment detected! Processing transaction...').attr('data-status', 'processing');
                     }
+                    // Handle pending status
+                    else if (response.data.status === 'pending') {
+                        statusContainer.html('Waiting for payment confirmation...').attr('data-status', 'pending');
+                    }
+                    // Handle any message from the server
+                    if (response.data.message) {
+                        console.log('Server message:', response.data.message);
+                    }
                 } else {
-                    console.log('Waiting for payment...');
+                    // Handle error responses
+                    if (response.data && response.data.message) {
+                        console.warn('Payment status check error:', response.data.message);
+                    } else {
+                        console.log('Waiting for payment...');
+                    }
                 }
             },
             error: function(xhr, status, error) {
                 console.error('Error checking payment status:', error);
+                // Continue polling despite errors
             }
         });
     }

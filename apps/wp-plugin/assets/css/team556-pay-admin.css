@@ -829,6 +829,151 @@
    End Welcome Page Styles
    ========================================================================== */
 
+/* --- Transactions Page (WP_List_Table) Styles --- */
+.team556-transactions-page .wp-list-table {
+    background-color: var(--team556-background-light);
+    border: 1px solid var(--team556-border);
+    border-radius: 8px; /* Consistent with other cards */
+    box-shadow: none; /* Remove default WP shadow if any */
+}
+
+.team556-transactions-page .wp-list-table thead th,
+.team556-transactions-page .wp-list-table tfoot th {
+    background-color: var(--team556-background-dark);
+    color: var(--team556-text-secondary);
+    border-bottom: 1px solid var(--team556-border);
+    font-weight: 600;
+}
+
+.team556-transactions-page .wp-list-table th,
+.team556-transactions-page .wp-list-table td {
+    border-color: var(--team556-border);
+    color: var(--team556-text);
+    padding: 12px 10px; /* Adjust padding as needed */
+}
+
+.team556-transactions-page .wp-list-table tbody tr {
+    background-color: var(--team556-background-light);
+}
+
+.team556-transactions-page .wp-list-table tbody tr:nth-child(even):not(.no-items) {
+    background-color: var(--team556-background); /* Slightly different for alternate rows */
+}
+
+.team556-transactions-page .wp-list-table tbody tr:hover {
+    background-color: var(--team556-background-dark); /* Hover effect */
+}
+
+.team556-transactions-page .wp-list-table .row-actions a {
+    color: var(--team556-primary);
+}
+
+.team556-transactions-page .wp-list-table .row-actions a:hover {
+    color: var(--team556-tint);
+}
+
+/* Pagination and Search Box */
+.team556-transactions-page .tablenav {
+    background-color: transparent; /* Remove default WP tablenav background */
+    border: none;
+    padding: 10px 0;
+}
+
+.team556-transactions-page .tablenav .tablenav-pages a,
+.team556-transactions-page .tablenav .tablenav-pages span.current {
+    color: var(--team556-text-secondary);
+    background-color: var(--team556-background-light);
+    border: 1px solid var(--team556-border);
+    padding: 6px 10px;
+    border-radius: 4px;
+}
+
+.team556-transactions-page .tablenav .tablenav-pages span.current {
+    background-color: var(--team556-primary);
+    color: var(--team556-text);
+    border-color: var(--team556-primary);
+}
+
+.team556-transactions-page .tablenav .tablenav-pages a:hover {
+    background-color: var(--team556-background-dark);
+    border-color: var(--team556-tint);
+    color: var(--team556-tint);
+}
+
+.team556-transactions-page .search-box input[type="search"] {
+    background-color: var(--team556-background-light);
+    border: 1px solid var(--team556-border);
+    color: var(--team556-text);
+    border-radius: 4px;
+    padding: 8px 10px;
+}
+
+.team556-transactions-page .search-box input[type="submit"],
+.team556-transactions-page .search-box .button {
+    background-color: var(--team556-primary);
+    color: var(--team556-text);
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    text-shadow: none;
+    box-shadow: none;
+}
+
+.team556-transactions-page .search-box input[type="submit"]:hover,
+.team556-transactions-page .search-box .button:hover {
+    background-color: var(--team556-tint);
+}
+
+/* Ensure the main .wrap for transactions page has a transparent or matching background */
+.team556-admin-body .team556-transactions-page.wrap {
+    background-color: transparent; /* Or var(--team556-background) if needed */
+}
+
+/* Column specific styling if needed - example for signature */
+.team556-transactions-page .wp-list-table td.column-signature a {
+    color: var(--team556-secondary);
+    font-family: monospace;
+}
+
+.team556-transactions-page .wp-list-table td.column-signature a:hover {
+    color: var(--team556-tint);
+}
+
+.team556-transactions-page .wp-list-table .column-wc_order_link a.button {
+    background-color: var(--team556-background-light);
+    border: 1px solid var(--team556-border);
+    color: var(--team556-text-secondary);
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+.team556-transactions-page .wp-list-table .column-wc_order_link a.button:hover {
+    background-color: var(--team556-background-dark);
+    border-color: var(--team556-tint);
+    color: var(--team556-tint);
+}
+
+.team556-transactions-page h1.wp-heading-inline {
+    color: var(--team556-text);
+    margin-bottom: 20px;
+}
+
+/* Hide default WP table borders if our custom ones are sufficient */
+.team556-transactions-page .wp-list-table.widefat {
+    border-collapse: collapse; /* Helps manage borders better */
+}
+.team556-transactions-page .wp-list-table.widefat td,
+.team556-transactions-page .wp-list-table.widefat th {
+    border-bottom-width: 1px; /* Ensure only bottom borders for rows */
+}
+.team556-transactions-page .wp-list-table.widefat th {
+    border-bottom-width: 1px; /* Header bottom border */
+}
+.team556-transactions-page .wp-list-table.widefat tbody tr:last-child td {
+    border-bottom: none; /* No border for last row cells if table has overall border */
+}
+
+
 /* --- Settings Page Specific Styles --- */
 /* Ensure the main .wrap.team556-admin-settings also has some breathing room */
 .wrap.team556-admin-settings > h1 {

@@ -36,16 +36,24 @@ The plugin source code is located within the monorepo at: `apps/wp-plugin/`
 For the plugin to communicate with the backend, specific configurations are needed:
 
 **A. WordPress PHP Environment:**
-   The plugin's PHP code needs to know the URL of your `main-api` payment endpoint.
+   The plugin's PHP code needs to know the URL of your `main-api` payment endpoint and Alchemy API key for price fetching.
+   
+   **1. Main API URL Configuration:**
    - **Variable Name:** `TEAM556_MAIN_API_PAYMENT_URL`
    - **Expected Value:** The full URL to your `main-api`'s `/api/v1/solana/payment-request` endpoint (e.g., `http://localhost:3000/api/v1/solana/payment-request` for local development).
-   - **How to Set:**
-     1. **Recommended for Production:** Set as a server-level environment variable (e.g., in Apache/Nginx config, or cPanel/Plesk).
-     2. **Alternative (wp-config.php):** Define it as a constant in your `wp-config.php` file before the `/* That's all, stop editing! Happy publishing. */` line:
+   
+   **2. Alchemy API Key Configuration:**
+   - **Variable Name:** `TEAM556_ALCHEMY_API_KEY` or `GLOBAL__ALCHEMY_API_KEY`
+   - **Expected Value:** Your Alchemy API key for fetching token prices (e.g., `alcht_XfC06RTw4Rfydwbx6CnK9zazC2GEfS`)
+   
+   **How to Set Both:**
+     1. **Recommended for Production:** Set as server-level environment variables (e.g., in Apache/Nginx config, or cPanel/Plesk).
+     2. **Alternative (wp-config.php):** Define them as constants in your `wp-config.php` file before the `/* That's all, stop editing! Happy publishing. */` line:
         ```php
         define('TEAM556_MAIN_API_PAYMENT_URL', 'YOUR_MAIN_API_PAYMENT_REQUEST_ENDPOINT_URL');
+        define('TEAM556_ALCHEMY_API_KEY', 'YOUR_ALCHEMY_API_KEY');
         ```
-     3. **Plugin Settings Page:** This URL can also be configured via the plugin's admin settings page (Options > Team556 Solana Pay > Main API URL). The environment variable/constant takes precedence if set.
+     3. **Plugin Settings Page:** The Main API URL can also be configured via the plugin's admin settings page (Options > Team556 Solana Pay > Main API URL). The environment variable/constant takes precedence if set.
 
 **B. Main API (`apps/main-api`) Environment (`.env` file):**
    The `main-api` needs to know how to reach the `solana-api` and how to authenticate with it.

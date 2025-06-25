@@ -1,0 +1,30 @@
+/* Team556 Pay Public Styles */
+
+.team556-pay-button-container {
+    /* Add styles for the button container here */
+    margin-bottom: 15px;
+}
+
+.team556-pay-qr-code {
+    /* Add styles for the QR code container here */
+    margin-top: 10px;
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #eee;
+    display: inline-block;
+}
+
+.team556-pay-qr-code canvas {
+    display: block;
+}
+
+.team556-pay-payment-link {
+    /* Add styles for the payment link here */
+    display: block;
+    margin-top: 10px;
+}
+
+.team556-pay-error {
+    color: red;
+    font-weight: bold;
+}

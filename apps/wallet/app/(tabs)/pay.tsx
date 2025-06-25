@@ -6,32 +6,135 @@ import { Colors } from '@/constants/Colors';
 import { ScreenLayout } from '@/components/layout/ScreenLayout';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions, BarcodeScanningResult, PermissionStatus } from 'expo-camera'; 
-import { PublicKey } from '@solana/web3.js';
+import { PublicKey, Connection, Transaction, ConnectionConfig, Commitment, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { BigNumber } from 'bignumber.js';
 import { useAuthStore } from '@/store/authStore';
+import { useToastStore } from '@/store/toastStore';
 import { signTransaction } from '@/services/api';
-import { Connection, SystemProgram, Transaction, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, createTransferInstruction, TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { Buffer } from 'buffer';
 import { parseURL, TransferRequestURL } from '@solana/pay';
+import { Buffer } from 'buffer'; // Add missing Buffer import
+import { PaymentReceipt } from '@/components/PaymentReceipt';
 
 const TEAM556_MINT_ADDRESS = new PublicKey('AMNfeXpjD6kXyyTDB4LMKzNWypqNHwtgJUACHUmuKLD5');
 
+const RPC_ENDPOINTS = [
+  process.env.EXPO_PUBLIC_GLOBAL__HELIUS_RPC_URL || 'https://rpc.helius.xyz?api-key=YOUR_API_KEY_HERE',
+  process.env.EXPO_PUBLIC_GLOBAL__BACKUP_RPC_URL_1 || 'https://api.mainnet-beta.solana.com',
+  process.env.EXPO_PUBLIC_GLOBAL__BACKUP_RPC_URL_2 || 'https://try-rpc.mainnet.solana.blockdaemon.tech/',
+  process.env.EXPO_PUBLIC_GLOBAL__BACKUP_RPC_URL_3 || 'https://solana-mainnet.g.alchemy.com/v2/YOUR_ALCHEMY_API_KEY',
+];
+
+async function createResilientConnection(endpoints: string[]): Promise<Connection> {
+  for (const endpoint of endpoints) {
+    try {
+      const connection = new Connection(endpoint, {
+        commitment: 'confirmed',
+        confirmTransactionInitialTimeout: 60000,
+      });
+      // Perform a quick version check to ensure the endpoint is responsive
+      await connection.getVersion();
+      console.log(`Successfully connected to RPC endpoint: ${endpoint}`);
+      return connection;
+    } catch (error) {
+      console.warn(`Failed to connect to RPC endpoint: ${endpoint}. Trying next...`);
+    }
+  }
+  throw new Error('Failed to connect to any available RPC endpoints.');
+}
+
 interface PaymentDetails {
     recipient: PublicKey;
-    amount: BigNumber | undefined; 
+    amount: BigNumber | undefined;
     label?: string;
     message?: string;
+    /**
+     * Webhook callback URL provided by the merchant. The wallet should POST the
+     * transaction signature to this URL after payment confirmation so the
+     * merchant site (e.g., Team556 Pay WordPress plugin) can mark the order
+     * as paid.
+     */
+    webhookUrl?: string;
 }
 
 export default function PayScreen() {
+  const { user, token, isLoading: isLoadingAuth } = useAuthStore();
+  const { showToast } = useToastStore();
   const router = useRouter();
+  
+  // Calculate this explicitly within component for debugging
+  const isP1PresaleUser = !!user && user.presale_type === 1;
+  
+  // Detailed debugging
+
+
+  // More aggressive immediate check and redirect
+  useEffect(() => {
+
+    
+    if ((!isLoadingAuth && !isP1PresaleUser) || (!isLoadingAuth && !user)) {
+
+      // Force navigation immediately
+      router.replace('/');
+      
+      // If replace doesn't work, try push as a fallback
+      setTimeout(() => {
+        router.push('/');
+      }, 100);
+    }
+  }, [isLoadingAuth, user, router]);
+
+  // Force re-check on every render
+  if (!isLoadingAuth && !isP1PresaleUser) {
+    // Return without rendering payment elements
+    return (
+      <ScreenLayout title='Access Denied' headerIcon={<Ionicons name='warning' size={24} color={Colors.error} />}>
+        <View style={styles.centered}>
+          <Ionicons name="lock-closed" size={48} color={Colors.error} />
+          <Text style={[styles.permissionDeniedText, {fontSize: 20, fontWeight: 'bold', marginVertical: 16}]}>
+            Access Restricted
+          </Text>
+          <Text style={styles.permissionText}>
+            The payment feature is only available to presale type 1 users.
+          </Text>
+          <View style={{marginTop: 20}}>
+            <Button 
+              onPress={() => router.replace('/')} 
+              title="Return to Home" 
+              color={Colors.primary}
+            />
+          </View>
+        </View>
+      </ScreenLayout>
+    );
+  }
+  
+  if (isLoadingAuth) {
+    return (
+      <ScreenLayout title='Pay with TEAM' headerIcon={<Ionicons name='card' size={24} color={Colors.primary} />}>
+        <View style={styles.centered}>
+          <Text style={styles.permissionText}>Loading...</Text>
+        </View>
+      </ScreenLayout>
+    );
+  }
+
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false); 
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
   const [manualUrlInput, setManualUrlInput] = useState(''); 
-  const token = useAuthStore(state => state.token);
-  const user = useAuthStore(state => state.user);
+  
+  // State for payment receipt
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [receiptDetails, setReceiptDetails] = useState<{
+    amount: string;
+    recipient: string;
+    recipientLabel?: string;
+    message?: string;
+    signature: string;
+    timestamp: Date;
+  } | null>(null);
+
 
   useEffect(() => {
     if (permission && permission.status === PermissionStatus.UNDETERMINED) {
@@ -40,36 +143,69 @@ export default function PayScreen() {
   }, [permission, requestPermission]);
 
   const handleBarCodeScanned = ({ type, data }: BarcodeScanningResult) => { 
-    setScanned(true); 
-    console.log(`Processing URL: ${data} (Type: ${type})`);
+  setScanned(true); 
+  console.log(`Processing URL: ${data} (Type: ${type})`);
 
-    if (!data || !data.startsWith('solana:')) {
-        Alert.alert('Invalid QR Code', 'This does not look like a Team556 Pay QR Code.');
-        return;
+  if (!data || !data.startsWith('solana:')) {
+      Alert.alert('Invalid QR Code', 'This does not look like a Team556 Pay QR Code.');
+      return;
+  }
+
+  // Attempt to correct a common manual input error: solana:recipient=ADDRESS...
+  let correctedData = data;
+  const recipientPrefix = 'solana:recipient=';
+  if (data.startsWith(recipientPrefix)) {
+    let addressAndParams = data.substring(recipientPrefix.length);
+    const ampersandIndex = addressAndParams.indexOf('&');
+    
+    if (ampersandIndex !== -1) {
+      const addressPart = addressAndParams.substring(0, ampersandIndex);
+      const paramsPart = addressAndParams.substring(ampersandIndex + 1);
+      correctedData = `solana:${addressPart}?${paramsPart}`;
+    } else {
+      // No parameters, just the address
+      correctedData = `solana:${addressAndParams}`;
     }
+    console.log(`Attempted correction for manual input: ${correctedData}`);
+  }
 
-    try {
-        const parsed = parseURL(data) as TransferRequestURL; 
-        console.log('Parsed Team556 Pay URL:', parsed);
+  try {
+      const parsed = parseURL(correctedData) as TransferRequestURL; 
+      console.log('Parsed Team556 Pay URL:', parsed);
 
-        if (parsed.splToken && parsed.splToken.equals(TEAM556_MINT_ADDRESS)) {
-            setPaymentDetails({
-                recipient: parsed.recipient,
-                amount: parsed.amount,
-                label: parsed.label,
-                message: parsed.message
-            });
-        } else if (parsed.splToken) {
-             Alert.alert('Invalid Token', `This request is for a different token, not TEAM556. (${parsed.splToken.toBase58()})`);
-        } else {
-            Alert.alert('Unsupported Request', 'This QR code does not represent a TEAM556 payment request.');
+        // Extract the optional webhook callback URL from the *raw* URL string. The
+        // `@solana/pay` parser drops unknown query parameters like `url=` so we
+        // must manually parse it before calling `parseURL`.
+        let webhookUrl: string | undefined;
+        const urlMatch = correctedData.match(/[?&]url=([^&]+)/);
+        if (urlMatch && urlMatch[1]) {
+            try {
+                webhookUrl = decodeURIComponent(urlMatch[1]);
+                console.log('Extracted webhook URL:', webhookUrl);
+            } catch (decodeErr) {
+                console.warn('Failed to decode webhook URL', decodeErr);
+            }
         }
-    } catch (error) {
-        console.error("Input data that caused parsing error:", data); // Log the problematic data
-        console.error("Error parsing Team556 Pay URL:", error);
-        Alert.alert('Error', 'Could not parse the Team556 Pay QR Code.');
-    }
-  };
+
+      if (parsed.splToken && parsed.splToken.equals(TEAM556_MINT_ADDRESS)) {
+          setPaymentDetails({
+               recipient: parsed.recipient,
+               amount: parsed.amount,
+               label: parsed.label,
+               message: parsed.message,
+               webhookUrl,
+           });
+      } else if (parsed.splToken) {
+           Alert.alert('Invalid Token', `This request is for a different token, not TEAM556. (${parsed.splToken.toBase58()})`);
+      } else {
+          Alert.alert('Unsupported Request', 'This QR code does not represent a TEAM556 payment request.');
+      }
+  } catch (error) {
+      console.error("Input data that caused parsing error (original input):", data); // Log the problematic data
+      console.error("Error parsing Team556 Pay URL:", error);
+      Alert.alert('Error', 'Could not parse the Team556 Pay QR Code.');
+  }
+};
 
   const handleSubmitManualUrl = () => {
     if (manualUrlInput.trim()) {
@@ -86,10 +222,10 @@ export default function PayScreen() {
       return;
     }
 
-    const senderWallet = user.wallets[0]; 
+    const senderWallet = user.wallets[0];
     const senderPublicKey = new PublicKey(senderWallet.address);
-    const recipientPublicKey = paymentDetails.recipient; 
-    const message = paymentDetails.message; 
+    const recipientPublicKey = paymentDetails.recipient;
+
 
     Alert.prompt(
       'Confirm Transaction',
@@ -101,12 +237,7 @@ export default function PayScreen() {
         }
 
         try {
-          const rpcEndpoint = process.env.EXPO_PUBLIC_SOLANA_RPC_ENDPOINT;
-          if (!rpcEndpoint) {
-            throw new Error('Solana RPC endpoint is not configured.');
-          }
-          const connection = new Connection(rpcEndpoint, 'confirmed');
-
+          const connection = await createResilientConnection(RPC_ENDPOINTS);
           const senderTokenAccount = await getAssociatedTokenAddress(
             TEAM556_MINT_ADDRESS,
             senderPublicKey
@@ -116,133 +247,204 @@ export default function PayScreen() {
             recipientPublicKey
           );
 
+          // Simplified retry function
+          const getAccountInfoWithRetry = async (conn: Connection, account: PublicKey, retries = 3, initialDelay = 1000) => {
+            let lastError;
+            for (let i = 0; i < retries; i++) {
+              try {
+                return await conn.getAccountInfo(account);
+              } catch (error) {
+                console.warn(`Attempt ${i + 1} to get account info failed:`, error);
+                lastError = error;
+                const delay = initialDelay * Math.pow(2, i);
+                await new Promise(resolve => setTimeout(resolve, delay));
+              }
+            }
+            throw lastError || new Error('Failed to get account info after multiple attempts');
+          };
+
+          const recipientATAInfo = await getAccountInfoWithRetry(connection, recipientTokenAccount);
+
           if (!paymentDetails?.amount) {
             throw new Error('Payment amount details became unavailable.');
           }
 
-          const decimals = 6; 
-          const amountInLamports = paymentDetails.amount.multipliedBy(Math.pow(10, decimals)).integerValue(BigNumber.ROUND_FLOOR);
-
-          if (amountInLamports.isLessThanOrEqualTo(0)) {
-             throw new Error('Invalid payment amount.');
-          }
+          const decimals = parseInt(process.env.EXPO_PUBLIC_GLOBAL__MINT_DECIMALS || '9', 10);
+          const amountInLamports = new BigNumber(paymentDetails.amount).multipliedBy(Math.pow(10, decimals)).integerValue(BigNumber.ROUND_FLOOR);
 
           const transaction = new Transaction();
           const instructions = [];
 
-          const recipientAccountInfo = await connection.getAccountInfo(recipientTokenAccount);
-          if (!recipientAccountInfo) {
-            console.log(`Recipient ATA ${recipientTokenAccount.toBase58()} does not exist. Creating...`);
+          if (!recipientATAInfo) {
             instructions.push(
               createAssociatedTokenAccountInstruction(
-                senderPublicKey,          // Payer
-                recipientTokenAccount,    // ATA address
-                recipientPublicKey,       // Owner
-                TEAM556_MINT_ADDRESS      // Mint
+                senderPublicKey,
+                recipientTokenAccount,
+                recipientPublicKey,
+                TEAM556_MINT_ADDRESS
               )
             );
           }
 
+          const transferAmount = BigInt(amountInLamports.toString());
           instructions.push(
             createTransferInstruction(
-              senderTokenAccount,       // Source ATA
-              recipientTokenAccount,    // Destination ATA
-              senderPublicKey,          // Owner of source ATA
-              BigInt(amountInLamports.toString()), // Amount (needs to be BigInt for spl-token v0.3+)
-              [],                       // Multi-signers (usually empty)
-              TOKEN_PROGRAM_ID          // SPL Token Program ID
+              senderTokenAccount,
+              recipientTokenAccount,
+              senderPublicKey,
+              transferAmount,
+              [],
+              TOKEN_PROGRAM_ID
             )
           );
-
+          
           transaction.add(...instructions);
 
-          transaction.feePayer = senderPublicKey;
-          const { blockhash } = await connection.getLatestBlockhash('confirmed');
+          // Simplified retry function for blockhash
+          const getBlockhashWithRetry = async (conn: Connection, retries = 3, initialDelay = 1000) => {
+            let lastError;
+            for (let i = 0; i < retries; i++) {
+              try {
+                return await conn.getLatestBlockhash('confirmed');
+              } catch (error) {
+                console.warn(`Attempt ${i + 1} to get blockhash failed:`, error);
+                lastError = error;
+                const delay = initialDelay * Math.pow(2, i);
+                await new Promise(resolve => setTimeout(resolve, delay));
+              }
+            }
+            throw lastError || new Error('Failed to get blockhash after multiple attempts');
+          };
+
+
+          const { blockhash, lastValidBlockHeight } = await getBlockhashWithRetry(connection);
+
           transaction.recentBlockhash = blockhash;
+          transaction.feePayer = senderPublicKey;
 
           const serializedTransaction = transaction.serialize({
-            requireAllSignatures: false, 
+            requireAllSignatures: false,
             verifySignatures: false,
           });
           const base64Transaction = serializedTransaction.toString('base64');
+
 
           const signResponse = await signTransaction(token, password, base64Transaction);
           const signedTxBase64 = signResponse.signedTransaction;
 
           const signedTxBytes = Buffer.from(signedTxBase64, 'base64');
+
           const signature = await connection.sendRawTransaction(signedTxBytes, {
-             skipPreflight: false 
+            skipPreflight: false
           });
-          console.log('Transaction sent with signature:', signature);
 
-          const confirmation = await connection.confirmTransaction({
-                signature,
-                blockhash, 
-                lastValidBlockHeight: (await connection.getLatestBlockhash('confirmed')).lastValidBlockHeight 
-            }, 'confirmed');
 
-          if (confirmation.value.err) {
-            console.error('Transaction confirmation error:', confirmation.value.err);
-            throw new Error(`Transaction failed: ${confirmation.value.err}`);
+
+          const confirmationResult = await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
+          
+          const confirmValue = confirmationResult as { value?: { err?: any } };
+          if (confirmValue?.value?.err) {
+            throw new Error(`Transaction confirmation failed: ${JSON.stringify(confirmValue.value.err)}`);
           }
+          showToast(`Payment successful!`, 'success', 3000);
 
-          console.log('Transaction confirmed successfully!');
-          Alert.alert('Success', `Payment of ${paymentDetails.amount.toString()} TEAM556 sent successfully!\nSignature: ${signature}`);
+            // Send webhook callback so the merchant site can confirm the payment
+            if (paymentDetails.webhookUrl) {
+              try {
+                await fetch(paymentDetails.webhookUrl, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ transaction: signature }),
+                });
+                console.log('Webhook POST sent to', paymentDetails.webhookUrl);
+              } catch (webhookErr) {
+                console.warn('Failed to send payment webhook', webhookErr);
+              }
+            }
+
+          setReceiptDetails({
+            amount: paymentDetails.amount.toString(),
+            recipient: paymentDetails.recipient.toBase58(),
+            recipientLabel: paymentDetails.label,
+            message: paymentDetails.message,
+            signature: signature,
+            timestamp: new Date()
+          });
+          setShowReceipt(true);
 
         } catch (error: any) {
-          console.error('Payment failed:', error);
-          Alert.alert('Payment Failed', error.message || 'An unknown error occurred during payment.');
+          console.error('[PayScreen.handleConfirmPayment] Payment failed. Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+          let userErrorMessage = 'An unknown error occurred during payment.';
+          if (error.message) {
+            if (error.message.includes('RPC') || error.message.includes('Network request failed') || error.message.includes('blockhash')) {
+              userErrorMessage = 'Network connection error. Please check your internet connection and try again.';
+            } else if (error.message.includes('insufficient funds')) {
+              userErrorMessage = 'Insufficient funds for this transaction.';
+            } else if (error.message.includes('password')) {
+              userErrorMessage = 'Invalid password.';
+            } else {
+              userErrorMessage = error.message;
+            }
+          }
+          Alert.alert('Payment Failed', userErrorMessage);
         } finally {
-          setPaymentDetails(null); 
+          setPaymentDetails(null);
         }
       },
-      Platform.OS === 'ios' ? 'secure-text' : 'default', 
-      '', 
-      'default' 
+      Platform.OS === 'ios' ? 'secure-text' : 'default',
+      '',
+      'default'
     );
   };
 
   const handleCancelPayment = () => {
-      console.log('Payment Cancelled');
       setPaymentDetails(null); 
   }
-
-  if (!permission) {
-    return <View />; 
+  
+  const handleReceiptClose = () => {
+    setShowReceipt(false);
+    setReceiptDetails(null);
+    setManualUrlInput(''); // Clear manual URL input
+    setScanned(false); // Reset scanned state
+    router.push('/'); // Navigate back to wallet tab (root)
   }
-
-  if (!permission.granted) {
+  // Conditional rendering for receipt, payment confirmation, or main pay screen
+  if (showReceipt && receiptDetails) {
     return (
-      <ScreenLayout title='Pay with TEAM' headerIcon={<Ionicons name='card' size={24} color={Colors.primary} />}>
-        <View style={styles.centered}> 
-          <Text style={styles.permissionText}>We need your permission to use the camera for scanning.</Text>
-          <Button onPress={requestPermission} title="Grant Camera Permission" color={Colors.primary} />
-          {permission.canAskAgain === false && <Text style={styles.permissionDeniedText}>Camera permission denied. Please enable it in your device settings.</Text> }
-        </View>
-      </ScreenLayout>
+      <PaymentReceipt
+        amount={receiptDetails.amount}
+        recipient={receiptDetails.recipient}
+        recipientLabel={receiptDetails.recipientLabel}
+        message={receiptDetails.message}
+        signature={receiptDetails.signature}
+        timestamp={receiptDetails.timestamp}
+        onClose={handleReceiptClose}
+      />
     );
   }
 
   if (paymentDetails) {
-      return (
-          <ScreenLayout title='Confirm Payment' headerIcon={<Ionicons name='card' size={24} color={Colors.primary} />}>
-              <View style={styles.centered}>
-                  <Text style={styles.confirmTitle}>Confirm TEAM Payment</Text>
-                  {paymentDetails.label && <Text style={styles.confirmLabel}>To: {paymentDetails.label}</Text>}
-                  <Text style={styles.confirmRecipient}>Recipient: {paymentDetails.recipient.toBase58()}</Text>
-                  <Text style={styles.confirmAmount}>
-                      Amount: {paymentDetails.amount ? paymentDetails.amount.toString() + ' TEAM' : 'Default Amount'}
-                  </Text>
-                  {paymentDetails.message && <Text style={styles.confirmMessage}>Message: {paymentDetails.message}</Text>}
-                  <View style={styles.buttonRow}>
-                       <Button title="Cancel" onPress={handleCancelPayment} color={Colors.error} />
-                       <Button title="Confirm & Send" onPress={handleConfirmPayment} color={Colors.primary} />
-                  </View>
-              </View>
-          </ScreenLayout>
-      )
+    // This is the payment confirmation screen
+    return (
+        <ScreenLayout title='Confirm Payment' headerIcon={<Ionicons name='card' size={24} color={Colors.primary} />}>
+            <View style={styles.centered}>
+                <Text style={styles.confirmTitle}>Confirm TEAM Payment</Text>
+                {paymentDetails.label && <Text style={styles.confirmLabel}>To: {paymentDetails.label}</Text>}
+                <Text style={styles.confirmRecipient}>Recipient: {paymentDetails.recipient.toBase58()}</Text>
+                <Text style={styles.confirmAmount}>
+                    Amount: {paymentDetails.amount ? paymentDetails.amount.toString() + ' TEAM' : 'Default Amount'}
+                </Text>
+                {paymentDetails.message && <Text style={styles.confirmMessage}>Message: {paymentDetails.message}</Text>}
+                <View style={styles.buttonRow}>
+                     <Button title="Cancel" onPress={handleCancelPayment} color={Colors.error} />
+                     <Button title="Confirm & Send" onPress={handleConfirmPayment} color={Colors.primary} />
+                </View>
+            </View>
+        </ScreenLayout>
+    );
   }
 
+  // This is the main QR scanner / manual input screen
   return (
     <ScreenLayout title='Pay with TEAM' headerIcon={<Ionicons name='card' size={24} color={Colors.primary} />}>
       <Head>

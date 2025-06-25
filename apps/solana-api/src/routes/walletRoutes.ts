@@ -6,7 +6,7 @@ import {
   signTransaction 
 } from './../controllers/wallet.controller'
 
-const router = Router()
+const router: Router = Router()
 
 // Define routes relative to the '/wallet' mount point in routes/index.ts
 router.post('/create', createWallet)

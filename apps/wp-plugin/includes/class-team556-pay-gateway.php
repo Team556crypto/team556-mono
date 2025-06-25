@@ -1133,20 +1133,6 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         // Check for maximum order total
         $enable_max_total_limit = isset($team556_pay_options['enable_max_order_total']) && $team556_pay_options['enable_max_order_total'] == 1;
         $max_total_setting = isset($team556_pay_options['max_order_total']) ? $team556_pay_options['max_order_total'] : '';
-
-        if (empty($this->unavailability_reason) && WC()->cart && $enable_max_total_limit && $max_total_setting !== '' && is_numeric($max_total_setting) && (float)$max_total_setting > 0) {
-            $max_total_value = (float) $max_total_setting;
-            $current_cart_total = WC()->cart->get_total('edit');
-            if ($current_cart_total > $max_total_value) {
-                $this->log('CHECKOUT_LIMIT_EXCEEDED: Cart total ' . wc_price($current_cart_total) . ' exceeds maximum ' . wc_price($max_total_value) . '. This will be handled in payment_fields().', 'info');
-                // Unavailability reason for max total is now handled in payment_fields()
-                // to allow the gateway to be listed and show the message upon selection.
-                // DO NOT set $this->unavailability_reason here for this specific case.
-            }
-        }
-
-        // Log the final unavailability reason if one was set during the checks
-        // And determine final availability
         if (!empty($this->unavailability_reason)) {
             return false; // If a reason was set by our custom checks, it's unavailable.
         }

@@ -82,13 +82,14 @@ const Content = () => {
                         requiredTokenAmount: parseFloat(body.data.requiredTokenAmount) || 0,
                         loaded: true,
                         // Use errorMessage from AJAX if present, otherwise check if critical data is missing
-                        error: body.data.errorMessage || 
-                               (!body.data.requiredTokenAmount || parseFloat(body.data.requiredTokenAmount) <= 0 || !body.data.tokenPrice || parseFloat(body.data.tokenPrice) <= 0) 
-                               ? __('Could not load token price or calculate amount. Please ensure cart is not empty.', 'team556-pay') 
+                        error: (body.data.errorMessage || body.data.message) ||
+                               (!body.data.requiredTokenAmount || parseFloat(body.data.requiredTokenAmount) <= 0 || !body.data.tokenPrice || parseFloat(body.data.tokenPrice) <= 0)
+                               ? __('Could not load token price or calculate amount. Please ensure cart is not empty.', 'team556-pay')
                                : null
                     });
                 } else {
-                    const errorMessage = body.data && body.data.errorMessage ? body.data.errorMessage : __('Failed to load payment details. Please try again.', 'team556-pay');
+                    const backendMessage = body.data && (body.data.errorMessage || body.data.message);
+                    const errorMessage = backendMessage ? backendMessage : __('Failed to load payment details. Please try again.', 'team556-pay');
                     console.error('Team556 Pay: Error fetching payment data:', body);
                     setPricingInfo({ tokenPrice: 0, currency: '', cartTotalFiat: 0, requiredTokenAmount: 0, loaded: true, error: errorMessage });
                 }

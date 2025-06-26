@@ -87,7 +87,7 @@ class Team556_Pay_Welcome {
             <div class="team556-welcome-sections">
 
                 <div class="team556-card team556-welcome-steps-section">
-                    <h2><?php _e('Getting Started in 3 Simple Steps', 'team556-pay'); ?></h2>
+                    <h2><?php _e('Getting Started in 2 Simple Steps', 'team556-pay'); ?></h2>
                     <div class="team556-steps-container">
                         <div class="team556-card team556-step-card">
                             <div class="team556-step-number">1</div>
@@ -98,17 +98,10 @@ class Team556_Pay_Welcome {
                             </div>
                         </div>
                         
-                        <div class="team556-card team556-step-card">
-                            <div class="team556-step-number">2</div>
-                            <div class="team556-step-content">
-                                <h3><?php _e('Add Payment Buttons', 'team556-pay'); ?></h3>
-                                <p><?php _e('Use the shortcode to add payment buttons to any page or post:', 'team556-pay'); ?></p>
-                                <code>[team556_pay amount="10" description="My Product" button_text="Pay Now"]</code>
-                            </div>
-                        </div>
+
                         
                         <div class="team556-card team556-step-card">
-                            <div class="team556-step-number">3</div>
+                            <div class="team556-step-number">2</div>
                             <div class="team556-step-content">
                                 <h3><?php _e('Track Your Payments', 'team556-pay'); ?></h3>
                                 <p><?php _e('View and manage all your transactions from the dashboard.', 'team556-pay'); ?></p>

@@ -55,13 +55,7 @@ class Team556_Pay_Settings {
             'team556-pay-settings'
         );
         
-        add_settings_section(
-            'team556_pay_display',
-            __('Display Settings', 'team556-pay'),
-            array($this, 'render_display_section'),
-            'team556-pay-settings'
-        );
-        
+
         add_settings_section(
             'team556_pay_advanced',
             __('Advanced Settings', 'team556-pay'),
@@ -82,18 +76,7 @@ class Team556_Pay_Settings {
         // Solana network - Force to mainnet
         $sanitized_input['solana_network'] = 'mainnet';
         
-        // Button text
-        $sanitized_input['button_text'] = sanitize_text_field($input['button_text']);
-        
-        // Button color
-        $sanitized_input['button_color'] = sanitize_text_field($input['button_color']);
-        
-        // Success message
-        $sanitized_input['success_message'] = sanitize_textarea_field($input['success_message']);
-        
-        // Error message
-        $sanitized_input['error_message'] = sanitize_textarea_field($input['error_message']);
-        
+
         // Debug mode
         $sanitized_input['debug_mode'] = isset($input['debug_mode']) ? 1 : 0;
         
@@ -116,15 +99,6 @@ class Team556_Pay_Settings {
             $sanitized_input['max_order_total'] = ''; // Default to empty if not set
         }
 
-        // Gateway Title (for WooCommerce Payments screen)
-        if (isset($input['gateway_title'])) {
-            $sanitized_input['gateway_title'] = sanitize_text_field($input['gateway_title']);
-        }
-
-        // Gateway Description (for WooCommerce Payments screen)
-        if (isset($input['gateway_description'])) {
-            $sanitized_input['gateway_description'] = sanitize_textarea_field($input['gateway_description']);
-        }
         
         return $sanitized_input;
     }
@@ -134,13 +108,6 @@ class Team556_Pay_Settings {
      */
     public function render_general_section() {
         echo '<p>' . __('Configure your Team556 Solana Pay merchant settings.', 'team556-pay') . '</p>';
-    }
-
-    /**
-     * Render display section
-     */
-    public function render_display_section() {
-        echo '<p>' . __('Customize how the payment buttons and messages appear to customers.', 'team556-pay') . '</p>';
     }
 
     /**
@@ -184,17 +151,6 @@ class Team556_Pay_Settings {
                         
                         <!-- Solana Network field removed - hardcoded to mainnet -->
 
-                        <div class="form-group">
-                            <label for="gateway_title"><?php _e('Gateway Title', 'team556-pay'); ?></label>
-                            <input type="text" id="gateway_title" name="team556_pay_settings[gateway_title]" value="<?php echo esc_attr($options['gateway_title'] ?? __('Team556 Pay', 'team556-pay')); ?>" class="regular-text">
-                            <p class="description"><?php _e('This is the title shown to customers on the checkout page for this payment method. It will be synced to WooCommerce payment settings.', 'team556-pay'); ?></p>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="gateway_description"><?php _e('Gateway Description', 'team556-pay'); ?></label>
-                            <textarea id="gateway_description" name="team556_pay_settings[gateway_description]" rows="3" class="large-text"><?php echo esc_textarea($options['gateway_description'] ?? __('Pay with Team556 tokens via Team556 Pay. You will need a Team556 Digital Armory account to do so.', 'team556-pay')); ?></textarea>
-                            <p class="description"><?php _e('This is the description shown to customers on the checkout page under the payment method title. It will be synced to WooCommerce payment settings.', 'team556-pay'); ?></p>
-                        </div>
 
                         <div class="form-group form-group-checkbox">
                             <label for="enable_max_order_total">
@@ -208,35 +164,6 @@ class Team556_Pay_Settings {
                             <label for="max_order_total"><?php _e('Maximum Order Total Amount', 'team556-pay'); ?></label>
                             <input type="number" step="0.01" min="0" id="max_order_total" name="team556_pay_settings[max_order_total]" value="<?php echo esc_attr($options['max_order_total'] ?? ''); ?>" placeholder="<?php echo esc_attr(wc_format_localized_price(0)); ?>" class="regular-text">
                             <p class="description"><?php _e('Enter the maximum order total. This is only active if the checkbox above is enabled.', 'team556-pay'); ?></p>
-                        </div>
-
-                        <hr>
-
-                        <h2><?php _e('Display Settings', 'team556-pay'); ?></h2>
-                        <p class="description"><?php _e('Customize how the payment buttons and messages appear to customers.', 'team556-pay'); ?></p>
-
-                        <div class="form-group">
-                            <label for="button_text"><?php _e('Button Text', 'team556-pay'); ?></label>
-                            <input type="text" id="button_text" name="team556_pay_settings[button_text]" value="<?php echo esc_attr($options['button_text'] ?? __('Pay with Team556 Token', 'team556-pay')); ?>" class="regular-text">
-                            <p class="description"><?php _e('Customize the text displayed on the payment button.', 'team556-pay'); ?></p>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="button_color"><?php _e('Button Color', 'team556-pay'); ?></label>
-                            <input type="color" id="button_color" name="team556_pay_settings[button_color]" value="<?php echo esc_attr($options['button_color'] ?? '#6a0dad'); ?>" class="team556-color-picker">
-                            <p class="description"><?php _e('Choose a color for the payment button.', 'team556-pay'); ?></p>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="success_message"><?php _e('Success Message', 'team556-pay'); ?></label>
-                            <textarea id="success_message" name="team556_pay_settings[success_message]" rows="3" class="large-text"><?php echo esc_textarea($options['success_message'] ?? __('Payment successful! Thank you for your purchase.', 'team556-pay')); ?></textarea>
-                            <p class="description"><?php _e('Message displayed to customers after a successful payment.', 'team556-pay'); ?></p>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="error_message"><?php _e('Error Message', 'team556-pay'); ?></label>
-                            <textarea id="error_message" name="team556_pay_settings[error_message]" rows="3" class="large-text"><?php echo esc_textarea($options['error_message'] ?? __('Payment failed. Please try again or contact support.', 'team556-pay')); ?></textarea>
-                            <p class="description"><?php _e('Message displayed to customers if payment fails.', 'team556-pay'); ?></p>
                         </div>
 
                         <hr>
@@ -268,12 +195,7 @@ class Team556_Pay_Settings {
                         <h3><?php _e('Wallet Address', 'team556-pay'); ?></h3>
                         <p><?php _e('Your wallet address is where Team556 token payments will be sent. Make sure to use a Solana wallet address that supports SPL tokens.', 'team556-pay'); ?></p>
                         
-                        <h3><?php _e('Network Selection', 'team556-pay'); ?></h3>
-                        <p><?php _e('Choose Mainnet for real transactions. Devnet and Testnet are for testing purposes only and use test tokens.', 'team556-pay'); ?></p>
-                        
-                        <h3><?php _e('Shortcode Usage', 'team556-pay'); ?></h3>
-                        <p><?php _e('Add a payment button to any page or post using this shortcode:', 'team556-pay'); ?></p>
-                        <code>[team556_pay_button amount="10" label="Product Name"]</code>
+
                     </div>
                 </div>
             </div>

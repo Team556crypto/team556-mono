@@ -283,672 +283,89 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         ));
     }
 
-    /**
-     * Process the payment
-     *
-     * @param int $order_id
-     * @return array
-     */
-    public function process_payment($order_id) {
-        $order = wc_get_order($order_id);
-        
-        // Check if we received a transaction signature from the frontend
-        if (isset($_POST['team556_pay_signature']) && !empty($_POST['team556_pay_signature'])) {
-            $signature = sanitize_text_field($_POST['team556_pay_signature']);
-            
-            // Debug log
-            if ($this->debug_mode === 'yes') {
 
-            }
-            
-            // Store transaction signature in order meta
-            $order->update_meta_data('_team556_pay_signature', $signature);
-            
-            // If reference is provided, store it as well
-            if (isset($_POST['team556_pay_reference']) && !empty($_POST['team556_pay_reference'])) {
-                $reference = sanitize_text_field($_POST['team556_pay_reference']);
-                $order->update_meta_data('_team556_pay_reference', $reference);
-                
-                if ($this->debug_mode === 'yes') {
 
-                }
-            }
-            
-            // Mark payment as complete
-            $order->payment_complete($signature);
-            
-            // Add transaction ID to order notes
-            $order->add_order_note(sprintf(
-                __('Team556 token payment completed via Team556 Pay. Transaction signature: %s', 'team556-pay'),
-                $signature
-            ));
-            
-            // Clear session data
-            WC()->session->__unset('team556_pay_order_id');
-            
-            // Return success and redirect URL
-            return array(
-                'result' => 'success',
-                'redirect' => $this->get_return_url($order)
-            );
-        }
-        
-        // If no signature was provided, we're starting the payment process
-        // Mark as pending (we're awaiting the payment)
-        $order->update_status('pending', __('Awaiting Team556 token payment via Team556 Pay QR code', 'team556-pay'));
-        
-        // Store order ID in session to retrieve it later
-        WC()->session->set('team556_pay_order_id', $order_id);
-        
-        // Optionally, store the reference in the order metadata if present in the request
-        if (isset($_POST['team556_pay_reference']) && !empty($_POST['team556_pay_reference'])) {
-            $reference = sanitize_text_field($_POST['team556_pay_reference']);
-            $order->update_meta_data('_team556_pay_reference', $reference);
-            $order->save();
-            
-            if ($this->debug_mode === 'yes') {
 
-            }
-        }
-        
-        // Return checkout payment URL to redirect the customer
-        return array(
-            'result' => 'success',
-            'redirect' => $order->get_checkout_payment_url(true),
-        );
+
+
+
+/**
+ * Check if the gateway is available for use.
+ * Overridden for debugging purposes.
+ *
+ * @return bool
+ */
+public function is_available() {
+    $is_available = parent::is_available();
+
+    if (!$is_available) {
+        return false;
     }
 
-    /**
-     * AJAX handler for completing payment
-     */
-    public function ajax_complete_payment() {
-        // Verify nonce
-        check_ajax_referer('team556-pay-complete-payment', 'nonce');
-        
-        // Get parameters
-        $order_id = isset($_POST['order_id']) ? intval($_POST['order_id']) : 0;
-        $signature = isset($_POST['signature']) ? sanitize_text_field($_POST['signature']) : '';
-        
-        if (empty($order_id) || empty($signature)) {
-            wp_send_json_error(array('message' => __('Missing required parameters', 'team556-pay')));
-            exit;
-        }
-        
-        // Get order
-        $order = wc_get_order($order_id);
-        if (!$order) {
-            wp_send_json_error(array('message' => __('Order not found', 'team556-pay')));
-            exit;
-        }
-        
-        // Debug log
-        if ($this->debug_mode === 'yes') {
+    $team556_pay_options = get_option('team556_pay_settings');
+    $wallet_address = !empty($this->get_option('wallet_address')) ? $this->get_option('wallet_address') : (!empty($team556_pay_options['merchant_wallet_address']) ? $team556_pay_options['merchant_wallet_address'] : '');
 
-        }
-        
-        // Verify the transaction on the blockchain
-        // In production, you should verify the transaction details on the Solana blockchain
-        // Here we'll assume the client-side verification is correct, but this isn't secure
-        
-        // For testing, allow simulated signatures in debug mode
-        $valid_signature = true;
-        if (strpos($signature, 'simulated_') === 0) {
-            if ($this->debug_mode !== 'yes') {
-                $valid_signature = false;
-            }
-        }
-        
-        if (!$valid_signature) {
-            if ($this->debug_mode === 'yes') {
-
-            }
-            wp_send_json_error(array('message' => __('Payment validation failed', 'team556-pay')));
-            exit;
-        }
-        
-        // Mark payment complete
-        $order->payment_complete();
-        
-        // Add transaction ID to order notes
-        $order->add_order_note(sprintf(
-            __('Team556 token payment completed via Solana Pay. Transaction signature: %s', 'team556-pay'),
-            $signature
-        ));
-        
-        // Store transaction signature in order meta
-        $order->update_meta_data('_team556_pay_signature', $signature);
-        $order->save();
-        
-        if ($this->debug_mode === 'yes') {
-
-        }
-        
-        // Clear session data
-        WC()->session->__unset('team556_pay_order_id');
-        
-        // Return success and redirect URL
-        wp_send_json_success(array(
-            'redirect' => $this->get_return_url($order)
-        ));
-        exit;
+    if (empty($wallet_address) || !defined('TEAM556_PAY_TEAM556_TOKEN_MINT')) {
+        return false;
     }
 
-    /**
-     * Test AJAX handler
-     */
-    public function ajax_test() {
-        wp_send_json_success(array('message' => 'Test successful'));
-        exit;
+    if (WC()->cart && WC()->cart->get_total('edit') <= 0) {
+        return false;
     }
 
-    /**
-     * Page displayed after checkout, where the user makes the payment.
-     *
-     * @param int $order_id
-     */
-    public function receipt_page($order_id) {
-        $order = wc_get_order($order_id);
-        if (!$order) {
-            echo '<div class="woocommerce-error">' . esc_html__('Invalid order.', 'team556-pay') . '</div>';
-            return;
+    return true;
+}
+
+/**
+ * Process the payment
+ *
+ * @param int $order_id
+ * @return array
+ */
+public function process_payment($order_id) {
+    $order = wc_get_order($order_id);
+
+    // Final server-side check for maximum order total before processing payment
+    $team556_pay_options = get_option('team556_pay_settings');
+    $enable_max_total_limit = isset($team556_pay_options['enable_max_order_total']) && $team556_pay_options['enable_max_order_total'] == 1;
+    $max_total_setting = isset($team556_pay_options['max_order_total']) ? $team556_pay_options['max_order_total'] : '';
+
+    if ($enable_max_total_limit && !empty($max_total_setting) && is_numeric($max_total_setting)) {
+        if ($order->get_total() > (float)$max_total_setting) {
+            wc_add_notice(sprintf(__('Order total exceeds the maximum of %s for Team556 Pay.', 'team556-pay'), wc_price($max_total_setting)), 'error');
+            return ['result' => 'failure', 'redirect' => wc_get_checkout_url()];
         }
-
-        $price_data = $this->fetch_team556_price_data();
-        $has_price = $price_data && isset($price_data['price']) && $price_data['price'] > 0;
-        $solana_pay_url = '';
-        if ($has_price) {
-            $fiat_total = $order->get_total();
-            $token_price = $price_data['price'];
-            $team556_amount = $fiat_total / $token_price;
-            $team556_amount_formatted = number_format($team556_amount, $this->get_token_decimals(), '.', ''); // Corrected variable name
-            $solana_pay_url = $this->create_solana_pay_url($team556_amount, $order_id);
-        }
-
-        ?>
-        <style>
-            .team556-pay-payment-container {
-                max-width: 800px;
-                margin: 20px auto;
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
-            }
-            
-            .team556-pay-header {
-                display: flex;
-                align-items: center;
-                margin-bottom: 20px;
-                padding: 0 10px;
-            }
-            
-            .team556-pay-header img {
-                margin-right: 12px;
-                vertical-align: middle;
-                max-height: 32px;
-            }
-            
-            .team556-pay-header h2 {
-                margin: 0;
-                font-size: 1.3em;
-                font-weight: 600;
-                color: #333;
-            }
-            
-            .team556-pay-block-info {
-                padding: 10px;
-                border: 1px solid #e0e0e0;
-                border-radius: 4px;
-                background-color: #f9f9f9;
-                margin-bottom: 20px;
-            }
-            
-            .team556-pay-block-info p {
-                margin: 8px 0;
-                line-height: 1.5;
-            }
-            
-            .team556-pay-block-info hr {
-                margin: 15px 0;
-                border: none;
-                border-top: 1px solid #e0e0e0;
-            }
-            
-            .team556-pay-block-info ol {
-                padding-left: 20px;
-                margin: 5px 0 15px 0;
-            }
-            
-            .team556-pay-block-info ol li {
-                margin-bottom: 5px;
-            }
-            
-            .team556-pay-qr-section {
-                text-align: center;
-                margin: 20px 0;
-            }
-            
-            #team556-pay-qr-code {
-                display: flex;
-                justify-content: center;
-                margin: 15px 0;
-                min-height: 200px;
-                align-items: center;
-            }
-            
-            .team556-pay-copy-section {
-                margin-top: 20px;
-                text-align: center;
-            }
-            
-            .team556-pay-copy-input {
-                width: 100%;
-                max-width: 400px;
-                padding: 8px 12px;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                font-size: 12px;
-                font-family: monospace;
-                background-color: #f8f8f8;
-                margin-bottom: 10px;
-                word-break: break-all;
-            }
-            
-            .team556-pay-copy-button {
-                background-color: #0073aa;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 14px;
-                transition: background-color 0.2s;
-            }
-            
-            .team556-pay-copy-button:hover {
-                background-color: #005a87;
-            }
-            
-            .team556-pay-copy-button:disabled {
-                background-color: #ccc;
-                cursor: not-allowed;
-            }
-            
-            .team556-pay-loading {
-                color: #666;
-                font-style: italic;
-            }
-            
-            .team556-pay-instructions {
-                font-style: italic;
-                font-size: 0.9em;
-                color: #666;
-                margin-top: 10px;
-            }
-        </style>
-
-        <div class="team556-pay-payment-container">
-            <div class="team556-pay-header">
-                <img src="<?php echo esc_url(TEAM556_PAY_PLUGIN_URL . 'assets/images/logo-round-dark.png'); ?>" alt="Team556 Pay" />
-                <h2><?php echo wp_kses_post($this->get_option('title')); ?></h2>
-            </div>
-
-            <div class="team556-pay-block-info">
-                <p><strong>Order Number:</strong> #<?php echo $order->get_order_number(); ?></p>
-                <p><strong>Order Total:</strong> <?php echo wc_price($order->get_total()); ?></p>
-                <p><strong>Amount Due:</strong> <?php echo esc_html($team556_amount_formatted); ?> TEAM556</p>
-                
-                <hr>
-                
-                <div class="team556-pay-qr-section">
-                    <p><strong>Scan the QR code to complete the payment</strong></p>
-                    <div id="team556-pay-qr-code">
-                        <span class="team556-pay-loading">Generating QR Code...</span>
-                    </div>
-                </div>
-                
-                <div class="team556-pay-copy-section">
-                    <p><strong>Or copy the payment link:</strong></p>
-                    <input type="text" id="team556-pay-link" class="team556-pay-copy-input" 
-                           value="<?php echo esc_attr($solana_pay_url); ?>" readonly>
-                    <br>
-                    <button id="team556-copy-link-btn" class="team556-pay-copy-button">
-                        Copy Payment Link
-                    </button>
-                </div>
-                
-                <hr>
-                
-                <p class="team556-pay-instructions">
-                    Your order will be processed once the payment is confirmed on the network. 
-                    This page will automatically refresh and redirect you once payment is received.
-                </p>
-                
-                <!-- Debug test button -->
-                <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
-                <div style="margin-top: 20px; padding: 15px; background: #f0f0f0; border: 1px solid #ddd;">
-                    <p><strong>Debug:</strong></p>
-                    <button id="test-ajax" type="button" style="margin-right: 10px;">Test AJAX</button>
-                    <button id="test-status-check" type="button">Test Status Check</button>
-                    <div id="debug-output" style="margin-top: 10px; font-family: monospace; font-size: 12px;"></div>
-                </div>
-                <?php endif; ?>
-            </div>
-        </div>
-
-        <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Wait for React components to be available
-            function waitForQRCodeCanvas() {
-                if (typeof window.QRCodeCanvas !== 'undefined' && typeof window.React !== 'undefined' && typeof window.ReactDOM !== 'undefined') {
-                    generateQRCode();
-                } else {
-                    setTimeout(waitForQRCodeCanvas, 100);
-                }
-            }
-            
-            function generateQRCode() {
-                const qrContainer = document.getElementById('team556-pay-qr-code');
-                if (!qrContainer) return;
-                
-                try {
-                    // Clear loading text
-                    qrContainer.innerHTML = '';
-                    
-                    // Create QR code using React
-                    const qrElement = window.React.createElement(window.QRCodeCanvas, {
-                        value: '<?php echo esc_js($solana_pay_url); ?>',
-                        size: 200,
-                        fgColor: '#000000',
-                        bgColor: '#ffffff',
-                        level: 'H'
-                    });
-                    
-                    // Render to DOM
-                    window.ReactDOM.render(qrElement, qrContainer);
-                } catch (error) {
-                    console.error('Error generating QR code:', error);
-                    qrContainer.innerHTML = '<span style="color: red;">Error generating QR code. Please use the payment link below.</span>';
-                }
-            }
-            
-            // Start QR code generation
-            waitForQRCodeCanvas();
-            
-            // Copy to clipboard functionality
-            document.getElementById('team556-copy-link-btn').addEventListener('click', function() {
-                const linkInput = document.getElementById('team556-pay-link');
-                const button = this;
-                
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(linkInput.value).then(function() {
-                        button.textContent = 'Copied!';
-                        setTimeout(function() { button.textContent = 'Copy Payment Link'; }, 2000);
-                    }).catch(function() {
-                        fallbackCopyTextToClipboard(linkInput.value, button);
-                    });
-                } else {
-                    fallbackCopyTextToClipboard(linkInput.value, button);
-                }
-            });
-            
-            function fallbackCopyTextToClipboard(text, button) {
-                const textArea = document.createElement('textarea');
-                textArea.value = text;
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                
-                try {
-                    document.execCommand('copy');
-                    button.textContent = 'Copied!';
-                    setTimeout(function() { button.textContent = 'Copy Payment Link'; }, 2000);
-                } catch (err) {
-                    console.error('Fallback: Could not copy text: ', err);
-                    alert('Please manually copy the payment link from the text field above.');
-                }
-                
-                document.body.removeChild(textArea);
-            }
-            
-            // Order status checking (existing functionality)
-            let statusCheckInterval = setInterval(function() {
-                // Create FormData object for proper parameter encoding
-                const formData = new FormData();
-                formData.append('action', 'team556_pay_check_order_status');
-                formData.append('order_id', '<?php echo $order_id; ?>');
-                formData.append('nonce', '<?php echo wp_create_nonce('team556_pay_check_order_status'); ?>');
-                
-                fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && (data.data.status === 'paid' || data.data.status === 'processing' || data.data.status === 'completed')) {
-                        clearInterval(statusCheckInterval);
-                        window.location.href = data.data.redirect_url;
-                    }
-                })
-                .catch(error => console.error('Order status check error:', error));
-            }, 3000);
-            
-            // Debug button handlers
-            <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
-            const testAjaxBtn = document.getElementById('test-ajax');
-            const testStatusBtn = document.getElementById('test-status-check');
-            const debugOutput = document.getElementById('debug-output');
-            
-            if (testAjaxBtn) {
-                testAjaxBtn.addEventListener('click', function() {
-                    debugOutput.innerHTML = 'Testing basic AJAX...';
-                    
-                    fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: 'action=team556_pay_test'
-                    })
-                    .then(response => {
-                        debugOutput.innerHTML += '<br>Response status: ' + response.status;
-                        return response.json();
-                    })
-                    .then(data => {
-                        debugOutput.innerHTML += '<br>Response data: ' + JSON.stringify(data);
-                    })
-                    .catch(error => {
-                        debugOutput.innerHTML += '<br>Error: ' + error.message;
-                    });
-                });
-            }
-            
-            if (testStatusBtn) {
-                testStatusBtn.addEventListener('click', function() {
-                    debugOutput.innerHTML = 'Testing order status check...';
-                    
-                    // Create FormData object for proper parameter encoding
-                    const formData = new FormData();
-                    formData.append('action', 'team556_pay_check_order_status');
-                    formData.append('order_id', '<?php echo $order_id; ?>');
-                    formData.append('nonce', '<?php echo wp_create_nonce('team556_pay_check_order_status'); ?>');
-                    
-                    fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(response => {
-                        debugOutput.innerHTML += '<br>Response status: ' + response.status;
-                        if (response.status === 400) {
-                            return response.text();
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        debugOutput.innerHTML += '<br>Response data: ' + (typeof data === 'string' ? data : JSON.stringify(data));
-                    })
-                    .catch(error => {
-                        debugOutput.innerHTML += '<br>Error: ' + error.message;
-                    });
-                });
-            }
-            <?php endif; ?>
-        });
-        </script>
-        <?php
     }
 
-    /**
-     * Payment fields
-     */
-    public function payment_fields() {
-        ?>
-        <style>
-            .team556-fields-container { border: 1px solid #e0e0e0; padding: 15px; border-radius: 5px; margin-top: 1em; }
-            .team556-fields-header { display: flex; align-items: center; margin-bottom: 15px; }
-            .team556-fields-logo { max-width: 40px; margin-right: 15px; }
-            .team556-fields-title { font-size: 1.1em; font-weight: 600; margin: 0; }
-            .team556-fields-info p { margin: 0.5em 0; }
-            .team556-fields-instructions { margin-top: 15px; font-size: 0.9em; }
-        </style>
-        <div class="team556-fields-container">
-            <div class="team556-fields-header">
-                <img src="<?php echo esc_url(TEAM556_PAY_PLUGIN_URL . 'assets/images/logo-round-dark.png'); ?>" alt="Team556 Pay" class="team556-fields-logo" />
-                <p class="team556-fields-title"><?php echo wp_kses_post($this->get_option('title')); ?></p>
-            </div>
+    $order->update_status('pending', __('Awaiting Team556 token payment.', 'team556-pay'));
+    return ['result' => 'success', 'redirect' => $order->get_checkout_payment_url(true)];
+}
 
-            <?php if ($this->description) : ?>
-                <p><?php echo wp_kses_post($this->description); ?></p>
-            <?php endif; ?>
+/**
+ * Payment fields
+ */
+public function payment_fields() {
+    $team556_pay_options = get_option('team556_pay_settings');
+    $enable_max_total_limit = isset($team556_pay_options['enable_max_order_total']) && $team556_pay_options['enable_max_order_total'] == 1;
+    $max_total_setting = isset($team556_pay_options['max_order_total']) ? (float)$team556_pay_options['max_order_total'] : 0;
+    $cart_total = WC()->cart->get_total('edit');
+    $limit_exceeded = $enable_max_total_limit && $max_total_setting > 0 && $cart_total > $max_total_setting;
 
-            <div class="team556-fields-info">
-                <?php
-                $cart_total_fiat = WC()->cart->get_total('raw');
-                if (empty($cart_total_fiat) || $cart_total_fiat <= 0) {
-                    echo '<p>' . esc_html__('Please add items to your cart to see payment details.', 'team556-pay') . '</p>';
-                } else {
-                    $price_data = $this->fetch_team556_price_data();
-                    if ($price_data && isset($price_data['price']) && $price_data['price'] > 0) {
-                        $token_price = $price_data['price'];
-                        $team556_amount = $cart_total_fiat / $token_price;
-                        echo '<p><strong>' . esc_html__('Current Price:', 'team556-pay') . '</strong> 1 TEAM556 ≈ ' . esc_html(wc_price($token_price)) . '</p>';
-                        echo '<p><strong>' . esc_html__('Order Total:', 'team556-pay') . '</strong> ' . esc_html(wc_price($cart_total_fiat)) . '</p>';
-                        echo '<p><strong>' . esc_html__('Amount Due:', 'team556-pay') . '</strong> ' . esc_html(number_format($team556_amount, $this->get_token_decimals(), '.', '')) . ' TEAM556</p>';
-                    } else {
-                        echo '<p>' . esc_html__('Could not retrieve current token price. The final amount will be calculated on the next page.', 'team556-pay') . '</p>';
-                    }
-                }
-                ?>
-            </div>
-
-            <div class="team556-fields-instructions">
-                <p><em><?php esc_html_e('After placing your order, you will be shown a QR code to complete the payment with your wallet.', 'team556-pay'); ?></em></p>
-            </div>
-        </div>
-        <?php
+    echo '<div class="team556-fields-container">';
+    if ($this->description) {
+        echo '<p>' . wp_kses_post($this->description) . '</p>';
     }
 
-    /**
-     * Create Solana Pay URL
-     */
-    private function create_solana_pay_url($amount, $order_id) {
-        // Get the merchant wallet address
-        $wallet_address = $this->wallet_address;
-        // No fallback to test wallet for token mint, should always be the correct one.
-        
-        // Token mint is hardcoded for security and consistency with plugin requirements
-        $token_mint = 'AMNfeXpjD6kXyyTDB4LMKzNWypqNHwtgJUACHUmuKLD5'; // Corrected Team556 Token Mint
-        
-        // Format the TOKEN amount to a string with appropriate decimal places for the URL
-        // Solana Pay spec: For SPL tokens, use "user" units (decimal format), not smallest units
-        // TEAM556 token has 9 decimals, so format accordingly
-        $token_amount_str = number_format($amount, 9, '.', '');
-        
-        // Remove trailing zeros for cleaner URLs
-        $token_amount_str = rtrim($token_amount_str, '0');
-        $token_amount_str = rtrim($token_amount_str, '.');
-        
-        // Get shop name for label
-        $shop_name = get_bloginfo('name');
-
-        // Construct the webhook URL for server-to-server confirmation
-        // The wallet will POST the transaction signature to this URL
-        $webhook_url = add_query_arg('order_id', $order_id, get_rest_url(null, 'team556-pay/v1/verify-payment'));
-        
-        // Build Solana Pay URL parameters using proper encoding
-        $params = array(
-            'spl-token' => $token_mint,
-            'amount'    => $token_amount_str,
-            // 'reference' => $reference, // uncomment if you want reference key support
-            'label'     => $shop_name,
-            'message'   => 'Payment for order at ' . $shop_name,
-            'url'       => $webhook_url,
-        );
-
-        // http_build_query will RFC3986-encode parameters and join them with '&'
-        $query = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
-
-        // Construct the Solana Pay URL
-        $solana_pay_url = 'solana:' . $wallet_address . '?' . $query;
-        
-        // Log the URL if debug mode is enabled
-        if ($this->debug_mode === 'yes') {
-            }
-        
-        return $solana_pay_url;
+    if ($limit_exceeded) {
+        echo '<div class="woocommerce-error">' . sprintf(__('Your order total of %s exceeds the maximum allowed for Team556 Pay, which is %s.', 'team556-pay'), wc_price($cart_total), wc_price($max_total_setting)) . '</div>';
+        wc_enqueue_js("jQuery(function($){ if ($('input[name=\"payment_method\"]:checked').val() === 'team556_pay') { $('#place_order').prop('disabled', true); } });");
+    } else {
+        echo '<p><em>' . esc_html__('You will be redirected to a secure page to complete your payment using your Solana wallet.', 'team556-pay') . '</em></p>';
     }
-
-    /**
-     * Get the number of decimals for the TEAM556 token.
-     *
-     * @return int
-     */
-    public function get_token_decimals() {
-        // The number of decimals for the TEAM556 token is 9.
-        // This can be made configurable if other tokens are supported in the future.
-        return 9;
-    }
-
-    /**
-     * Static AJAX handler for checking order status.
-     * This is hooked from the main plugin class to ensure it's registered during AJAX requests.
-     */
-    public static function static_ajax_check_order_status_handler() {
-        if (ob_get_level()) {
-            ob_clean();
-        }
-        $logger = wc_get_logger();
-        $logger->debug('TEAM556 AJAX: static_ajax_check_order_status_handler called', array('source' => 'team556-pay-ajax'));
-
-        // Ensure WooCommerce is active and its functions are available
-        if (!class_exists('WooCommerce') || !WC()->payment_gateways()) {
-            $logger->error('TEAM556 AJAX Error: WooCommerce or Payment Gateways not available in static_ajax_check_order_status_handler.', array('source' => 'team556-pay-ajax'));
-            wp_send_json_error(array('message' => 'WooCommerce critical components not available.'));
-            return;
-        }
-
-        $gateways = WC()->payment_gateways->payment_gateways();
-        if (!isset($gateways['team556_pay'])) {
-            $logger->error('TEAM556 AJAX Error: Team556_Pay_Gateway not found in available gateways.', array('source' => 'team556-pay-ajax'));
-            wp_send_json_error(array('message' => 'Team556 Pay gateway not available.'));
-            return;
-        }
-
-        /** @var Team556_Pay_Gateway $gateway_instance */
-        $gateway_instance = $gateways['team556_pay'];
-
-        // Now, call the original instance method. 
-        // The instance method ajax_check_order_status() will handle nonce, order_id, etc., using $_POST directly.
-        // It also handles wp_send_json_success/error and exit.
-        $gateway_instance->ajax_check_order_status();
-        
-        // Fallback if the instance method doesn't exit (it should)
-        $logger->warning('TEAM556 AJAX Warning: ajax_check_order_status instance method did not exit as expected.', array('source' => 'team556-pay-ajax'));
-        wp_send_json_error(array('message' => 'Gateway handler did not terminate request.'));
-    }
-
-    /**
-     * Fetch TEAM556 price data from API or cache.
-     *
-     * @return array|false Price data array ['price' => float, 'last_updated' => timestamp, 'source' => 'cache'|'api'] or false on failure.
-     */
+    echo '</div>';
+}
     public function fetch_team556_price_data() {
-        $transient_key = 'team556_main_api_price_data'; // Changed transient key
+        $transient_key = 'team556_main_api_price_data';
         $cached_data = get_transient($transient_key);
 
         if (false !== $cached_data && isset($cached_data['price'])) {
@@ -959,7 +376,6 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
 
         $this->log_debug('TEAM556 Price: Cache miss or expired, fetching from main-api.');
 
-        // Main API is fixed for production deployment.
         $main_api_base_url = 'https://team556-main-api.fly.dev';
         $api_url = $main_api_base_url . '/api/price/team556-usdc';
 
@@ -967,9 +383,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
             $this->log_debug('TEAM556 Price: Requesting URL: ' . $api_url);
         }
 
-        $response = wp_remote_get($api_url, array(
-            'timeout' => 10, // seconds
-        ));
+        $response = wp_remote_get($api_url, array('timeout' => 10));
 
         if (is_wp_error($response)) {
             if ($this->debug_mode === 'yes') {
@@ -981,11 +395,6 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         $status_code = wp_remote_retrieve_response_code($response);
         $body = wp_remote_retrieve_body($response);
 
-        if ($this->debug_mode === 'yes') {
-            $this->log_debug('TEAM556 Price: Response Status Code: ' . $status_code);
-            $this->log_debug('TEAM556 Price: Response Body: ' . $body);
-        }
-
         if ($status_code !== 200) {
             if ($this->debug_mode === 'yes') {
                 $this->log_debug('TEAM556 Price: API returned non-200 status: ' . $status_code);
@@ -995,7 +404,6 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
 
         $data = json_decode($body, true);
 
-        // Expected main-api response structure: {"token":"TEAM556","price_usdc":0.00402045,"source":"alchemy","timestamp":"2024-07-15T20:05:56.17384Z"}
         if (empty($data) || !isset($data['price_usdc']) || !is_numeric($data['price_usdc'])) {
             if ($this->debug_mode === 'yes') {
                 $this->log_debug('TEAM556 Price: Invalid data structure or missing price_usdc from main-api response.');
@@ -1003,12 +411,9 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
             return false;
         }
 
-        $price_str = $data['price_usdc']; // Keep as string
+        $price_str = $data['price_usdc'];
 
-        // Basic validation for the price string (e.g., is numeric, positive)
-        // Using BCMath for comparison to handle string numbers accurately.
-        if (!is_numeric($price_str) || bccomp($price_str, '0', 9) <= 0) { // 9 is the scale for comparison
-
+        if (!is_numeric($price_str) || bccomp($price_str, '0', 9) <= 0) {
             if ($this->debug_mode === 'yes') {
                 $this->log_debug('TEAM556 Price: Price value is not positive: ' . $price_str);
             }
@@ -1016,89 +421,20 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         }
 
         $price_info = [
-            'price'        => $price_str, // Store the string price
-            'last_updated' => time(), // Use current time as last_updated from WP perspective
+            'price'        => $price_str,
+            'last_updated' => time(),
             'source'       => 'api (via main-api: ' . (isset($data['source']) ? $data['source'] : 'unknown') . ')',
-            'api_timestamp'=> isset($data['timestamp']) ? $data['timestamp'] : null, // Store original timestamp from API
+            'api_timestamp'=> isset($data['timestamp']) ? $data['timestamp'] : null,
         ];
 
-        set_transient($transient_key, $price_info, 60); // Cache for 60 seconds (increased from 10)
+        set_transient($transient_key, $price_info, 60);
 
         if ($this->debug_mode === 'yes') {
             $this->log_debug('TEAM556 Price: Successfully fetched and cached. Price: ' . $price_str);
         }
         return $price_info;
-    } // Closing brace for fetch_team556_price_data method
-    
-    /**
-     * Check if the gateway is available for use.
-     * Overridden for debugging purposes.
-     *
-     * @return bool
-     */
-    public function is_available() {
-        // Check wallet_address specifically, considering global settings as per constructor logic
-        $effective_wallet_address = $this->get_option('wallet_address');
-        if (empty($effective_wallet_address)) {
-            $global_settings = get_option('team556_pay_settings'); // This is the option name for global settings
-            if (!empty($global_settings) && isset($global_settings['merchant_wallet_address'])) {
-                $effective_wallet_address = $global_settings['merchant_wallet_address'];
-            }
-        }
-
-        // Call parent::is_available() to get its decision
-        $parent_is_available = parent::is_available();
-        $this->log('Parent is_available() result: ' . ($parent_is_available ? 'TRUE' : 'FALSE'), 'info');
-
-        if (!$parent_is_available) {
-            // If parent says no (e.g., gateway disabled, currency mismatch), then it's definitively unavailable.
-            $this->log('Path: Returning FALSE (due to parent).', 'info');
-            return false;
-        }
-
-        // If parent is available, we proceed with our checks.
-        $team556_pay_options = get_option('team556_pay_settings');
-
-        // Check for required settings: wallet address from custom settings and token mint from constant
-        $wallet_address_from_custom_settings = isset($team556_pay_options['merchant_wallet_address']) ? $team556_pay_options['merchant_wallet_address'] : '';
-        $token_mint_constant = defined('TEAM556_PAY_TEAM556_TOKEN_MINT') ? TEAM556_PAY_TEAM556_TOKEN_MINT : '';
-
-        if (empty($this->unavailability_reason) && (empty($wallet_address_from_custom_settings) || empty($token_mint_constant))) {
-            $this->unavailability_reason = __('Team556 Pay is currently unavailable due to a configuration issue. Please contact support.', 'team556-pay');
-        }
-
-        // Check if cart total is zero or negative
-        if (WC()->cart) {
-            $this->log('Cart total for zero/negative check: ' . wc_price(WC()->cart->get_total('edit')) . ' (Raw: ' . WC()->cart->get_total('edit') . ')', 'info');
-        } else {
-            $this->log('WC()->cart is not available for zero/negative check.', 'info');
-        }
-        if (empty($this->unavailability_reason) && WC()->cart && WC()->cart->get_total('edit') <= 0) {
-            $this->unavailability_reason = __('Team556 Pay cannot be used for orders with a zero or negative total.', 'team556-pay');
-        }
-
-        // Check for maximum order total
-        $enable_max_total_limit = isset($team556_pay_options['enable_max_order_total']) && $team556_pay_options['enable_max_order_total'] == 1;
-        $max_total_setting = isset($team556_pay_options['max_order_total']) ? $team556_pay_options['max_order_total'] : '';
-
-        if (empty($this->unavailability_reason) && WC()->cart && $enable_max_total_limit && $max_total_setting !== '' && is_numeric($max_total_setting) && (float)$max_total_setting > 0) {
-            $max_total_value = (float) $max_total_setting;
-            $current_cart_total = WC()->cart->get_total('edit');
-            if ($current_cart_total > $max_total_value) {
-                $this->log('CHECKOUT_LIMIT_EXCEEDED: Cart total ' . wc_price($current_cart_total) . ' exceeds maximum ' . wc_price($max_total_value) . '. This will be handled in payment_fields().', 'info');
-                // Unavailability reason for max total is now handled in payment_fields()
-                // to allow the gateway to be listed and show the message upon selection.
-                // DO NOT set $this->unavailability_reason here for this specific case.
-            }
-        }
-
-        // Log the final unavailability reason if one was set during the checks
-        // And determine final availability
-        if (!empty($this->unavailability_reason)) {
-            return false; // If a reason was set by our custom checks, it's unavailable.
-        }
-        return true; // Otherwise, if parent was available and no custom reasons were set, it's available.
     }
+
     /**
      * Add CSS to ensure payment method is visible on all themes
      */

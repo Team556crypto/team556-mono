@@ -45,6 +45,18 @@ const iconUrl = settings.icon || null; // Get the icon URL
  * Content component - Renders the payment method's description and any fields.
  */
 const Content = () => {
+    // First, check for the limit exceeded error passed directly from PHP.
+    // This provides an immediate and clear error message without needing an AJAX call.
+    if (settings.limitExceeded) {
+        return (
+            <div 
+                className="woocommerce-error"
+                role="alert"
+                dangerouslySetInnerHTML={{ __html: settings.errorMessage }}
+            />
+        );
+    }
+
     const [qrValue, setQrValue] = useState('');
     const [pricingInfo, setPricingInfo] = useState({
         tokenPrice: 0,

@@ -155,27 +155,44 @@ final class Team556_Pay_Gateway_Blocks_Integration extends AbstractPaymentMethod
         $this->get_gateway_instance(); // Ensure $this->gateway is populated
 
         if ( ! $this->gateway ) {
-
             // Return minimal data to prevent JS errors, but indicate a problem
             return array(
                 'title'       => __( 'Team556 Pay (Error)', 'team556-pay' ),
                 'description' => __( 'Could not initialize Team556 Pay. Please check plugin settings and WooCommerce logs.', 'team556-pay' ),
                 'supports'    => array( 'products' ), // Default to prevent JS errors
                 'icon'        => '', // No icon if there's an error
+                'limitExceeded' => false,
             );
         }
 
+        // Check for maximum order total limit.
+        $team556_pay_options = get_option('team556_pay_settings');
+        $enable_max_total_limit = isset($team556_pay_options['enable_max_order_total']) && $team556_pay_options['enable_max_order_total'] == 1;
+        $max_total_setting = isset($team556_pay_options['max_order_total']) ? (float)$team556_pay_options['max_order_total'] : 0;
+        
+        $cart_total = 0;
+        if ( function_exists('WC') && WC()->cart ) {
+            $cart_total = WC()->cart->get_total('edit');
+        }
 
-
+        $limit_exceeded = $enable_max_total_limit && $max_total_setting > 0 && $cart_total > $max_total_setting;
 
         return array(
-            'title'       => $this->gateway->get_title(),
-            'description' => $this->gateway->get_description(),
-            'supports'    => $this->filter_gateway_supports( $this->gateway->supports ),
-            'icon'        => $this->gateway->get_icon_url_for_blocks(), // We might need a specific method for this
-            // Add any other data your frontend component might need
-            // For example, API keys (publishable ones!), URLs, nonces etc.
-            // 'publishableKey' => $this->gateway->get_option('publishable_key'),
+            'title'           => $this->gateway->get_title(),
+            'description'     => $this->gateway->get_description(),
+            'supports'        => $this->filter_gateway_supports( $this->gateway->supports ),
+            'icon'            => $this->gateway->get_icon_url_for_blocks(),
+            'limitExceeded'   => $limit_exceeded,
+            'maxOrderTotal'   => $max_total_setting > 0 ? wc_price($max_total_setting) : 0,
+            'cartTotal'       => $cart_total > 0 ? wc_price($cart_total) : 0,
+            'errorMessage'    => $limit_exceeded 
+                ? sprintf(
+                    // Translators: %1$s is the cart total, %2$s is the maximum allowed total.
+                    __( 'Your order total of %1$s exceeds the maximum allowed for Team556 Pay, which is %2$s.', 'team556-pay' ),
+                    wc_price($cart_total),
+                    wc_price($max_total_setting)
+                )
+                : ''
         );
     }
 

@@ -35,7 +35,10 @@ require_once TEAM556_PAY_PLUGIN_DIR . 'includes/admin/class-team556-pay-welcome.
 require_once TEAM556_PAY_PLUGIN_DIR . 'includes/class-team556-pay-verifier.php';
 require_once TEAM556_PAY_PLUGIN_DIR . 'includes/class-team556-pay-shortcode.php';
 require_once TEAM556_PAY_PLUGIN_DIR . 'includes/class-team556-pay-gateway-blocks.php';
+require_once TEAM556_PAY_PLUGIN_DIR . 'includes/class-team556-pay-gateway.php'; // Ensure gateway class is loaded once.
 require_once TEAM556_PAY_PLUGIN_DIR . 'includes/constants/color-constants.php';
+
+
 
 // Temporary debugging function
 if (!function_exists('team556_debug_payment_gateways')) {
@@ -130,6 +133,11 @@ add_action('update_option_team556_pay_settings', 'team556_sync_global_settings_t
 
 // Initialize the plugin
 function team556_pay_init() {
+    // Add the gateway to WooCommerce
+    add_filter('woocommerce_payment_gateways', function ($gateways) {
+        $gateways[] = 'Team556_Pay_Gateway';
+        return $gateways;
+    });
     // Load plugin textdomain for translations
     load_plugin_textdomain('team556-pay', false, dirname(plugin_basename(__FILE__)) . '/languages/');
 

@@ -290,6 +290,25 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
      * @return array
      */
     public function process_payment($order_id) {
+    // Enforce maximum order total before any processing
+    $global_settings = get_option('team556_pay_settings');
+    $enable_max_total_limit = isset($global_settings['enable_max_order_total']) && $global_settings['enable_max_order_total'];
+    $max_total_setting = isset($global_settings['max_order_total']) ? $global_settings['max_order_total'] : '';
+
+    if ( $enable_max_total_limit && $max_total_setting !== '' && is_numeric( $max_total_setting ) && (float) $max_total_setting > 0 ) {
+        $order        = wc_get_order( $order_id );
+        $cart_total   = floatval( $order ? $order->get_total() : 0 );
+        $max_total    = floatval( $max_total_setting );
+        if ( $cart_total > $max_total ) {
+            $cart_plain = html_entity_decode( strip_tags( wc_price( $cart_total ) ) );
+            $max_plain  = html_entity_decode( strip_tags( wc_price( $max_total ) ) );
+            $error_message = sprintf( __( 'Team556 Pay is not available because your order total of %s exceeds the maximum of %s.', 'team556-pay' ), $cart_plain, $max_plain );
+            // Show error message to customer
+            wc_add_notice( $error_message, 'error' );
+            return [ 'result' => 'failure' ];
+        }
+    }
+
         $order = wc_get_order($order_id);
         
         // Check if we received a transaction signature from the frontend
@@ -797,6 +816,32 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
      * Payment fields
      */
     public function payment_fields() {
+        $max_total_raw = $this->get_option('max_order_total');
+        $max_total_value = !empty($max_total_raw) ? floatval($max_total_raw) : 0;
+        $current_cart_total = WC()->cart->get_total('edit');
+
+        if ($max_total_value > 0 && $current_cart_total > $max_total_value) {
+            $error_message = sprintf(
+                __('Team556 Pay is not available because your order total of %s exceeds the maximum of %s.', 'team556-pay'),
+                wc_price($current_cart_total),
+                wc_price($max_total_value)
+            );
+
+            echo '<div class="woocommerce-error">' . esc_html($error_message) . '</div>';
+
+            // JavaScript to disable the place order button
+            wc_enqueue_js("
+                jQuery(document).ready(function($) {
+                    var placeOrderButton = $('#place_order');
+                    if (placeOrderButton.length) {
+                        placeOrderButton.prop('disabled', true);
+                        console.log('Team556 Pay: Place order button disabled due to cart total exceeding limit.');
+                    }
+                });
+            ");
+
+            return; // Stop rendering the rest of the payment fields
+        }
         ?>
         <style>
             .team556-fields-container { border: 1px solid #e0e0e0; padding: 15px; border-radius: 5px; margin-top: 1em; }
@@ -1037,6 +1082,25 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
      * @return bool
      */
     public function is_available() {
+        // Check parent availability first
+        $parent_available = parent::is_available();
+        if ( ! $parent_available ) {
+            return false;
+        }
+
+        // Enforce maximum order total
+        $global_settings = get_option( 'team556_pay_settings' );
+        $enable_max_total_limit = isset( $global_settings['enable_max_order_total'] ) && $global_settings['enable_max_order_total'];
+        $max_total_setting      = isset( $global_settings['max_order_total'] ) ? $global_settings['max_order_total'] : '';
+        if ( $enable_max_total_limit && $max_total_setting !== '' && is_numeric( $max_total_setting ) && (float) $max_total_setting > 0 ) {
+            // Use cart total if available, otherwise order amount
+            $cart_total = WC()->cart ? floatval( WC()->cart->total ) : 0;
+            if ( $cart_total > floatval( $max_total_setting ) ) {
+                // Do not mark unavailable; let frontend/payment_fields handle user messaging.
+                $this->log( 'Cart total exceeds max limit; keeping gateway available so user sees error message.', 'info' );
+            }
+        }
+
         // Check wallet_address specifically, considering global settings as per constructor logic
         $effective_wallet_address = $this->get_option('wallet_address');
         if (empty($effective_wallet_address)) {

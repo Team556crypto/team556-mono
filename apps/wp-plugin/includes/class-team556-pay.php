@@ -71,10 +71,10 @@ class Team556_Pay {
             add_action('rest_api_init', array($this, 'register_rest_routes'), 10); 
             add_action('init', array($this, 'register_rest_routes'), 999);
             
-            if ($this->logger) {
+//            if ($this->logger) {
                 // $this->logger->debug(
-                    "Adding hooks for REST route registration. Request ID: {$request_id}\n" .
-                    "Static flag set to prevent multiple registrations in this process.",
+                    // "Adding hooks for REST route registration. Request ID: {$request_id}\n" .
+                    // "Static flag set to prevent multiple registrations in this process.",
                     $this->log_context
                 );
             }
@@ -85,22 +85,20 @@ class Team556_Pay {
             
             if (time() - $last_flush > $day_in_seconds) {
                 if ($this->logger) // $this->logger->debug(
-                    "Will flush rewrite rules (not done in >24 hours)", 
+                    // "Will flush rewrite rules (not done in >24 hours)", 
                     $this->log_context
-                );
                 
                 add_action('wp_loaded', function() use ($request_id) {
                     flush_rewrite_rules(true);
                     update_option('team556_last_flush_rewrite', time());
-                    if ($this->logger) // $this->logger->debug(
-                        "Rewrite rules flushed successfully. Request ID: {$request_id}", 
-                        $this->log_context
-                    );
+//                     if ($this->logger) // $this->logger->debug(
+                        // "Rewrite rules flushed successfully. Request ID: {$request_id}"//                          $this->log_context
+                    // );
                 });
             }
         } else if ($this->logger) {
             // $this->logger->debug(
-                "Skipping REST route registration - already registered in this process. Request ID: {$request_id}",
+//                 "Skipping REST route registration - already registered in this process. Request ID: {$request_id}",
                 $this->log_context
             );
         }

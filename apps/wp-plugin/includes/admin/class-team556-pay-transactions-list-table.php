@@ -26,8 +26,11 @@ class Team556_Pay_Transactions_List_Table extends WP_List_Table {
         $columns = [
             'cb'            => '<input type="checkbox" />',
             'order_id'      => __('Order ID', 'team556-pay'),
+            'customer'       => __('Customer', 'team556-pay'),
+            'order_total'    => __('Total', 'team556-pay'),
             'amount'        => __('Amount', 'team556-pay'),
             'currency'      => __('Currency', 'team556-pay'),
+            'wallet_address' => __('Wallet', 'team556-pay'),
             'status'        => __('Status', 'team556-pay'),
             'signature'     => __('Solana Signature', 'team556-pay'),
             'created_at'    => __('Date', 'team556-pay'),
@@ -43,13 +46,61 @@ class Team556_Pay_Transactions_List_Table extends WP_List_Table {
      */
     protected function get_sortable_columns() {
         $sortable_columns = [
-            'order_id'   => ['order_id', false],
-            'amount'     => ['amount', false],
-            'status'     => ['status', false],
-            'created_at' => ['created_at', true] // True for default sort
+            'order_id'      => ['order_id', false],
+            'order_total'   => ['amount', false],
+            'amount'        => ['amount', false],
+            'status'        => ['status', false],
+            'created_at'    => ['created_at', true] // True for default sort
         ];
         return $sortable_columns;
     }
+
+    /**
+     * Column for Customer name derived from WooCommerce order.
+     */
+    protected function column_customer($item) {
+        if ($item->order_id && function_exists('wc_get_order')) {
+            $order = wc_get_order($item->order_id);
+            if ($order) {
+                return esc_html($order->get_formatted_billing_full_name());
+            }
+        }
+        return __('N/A', 'team556-pay');
+    }
+
+    /**
+     * Column for formatted order total from WooCommerce order.
+     */
+    protected function column_order_total($item) {
+        if ($item->order_id && function_exists('wc_get_order')) {
+            $order = wc_get_order($item->order_id);
+            if ($order) {
+                // get_formatted_order_total includes currency symbol & decimals formatted
+                return wp_kses_post($order->get_formatted_order_total());
+            }
+        }
+        return __('N/A', 'team556-pay');
+    }
+
+    /**
+     * Column for wallet address with explorer link.
+     */
+    protected function column_wallet_address($item) {
+        if (!empty($item->wallet_address)) {
+            $network = get_option('team556_solana_pay_network', 'mainnet');
+            $explorer_base_url = $network === 'mainnet' ? 'https://explorer.solana.com/address/' : 'https://explorer.solana.com/address/';
+            $explorer_cluster_param = $network === 'mainnet' ? '?cluster=mainnet-beta' : '?cluster=devnet';
+            $url = $explorer_base_url . esc_attr($item->wallet_address) . $explorer_cluster_param;
+            return sprintf('<a href="%s" target="_blank" title="%s">%s...%s</a>',
+                esc_url($url),
+                esc_attr($item->wallet_address),
+                esc_html(substr($item->wallet_address, 0, 6)),
+                esc_html(substr($item->wallet_address, -6))
+            );
+        }
+        return __('N/A', 'team556-pay');
+    }
+
 
     /**
      * Default column values.
@@ -62,6 +113,7 @@ class Team556_Pay_Transactions_List_Table extends WP_List_Table {
         switch ($column_name) {
             case 'order_id':
             case 'amount':
+            case 'wallet_address':
             case 'currency':
             case 'status':
             case 'signature':

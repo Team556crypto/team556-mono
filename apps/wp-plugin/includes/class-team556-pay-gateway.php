@@ -1196,7 +1196,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         }
         
         $this->log_wc('ajax_check_order_status called', 'team556-pay-ajax');
-        $this->log_wc('POST data: ' . print_r($_POST, true), 'team556-pay-ajax');
+        // $this->log_wc('POST data: ' . print_r($_POST, true), 'team556-pay-ajax');
         
         try {
             // Check if nonce is present

@@ -89,7 +89,7 @@ class Team556_Pay_Verifier {
             if (!empty($context)) {
                 $log_message .= " (Context: {$context})";
             }
-            $this->logger->debug($log_message, $this->log_context);
+            // $this->logger->debug($log_message, $this->log_context);
         }
     }
     

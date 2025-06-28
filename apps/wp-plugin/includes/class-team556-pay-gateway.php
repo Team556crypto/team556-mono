@@ -48,7 +48,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         if (!$this->logger) {
             $this->logger = wc_get_logger();
         }
-        $this->logger->log($level, $message, array('source' => $source));
+        // $this->logger->log($level, $message, array('source' => $source));
     }
 
     /**
@@ -128,7 +128,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         // Initialize logger (always get a logger so we can write gateway logs)
     $this->logger = wc_get_logger();
     // Write an initialization log so the gateway log file is always created
-    $this->log_wc('Team556 Pay Gateway constructor executed', 'team556-pay-gateway', 'info');
+    // $this->log_wc('Team556 Pay Gateway constructor executed', 'team556-pay-gateway', 'info');
 
     // Additional logger instance for debug_mode if explicit WC_Logger class check is needed
     // Initialize logger if debug mode is enabled (legacy check retained for backwards compatibility)
@@ -152,7 +152,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         if ($this->debug_mode === 'yes' && is_object($this->logger)) {
             // Prepend context to the message for clarity in logs
             $log_message = '[' . strtoupper($context) . '] ' . $message;
-            $this->logger->debug($log_message, array('source' => 'team556-pay-gateway'));
+            // $this->logger->debug($log_message, array('source' => 'team556-pay-gateway'));
         }
     }
 
@@ -174,7 +174,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         }
         
         // Log the message
-        $this->logger->log($level, $message, array('source' => 'team556-pay-gateway'));
+        // $this->logger->log($level, $message, array('source' => 'team556-pay-gateway'));
     }
 
     /**
@@ -958,18 +958,18 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
             ob_clean();
         }
         $logger = wc_get_logger();
-        $logger->debug('TEAM556 AJAX: static_ajax_check_order_status_handler called', array('source' => 'team556-pay-ajax'));
+        // $logger->debug('TEAM556 AJAX: static_ajax_check_order_status_handler called', array('source' => 'team556-pay-ajax'));
 
         // Ensure WooCommerce is active and its functions are available
         if (!class_exists('WooCommerce') || !WC()->payment_gateways()) {
-            $logger->error('TEAM556 AJAX Error: WooCommerce or Payment Gateways not available in static_ajax_check_order_status_handler.', array('source' => 'team556-pay-ajax'));
+            // $logger->error('TEAM556 AJAX Error: WooCommerce or Payment Gateways not available in static_ajax_check_order_status_handler.', array('source' => 'team556-pay-ajax'));
             wp_send_json_error(array('message' => 'WooCommerce critical components not available.'));
             return;
         }
 
         $gateways = WC()->payment_gateways->payment_gateways();
         if (!isset($gateways['team556_pay'])) {
-            $logger->error('TEAM556 AJAX Error: Team556_Pay_Gateway not found in available gateways.', array('source' => 'team556-pay-ajax'));
+            // $logger->error('TEAM556 AJAX Error: Team556_Pay_Gateway not found in available gateways.', array('source' => 'team556-pay-ajax'));
             wp_send_json_error(array('message' => 'Team556 Pay gateway not available.'));
             return;
         }
@@ -983,7 +983,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         $gateway_instance->ajax_check_order_status();
         
         // Fallback if the instance method doesn't exit (it should)
-        $logger->warning('TEAM556 AJAX Warning: ajax_check_order_status instance method did not exit as expected.', array('source' => 'team556-pay-ajax'));
+        // $logger->warning('TEAM556 AJAX Warning: ajax_check_order_status instance method did not exit as expected.', array('source' => 'team556-pay-ajax'));
         wp_send_json_error(array('message' => 'Gateway handler did not terminate request.'));
     }
 
@@ -1259,49 +1259,49 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
             ob_clean();
         }
         
-        $this->log_wc('ajax_check_order_status called', 'team556-pay-ajax');
-        // $this->log_wc('POST data: ' . print_r($_POST, true), 'team556-pay-ajax');
+        // $this->log_wc('ajax_check_order_status called', 'team556-pay-ajax');
+        // // $this->log_wc('POST data: ' . print_r($_POST, true), 'team556-pay-ajax');
         
         try {
             // Check if nonce is present
             if (!isset($_POST['nonce'])) {
-                $this->log_wc('No nonce provided in POST data', 'team556-pay-ajax', 'error');
+                // $this->log_wc('No nonce provided in POST data', 'team556-pay-ajax', 'error');
                 wp_send_json_error(array('message' => 'No nonce provided'));
                 return;
             }
             
-            $this->log_wc('Nonce provided: ' . $_POST['nonce'], 'team556-pay-ajax');
+            // $this->log_wc('Nonce provided: ' . $_POST['nonce'], 'team556-pay-ajax');
             
             // Verify nonce
             if (!wp_verify_nonce($_POST['nonce'], 'team556_pay_check_order_status')) {
-                $this->log_wc('Nonce verification failed', 'team556-pay-ajax', 'error');
+                // $this->log_wc('Nonce verification failed', 'team556-pay-ajax', 'error');
                 wp_send_json_error(array('message' => 'Invalid nonce'));
                 return;
             }
             
-            $this->log_wc('Nonce verification successful', 'team556-pay-ajax');
+            // $this->log_wc('Nonce verification successful', 'team556-pay-ajax');
             
             $order_id = isset($_POST['order_id']) ? intval($_POST['order_id']) : 0;
             if (!$order_id) {
-                $this->log_wc('Invalid order ID: ' . $order_id, 'team556-pay-ajax', 'error');
+                // $this->log_wc('Invalid order ID: ' . $order_id, 'team556-pay-ajax', 'error');
                 wp_send_json_error(array('message' => 'Invalid order ID'));
                 return;
             }
             
-            $this->log_wc('Valid order ID: ' . $order_id, 'team556-pay-ajax');
+            // $this->log_wc('Valid order ID: ' . $order_id, 'team556-pay-ajax');
             
             $order = wc_get_order($order_id);
             if (!$order) {
-                $this->log_wc('Order not found: ' . $order_id, 'team556-pay-ajax', 'error');
+                // $this->log_wc('Order not found: ' . $order_id, 'team556-pay-ajax', 'error');
                 wp_send_json_error(array('message' => 'Order not found'));
                 return;
             }
             
-            $this->log_wc('Order found. Status: ' . $order->get_status(), 'team556-pay-ajax');
+            // $this->log_wc('Order found. Status: ' . $order->get_status(), 'team556-pay-ajax');
             
             // Check if order is paid or processing
             if (in_array($order->get_status(), array('processing', 'completed'))) {
-                $this->log_wc('Order is paid, redirecting', 'team556-pay-ajax');
+                // $this->log_wc('Order is paid, redirecting', 'team556-pay-ajax');
                 wp_send_json_success(array(
                     'status' => 'paid',
                     'redirect_url' => $this->get_return_url($order)
@@ -1312,13 +1312,13 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
             // Check for transaction signature in order meta
             $transaction_signature = $order->get_meta('_team556_transaction_signature');
             if (!empty($transaction_signature)) {
-                $this->log_wc('Transaction signature found: ' . $transaction_signature, 'team556-pay-ajax');
+                // $this->log_wc('Transaction signature found: ' . $transaction_signature, 'team556-pay-ajax');
                 
                 // Mark order as paid if not already
                 if (!$order->is_paid()) {
                     $order->payment_complete($transaction_signature);
                     $order->add_order_note(__('Payment completed via Team556 Pay. Transaction signature: ' . $transaction_signature, 'team556-pay'));
-                    $this->log_wc('Order marked as paid', 'team556-pay-ajax');
+                    // $this->log_wc('Order marked as paid', 'team556-pay-ajax');
                 }
                 
                 wp_send_json_success(array(
@@ -1331,13 +1331,13 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
             // Check webhook verification flag
             $webhook_verified = $order->get_meta('_team556_webhook_verified');
             if ($webhook_verified === 'yes') {
-                $this->log_wc('Webhook verification found', 'team556-pay-ajax');
+                // $this->log_wc('Webhook verification found', 'team556-pay-ajax');
                 
                 // Mark order as paid if not already
                 if (!$order->is_paid()) {
                     $order->payment_complete();
                     $order->add_order_note(__('Payment completed via Team556 Pay webhook verification.', 'team556-pay'));
-                    $this->log_wc('Order marked as paid via webhook', 'team556-pay-ajax');
+                    // $this->log_wc('Order marked as paid via webhook', 'team556-pay-ajax');
                 }
                 
                 wp_send_json_success(array(
@@ -1347,7 +1347,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
                 return;
             }
             
-            $this->log_wc('No payment detected yet', 'team556-pay-ajax');
+            // $this->log_wc('No payment detected yet', 'team556-pay-ajax');
             
             // Payment not detected yet
             wp_send_json_success(array(
@@ -1355,8 +1355,8 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
             ));
             
         } catch (Exception $e) {
-            $this->log_wc('Exception occurred: ' . $e->getMessage(), 'team556-pay-ajax', 'error');
-            $this->log_wc('Exception trace: ' . $e->getTraceAsString(), 'team556-pay-ajax', 'debug');
+            // $this->log_wc('Exception occurred: ' . $e->getMessage(), 'team556-pay-ajax', 'error');
+            // $this->log_wc('Exception trace: ' . $e->getTraceAsString(), 'team556-pay-ajax', 'debug');
             wp_send_json_error(array('message' => 'Server error: ' . $e->getMessage()));
         }
     }

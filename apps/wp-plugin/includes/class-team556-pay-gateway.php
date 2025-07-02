@@ -1360,4 +1360,45 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
             wp_send_json_error(array('message' => 'Server error: ' . $e->getMessage()));
         }
     }
-} 
+
+    /**
+     * Display Team556 Pay transaction data in the WooCommerce admin order page.
+     *
+     * Hooked to woocommerce_admin_order_data_after_billing_address.
+     *
+     * @param WC_Order|int $order Order object or ID.
+     */
+    public function display_transaction_data_in_admin( $order ) {
+        if ( ! $order instanceof WC_Order ) {
+            $order = wc_get_order( $order );
+        }
+        if ( ! $order ) {
+            return;
+        }
+
+        $signature = $order->get_meta( '_team556_transaction_signature' );
+        if ( ! $signature ) {
+            // Fallback to legacy meta key.
+            $signature = $order->get_meta( '_team556_pay_signature' );
+        }
+
+        $network  = $this->network === 'mainnet' ? 'mainnet-beta' : 'devnet';
+        $explorer = $signature ? sprintf( 'https://explorer.solana.com/tx/%s?cluster=%s', $signature, $network ) : '';
+
+        echo '<div class="order_data_column">';
+        echo '<h4>' . esc_html__( 'Team556 Pay', 'team556-pay' ) . '</h4>';
+
+        if ( $signature ) {
+            echo '<p><strong>' . esc_html__( 'Transaction:', 'team556-pay' ) . '</strong> ';
+            echo '<a href="' . esc_url( $explorer ) . '" target="_blank" rel="noopener noreferrer">';
+            echo esc_html( substr( $signature, 0, 4 ) . '...' . substr( $signature, -4 ) );
+            echo '</a></p>';
+        } else {
+            echo '<p>' . esc_html__( 'No transaction signature recorded.', 'team556-pay' ) . '</p>';
+        }
+
+        echo '</div>';
+    }
+
+}
+ 

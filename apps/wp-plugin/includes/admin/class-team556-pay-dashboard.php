@@ -218,8 +218,8 @@ class Team556_Pay_Dashboard {
                             <div class="team556-tx-main-info">
                                 <div class="team556-tx-signature">
                                     <a href="<?php echo esc_url($explorer_url); ?>" target="_blank" title="<?php echo esc_attr($transaction->signature); ?>">
-                                        <?php echo esc_html(substr($transaction->signature, 0, 8) . '...' . substr($transaction->signature, -8)); ?>
-                                        <span class="dashicons dashicons-external"></span>
+                                        <span class="dashicons dashicons-external"></span> <?php _e('Explorer', 'team556-pay'); ?>
+                                        
                                     </a>
                                 </div>
                                 <div class="team556-tx-date">
@@ -246,10 +246,12 @@ class Team556_Pay_Dashboard {
                                         </a>
                                     </div>
                                  <?php endif; ?>
-                                 <div class="team556-tx-payer" title="<?php echo esc_attr($transaction->wallet_address); ?>">
-                                    <?php _e('Payer:', 'team556-pay'); ?>
-                                    <?php echo esc_html(substr($transaction->wallet_address, 0, 4) . '...' . substr($transaction->wallet_address, -4)); ?>
-                                 </div>
+                                 <?php if (!empty($transaction->wallet_address) && strtolower($transaction->wallet_address) !== 'unknown') : ?>
+                                    <div class="team556-tx-payer" title="<?php echo esc_attr($transaction->wallet_address); ?>">
+                                        <?php _e('Wallet:', 'team556-pay'); ?>
+                                        <?php echo esc_html(substr($transaction->wallet_address, 0, 4) . '...' . substr($transaction->wallet_address, -4)); ?>
+                                    </div>
+                                 <?php endif; ?>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -290,7 +292,7 @@ class Team556_Pay_Dashboard {
         
         // Recent transactions
         $recent_transactions = $db->get_transactions(array(
-            'number' => 10,
+            'number' => 5,
             'order' => 'DESC',
             'orderby' => 'created_at'
         ));
@@ -368,8 +370,7 @@ class Team556_Pay_Dashboard {
                                 <div class="team556-tx-main-info">
                                     <div class="team556-tx-signature">
                                         <a href="<?php echo esc_url($explorer_url); ?>" target="_blank" title="<?php echo esc_attr($transaction->signature); ?>">
-                                            <?php echo esc_html(substr($transaction->signature, 0, 8) . '...' . substr($transaction->signature, -8)); ?>
-                                            <span class="dashicons dashicons-external"></span>
+                                             <?php _e('Explorer', 'team556-pay'); ?>
                                         </a>
                                     </div>
                                     <div class="team556-tx-date">
@@ -397,8 +398,31 @@ class Team556_Pay_Dashboard {
                                         </div>
                                      <?php endif; ?>
                                      <div class="team556-tx-payer" title="<?php echo esc_attr($transaction->wallet_address); ?>">
-                                        <?php _e('Payer:', 'team556-pay'); ?>
-                                        <?php echo esc_html(substr($transaction->wallet_address, 0, 4) . '...' . substr($transaction->wallet_address, -4)); ?>
+                                        <?php if (!empty($transaction->wallet_address) && strtolower($transaction->wallet_address) !== 'unknown') : ?>
+                                            <?php _e('Wallet:', 'team556-pay'); ?>
+                                            <?php echo esc_html(substr($transaction->wallet_address, 0, 4) . '...' . substr($transaction->wallet_address, -4)); ?>
+                                        <?php endif; ?>
+
+                                        <?php
+                                        // Additional details for dashboard card
+                                        $order_total_display = __('N/A', 'team556-pay');
+                                        $customer_display    = __('Guest', 'team556-pay');
+                                        if (!empty($transaction->order_id) && function_exists('wc_get_order')) {
+                                            $order = wc_get_order($transaction->order_id);
+                                            if ($order) {
+                                                $order_total_display = $order->get_formatted_order_total();
+                                                $customer_display    = $order->get_formatted_billing_full_name();
+                                            }
+                                        }
+                                        ?>
+                                        <div class="team556-tx-customer" title="<?php echo esc_attr($customer_display); ?>">
+                                            <?php _e('Customer:', 'team556-pay'); ?>
+                                            <?php echo esc_html($customer_display); ?>
+                                        </div>
+                                        <div class="team556-tx-order-total">
+                                            <?php _e('Order Total:', 'team556-pay'); ?>
+                                            <?php echo wp_kses_post($order_total_display); ?>
+                                        </div>
                                      </div>
                                 </div>
                             </div>

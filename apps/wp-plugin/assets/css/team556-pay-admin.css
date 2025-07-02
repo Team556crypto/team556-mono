@@ -207,10 +207,10 @@
     background-color: var(--team556-background-light);
     border: 1px solid var(--team556-border);
     border-radius: 12px;
-    padding: 16px;
+    padding: 12px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
     transition: box-shadow 0.2s ease-in-out;
 }
 
@@ -250,7 +250,7 @@
 }
 
 .team556-tx-amount {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--team556-text);
 }

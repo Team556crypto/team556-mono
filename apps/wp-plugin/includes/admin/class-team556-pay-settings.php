@@ -1,6 +1,6 @@
 <?php
 /**
- * Team556 Solana Pay Settings Class
+ * Team556 Pay Settings Class
  * Handles the settings page functionality
  */
 
@@ -107,7 +107,7 @@ class Team556_Pay_Settings {
      * Render general section
      */
     public function render_general_section() {
-        echo '<p>' . __('Configure your Team556 Solana Pay merchant settings.', 'team556-pay') . '</p>';
+        echo '<p>' . __('Configure your Team556 Pay merchant settings.', 'team556-pay') . '</p>';
     }
 
     /**
@@ -141,7 +141,7 @@ class Team556_Pay_Settings {
                     
                     <div class="team556-card team556-settings-form-card">
                         <h2><?php _e('General Settings', 'team556-pay'); ?></h2>
-                        <p class="description"><?php _e('Configure your Team556 Solana Pay merchant settings.', 'team556-pay'); ?></p>
+                        <p class="description"><?php _e('Configure your Team556 Pay merchant settings.', 'team556-pay'); ?></p>
                         
                         <div class="form-group">
                             <label for="merchant_wallet_address"><?php _e('Merchant Wallet Address', 'team556-pay'); ?></label>

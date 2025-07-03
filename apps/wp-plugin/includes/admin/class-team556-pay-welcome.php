@@ -1,6 +1,6 @@
 <?php
 /**
- * Team556 Solana Pay Welcome Screen
+ * Team556 Pay Welcome Screen
  * Handles the welcome screen after activation
  */
 
@@ -30,8 +30,8 @@ class Team556_Pay_Welcome {
     public function add_welcome_page() {
         // Add hidden page
         add_dashboard_page(
-            __('Welcome to Team556 Solana Pay', 'team556-pay'),
-            __('Welcome to Team556 Solana Pay', 'team556-pay'),
+            __('Welcome to Team556 Pay', 'team556-pay'),
+            __('Welcome to Team556 Pay', 'team556-pay'),
             'manage_options',
             'team556-pay-welcome',
             array($this, 'render_welcome_page')
@@ -76,11 +76,11 @@ class Team556_Pay_Welcome {
             
             <div class="team556-welcome-header">
                 <div class="team556-welcome-logo">
-                    <img src="<?php echo TEAM556_PAY_PLUGIN_URL; ?>assets/images/logo-round-dark.png" alt="Team556 Solana Pay"> 
+                    <img src="<?php echo TEAM556_PAY_PLUGIN_URL; ?>assets/images/logo-round-dark.png" alt="Team556 Pay"> 
                 </div>
                 <div class="team556-welcome-intro">
-                    <h1><?php _e('Welcome to Team556 Solana Pay!', 'team556-pay'); ?></h1>
-                    <p><?php _e('You\'re now ready to start accepting Team556 tokens as payment using Solana Pay. This plugin allows your customers to pay with Team556 tokens directly from their Solana wallet.', 'team556-pay'); ?></p>
+                    <h1><?php _e('Welcome to Team556 Pay!', 'team556-pay'); ?></h1>
+                    <p><?php _e('You\'re now ready to start accepting Team556 tokens as payment with Team556 Pay. This plugin allows your customers to pay with Team556 tokens directly from their Solana wallet.', 'team556-pay'); ?></p>
                 </div>
             </div>
             
@@ -114,7 +114,7 @@ class Team556_Pay_Welcome {
                 <div class="team556-card team556-welcome-woocommerce">
                     <?php if (class_exists('WooCommerce')) : ?>
                         <h2><?php _e('WooCommerce Integration', 'team556-pay'); ?></h2>
-                        <p><?php _e('Team556 Solana Pay has been automatically integrated with WooCommerce. To configure or adjust your Team556 token payment settings:', 'team556-pay'); ?></p>
+                        <p><?php _e('Team556 Pay has been automatically integrated with WooCommerce. To configure or adjust your Team556 token payment settings:', 'team556-pay'); ?></p>
                         <ol>
                             <li><?php _e('Go to WooCommerce > Settings > Payments', 'team556-pay'); ?></li>
                             <li><?php _e('Find "Team556 Token (Team556 Pay)" in the list (it should already be enabled)', 'team556-pay'); ?></li>
@@ -123,7 +123,7 @@ class Team556_Pay_Welcome {
                         <a href="<?php echo esc_url(admin_url('admin.php?page=wc-settings&tab=checkout')); ?>" class="team556-button outline"><?php _e('WooCommerce Payment Settings', 'team556-pay'); ?></a>
                     <?php else : ?>
                         <h2><?php _e('WooCommerce Integration', 'team556-pay'); ?></h2>
-                        <p><?php _e('Team556 Solana Pay can integrate with WooCommerce to provide a seamless checkout experience. If you\'re running an online store, consider installing WooCommerce to unlock additional features.', 'team556-pay'); ?></p>
+                        <p><?php _e('Team556 Pay can integrate with WooCommerce to provide a seamless checkout experience. If you\'re running an online store, consider installing WooCommerce to unlock additional features.', 'team556-pay'); ?></p>
                         <a href="<?php echo esc_url(admin_url('plugin-install.php?s=woocommerce&tab=search&type=term')); ?>" class="team556-button outline"><?php _e('Install WooCommerce', 'team556-pay'); ?></a>
                     <?php endif; ?>
                 </div>

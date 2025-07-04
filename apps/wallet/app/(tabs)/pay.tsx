@@ -10,11 +10,13 @@ import { PublicKey, Connection, Transaction, ConnectionConfig, Commitment, Syste
 import { BigNumber } from 'bignumber.js';
 import { useAuthStore } from '@/store/authStore';
 import { useToastStore } from '@/store/toastStore';
+import { useDrawerStore } from '@/store/drawerStore';
 import { signTransaction } from '@/services/api';
 import { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, createTransferInstruction, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { parseURL, TransferRequestURL } from '@solana/pay';
 import { Buffer } from 'buffer'; // Add missing Buffer import
-import { PaymentReceipt } from '@/components/PaymentReceipt';
+import { PaymentReceiptDrawerContent } from '@/components/drawers/PaymentReceiptDrawerContent';
+import ConfirmPaymentDrawerContent from '@/components/drawers/ConfirmPaymentDrawerContent';
 
 const TEAM556_MINT_ADDRESS = new PublicKey('AMNfeXpjD6kXyyTDB4LMKzNWypqNHwtgJUACHUmuKLD5');
 
@@ -59,7 +61,8 @@ interface PaymentDetails {
 
 export default function PayScreen() {
   const { user, token, isLoading: isLoadingAuth } = useAuthStore();
-  const { showToast } = useToastStore();
+    const { showToast } = useToastStore();
+  const { openDrawer, closeDrawer } = useDrawerStore();
   const router = useRouter();
   
   // Calculate this explicitly within component for debugging
@@ -121,19 +124,12 @@ export default function PayScreen() {
 
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false); 
-  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
+  
   const [manualUrlInput, setManualUrlInput] = useState(''); 
   
   // State for payment receipt
   const [showReceipt, setShowReceipt] = useState(false);
-  const [receiptDetails, setReceiptDetails] = useState<{
-    amount: string;
-    recipient: string;
-    recipientLabel?: string;
-    message?: string;
-    signature: string;
-    timestamp: Date;
-  } | null>(null);
+  
 
 
   useEffect(() => {
@@ -187,14 +183,21 @@ export default function PayScreen() {
             }
         }
 
-      if (parsed.splToken && parsed.splToken.equals(TEAM556_MINT_ADDRESS)) {
-          setPaymentDetails({
+            if (parsed.splToken && parsed.splToken.equals(TEAM556_MINT_ADDRESS)) {
+          const details: PaymentDetails = {
                recipient: parsed.recipient,
                amount: parsed.amount,
                label: parsed.label,
                message: parsed.message,
                webhookUrl,
-           });
+           };
+          openDrawer(
+              <ConfirmPaymentDrawerContent
+                  onClose={closeDrawer}
+                  onConfirm={(password: string) => handleConfirmPayment(details, password)}
+                  paymentDetails={details}
+              />
+          );
       } else if (parsed.splToken) {
            Alert.alert('Invalid Token', `This request is for a different token, not TEAM556. (${parsed.splToken.toBase58()})`);
       } else {
@@ -216,28 +219,25 @@ export default function PayScreen() {
     }
   };
 
-  const handleConfirmPayment = async () => {
-    if (!paymentDetails || !token || !user || !user.wallets || user.wallets.length === 0) {
+      const handleConfirmPayment = async (paymentDetails: PaymentDetails, password: string) => {
+    closeDrawer();
+        if (!token || !user || !user.wallets || user.wallets.length === 0) {
       Alert.alert('Error', 'Missing payment details or user information.');
       return;
     }
 
     const senderWallet = user.wallets[0];
     const senderPublicKey = new PublicKey(senderWallet.address);
-    const recipientPublicKey = paymentDetails.recipient;
+        const recipientPublicKey = paymentDetails.recipient;
 
 
-    Alert.prompt(
-      'Confirm Transaction',
-      'Please enter your password to sign the transaction.',
-      async (password) => {
         if (!password) {
-          Alert.alert('Error', 'Password is required to sign the transaction.');
-          return;
-        }
+      Alert.alert('Error', 'Password is required to sign the transaction.');
+      return;
+    }
 
-        try {
-          const connection = await createResilientConnection(RPC_ENDPOINTS);
+    try {
+      const connection = await createResilientConnection(RPC_ENDPOINTS);
           const senderTokenAccount = await getAssociatedTokenAddress(
             TEAM556_MINT_ADDRESS,
             senderPublicKey
@@ -265,12 +265,12 @@ export default function PayScreen() {
 
           const recipientATAInfo = await getAccountInfoWithRetry(connection, recipientTokenAccount);
 
-          if (!paymentDetails?.amount) {
+                    if (!paymentDetails.amount) {
             throw new Error('Payment amount details became unavailable.');
           }
 
           const decimals = parseInt(process.env.EXPO_PUBLIC_GLOBAL__MINT_DECIMALS || '9', 10);
-          const amountInLamports = new BigNumber(paymentDetails.amount).multipliedBy(Math.pow(10, decimals)).integerValue(BigNumber.ROUND_FLOOR);
+                    const amountInLamports = new BigNumber(paymentDetails.amount).multipliedBy(Math.pow(10, decimals)).integerValue(BigNumber.ROUND_FLOOR);
 
           const transaction = new Transaction();
           const instructions = [];
@@ -349,27 +349,34 @@ export default function PayScreen() {
           showToast(`Payment successful!`, 'success', 3000);
 
             // Send webhook callback so the merchant site can confirm the payment
-            if (paymentDetails.webhookUrl) {
+                        if (paymentDetails.webhookUrl) {
               try {
-                await fetch(paymentDetails.webhookUrl, {
+                                await fetch(paymentDetails.webhookUrl, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ transaction: signature }),
                 });
-                console.log('Webhook POST sent to', paymentDetails.webhookUrl);
+                                console.log('Webhook POST sent to', paymentDetails.webhookUrl);
               } catch (webhookErr) {
                 console.warn('Failed to send payment webhook', webhookErr);
               }
             }
 
-          setReceiptDetails({
-            amount: paymentDetails.amount.toString(),
-            recipient: paymentDetails.recipient.toBase58(),
-            recipientLabel: paymentDetails.label,
-            message: paymentDetails.message,
-            signature: signature,
-            timestamp: new Date()
-          });
+                              closeDrawer(); // Close the confirmation drawer
+          openDrawer(
+            <PaymentReceiptDrawerContent
+              amount={paymentDetails.amount.toString()}
+              recipient={recipientPublicKey.toBase58()}
+              recipientLabel={paymentDetails.label}
+              message={paymentDetails.message}
+              signature={signature}
+              timestamp={new Date()}
+              onClose={() => {
+                closeDrawer();
+                router.push('/');
+              }}
+            />
+          );
           setShowReceipt(true);
 
         } catch (error: any) {
@@ -386,63 +393,19 @@ export default function PayScreen() {
               userErrorMessage = error.message;
             }
           }
-          Alert.alert('Payment Failed', userErrorMessage);
-        } finally {
-          setPaymentDetails(null);
-        }
-      },
-      Platform.OS === 'ios' ? 'secure-text' : 'default',
-      '',
-      'default'
-    );
+                Alert.alert('Payment Failed', userErrorMessage);
+    }
   };
 
-  const handleCancelPayment = () => {
-      setPaymentDetails(null); 
-  }
-  
   const handleReceiptClose = () => {
     setShowReceipt(false);
-    setReceiptDetails(null);
-    setManualUrlInput(''); // Clear manual URL input
-    setScanned(false); // Reset scanned state
-    router.push('/'); // Navigate back to wallet tab (root)
-  }
-  // Conditional rendering for receipt, payment confirmation, or main pay screen
-  if (showReceipt && receiptDetails) {
-    return (
-      <PaymentReceipt
-        amount={receiptDetails.amount}
-        recipient={receiptDetails.recipient}
-        recipientLabel={receiptDetails.recipientLabel}
-        message={receiptDetails.message}
-        signature={receiptDetails.signature}
-        timestamp={receiptDetails.timestamp}
-        onClose={handleReceiptClose}
-      />
-    );
-  }
+    setManualUrlInput('');
+    setScanned(false);
+    router.push('/');
+  };
 
-  if (paymentDetails) {
-    // This is the payment confirmation screen
-    return (
-        <ScreenLayout title='Confirm Payment' headerIcon={<Ionicons name='card' size={24} color={Colors.primary} />}>
-            <View style={styles.centered}>
-                <Text style={styles.confirmTitle}>Confirm TEAM Payment</Text>
-                {paymentDetails.label && <Text style={styles.confirmLabel}>To: {paymentDetails.label}</Text>}
-                <Text style={styles.confirmRecipient}>Recipient: {paymentDetails.recipient.toBase58()}</Text>
-                <Text style={styles.confirmAmount}>
-                    Amount: {paymentDetails.amount ? paymentDetails.amount.toString() + ' TEAM' : 'Default Amount'}
-                </Text>
-                {paymentDetails.message && <Text style={styles.confirmMessage}>Message: {paymentDetails.message}</Text>}
-                <View style={styles.buttonRow}>
-                     <Button title="Cancel" onPress={handleCancelPayment} color={Colors.error} />
-                     <Button title="Confirm & Send" onPress={handleConfirmPayment} color={Colors.primary} />
-                </View>
-            </View>
-        </ScreenLayout>
-    );
-  }
+  // Conditional rendering for receipt, payment confirmation, or main pay screen
+  // Removed the old PaymentReceipt component
 
   // This is the main QR scanner / manual input screen
   return (

@@ -31,7 +31,6 @@
     --team556-spacing-small: 8px;
     --team556-spacing-medium: 16px;
     --team556-spacing-large: 24px;
-<<<<<<< HEAD
 
     /* Text colors */
     --team556-primary-text-color: var(--team556-text);
@@ -48,8 +47,6 @@
     --team556-border-color: var(--team556-border);
     --team556-input-background-color: var(--team556-background-light);
 
-=======
->>>>>>> 2875fca9e7981c8ab550c37139069e2b197f9953
 }
 
 /* General Dashboard Styles */
@@ -774,8 +771,7 @@
     color: var(--team556-text);
 }
 
-/* ==========================================================================
-   Welcome Page Styles
+/* ===================================================================   Welcome Page Styles
    ========================================================================== */
 .team556-welcome-wrap {
     max-width: 900px;
@@ -903,8 +899,7 @@
     margin-top: var(--team556-spacing-small);
 }
 
-/* ==========================================================================
-   End Welcome Page Styles
+/* ===================================================================   End Welcome Page Styles
    ========================================================================== */
 
 /* --- Transactions Page (WP_List_Table) Styles --- */

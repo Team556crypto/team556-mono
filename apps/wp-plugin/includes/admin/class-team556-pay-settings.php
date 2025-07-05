@@ -1,6 +1,6 @@
 <?php
 /**
- * Team556 Solana Pay Settings Class
+ * Team556 Pay Settings Class
  * Handles the settings page functionality
  */
 
@@ -107,7 +107,7 @@ class Team556_Pay_Settings {
      * Render general section
      */
     public function render_general_section() {
-        echo '<p>' . __('Configure your Team556 Solana Pay merchant settings.', 'team556-pay') . '</p>';
+        echo '<p>' . __('Configure your Team556 Pay merchant settings.', 'team556-pay') . '</p>';
     }
 
     /**
@@ -132,7 +132,14 @@ class Team556_Pay_Settings {
         ?>
         <div class="team556-dark-theme-wrapper">
             <div class="wrap team556-admin-settings">
-                <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+                <div class="team556-welcome-header" style="margin-bottom:var(--team556-spacing-large);">
+                    <div class="team556-welcome-logo">
+                        <img src="<?php echo TEAM556_PAY_PLUGIN_URL; ?>assets/images/logo-round-dark.png" alt="Team556 Pay" style="max-width:80px; height:auto;" />
+                    </div>
+                    <div class="team556-welcome-intro">
+                        <h1 style="margin:0;"><?php echo esc_html(get_admin_page_title()); ?></h1>
+                    </div>
+                </div>
                 
                 <?php settings_errors(); // Still show WordPress settings errors ?>
                 
@@ -141,7 +148,7 @@ class Team556_Pay_Settings {
                     
                     <div class="team556-card team556-settings-form-card">
                         <h2><?php _e('General Settings', 'team556-pay'); ?></h2>
-                        <p class="description"><?php _e('Configure your Team556 Solana Pay merchant settings.', 'team556-pay'); ?></p>
+                        <p class="description"><?php _e('Configure your Team556 Pay merchant settings.', 'team556-pay'); ?></p>
                         
                         <div class="form-group">
                             <label for="merchant_wallet_address"><?php _e('Merchant Wallet Address', 'team556-pay'); ?></label>

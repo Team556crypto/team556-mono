@@ -25,6 +25,28 @@
     /* Keep black and white for potential utility */
     --black: #000;
     --white: #fff;
+
+    /* Spacing scale */
+    --team556-spacing-xsmall: 4px;
+    --team556-spacing-small: 8px;
+    --team556-spacing-medium: 16px;
+    --team556-spacing-large: 24px;
+
+    /* Text colors */
+    --team556-primary-text-color: var(--team556-text);
+    --team556-secondary-text-color: var(--team556-text-secondary);
+
+    /* Accent colors */
+    --team556-primary-accent-color: var(--team556-secondary);
+    --team556-primary-accent-color-rgb: 66, 211, 151;
+
+    /* Button text */
+    --team556-button-text-color: var(--team556-text);
+
+    /* Border & Input */
+    --team556-border-color: var(--team556-border);
+    --team556-input-background-color: var(--team556-background-light);
+
 }
 
 /* General Dashboard Styles */
@@ -366,6 +388,46 @@
 }
 
 .team556-step-content p {
+    color: var(--team556-text-secondary);
+}
+
+/* Transactions Summary */
+.team556-transactions-summary {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+}
+.team556-summary-logo img {
+    height: 60px;
+    width: auto;
+}
+
+/* Stats Grid */
+.team556-stats-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    flex: 1;
+}
+
+.team556-stat-card {
+    background-color: var(--team556-background-light);
+    border: 1px solid var(--team556-border);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    flex: 0 0 160px;
+}
+
+.team556-stat-value {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--team556-text);
+    margin-bottom: 4px;
+}
+
+.team556-stat-label {
+    font-size: 13px;
     color: var(--team556-text-secondary);
 }
 
@@ -1190,6 +1252,12 @@
 }
 
 /* --- End Settings Page Specific Styles --- */
+
+/* Hide duplicate footer header row in transactions table */
+.team556-transactions-page .wp-list-table tfoot {
+    display: none;
+}
+
 
 /* --- Welcome Page Styles --- */
 .team556-welcome-wrap {

@@ -252,6 +252,60 @@ class Team556_Pay_DB {
     }
 
     /**
+     * Get total amount of transactions
+     *
+     * @param array $args Query arguments
+     * @return float Total amount
+     */
+    public function get_total_amount($args = array()) {
+        global $wpdb;
+
+        $defaults = array(
+            'status'   => '',
+            'order_id' => null,
+            'search'   => '',
+        );
+
+        $args = wp_parse_args($args, $defaults);
+
+        $sql = "SELECT SUM(t.amount) 
+                FROM {$this->transactions_table} t 
+                LEFT JOIN {$wpdb->posts} p ON t.order_id = p.ID AND p.post_type = 'shop_order'
+                LEFT JOIN {$wpdb->postmeta} pm_fname ON p.ID = pm_fname.post_id AND pm_fname.meta_key = '_billing_first_name'
+                LEFT JOIN {$wpdb->postmeta} pm_lname ON p.ID = pm_lname.post_id AND pm_lname.meta_key = '_billing_last_name'";
+
+        $where  = array();
+        $params = array();
+
+        if (!empty($args['search'])) {
+            $search_term = '%' . $wpdb->esc_like($args['search']) . '%';
+            $where[]     = "(t.transaction_signature LIKE %s OR t.order_id LIKE %s OR t.id LIKE %s OR CONCAT(pm_fname.meta_value, ' ', pm_lname.meta_value) LIKE %s)";
+            $params[]    = $search_term;
+            $params[]    = $search_term;
+            $params[]    = $search_term;
+            $params[]    = $search_term;
+        }
+
+        if (!empty($args['status'])) {
+            $where[]  = "t.status = %s";
+            $params[] = $args['status'];
+        }
+
+        if (!is_null($args['order_id'])) {
+            $where[]  = "t.order_id = %d";
+            $params[] = $args['order_id'];
+        }
+
+        if (!empty($where)) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+
+        $total = $wpdb->get_var($wpdb->prepare($sql, $params));
+
+        return $total ? (float) $total : 0;
+    }
+
+    /**
      * Count transactions
      *
      * @param array $args Query arguments

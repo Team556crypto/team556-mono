@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 /**
  * Plugin Name: Team556 Pay
  * Plugin URI: https://team556.com
- * Description: WordPress plugin to accept Team556 tokens using Solana Pay
+ * Description: WordPress plugin to accept Team556 tokens using Team556 Pay
  * Version: 1.0.0
  * Author: Team556
  * Text Domain: team556-pay

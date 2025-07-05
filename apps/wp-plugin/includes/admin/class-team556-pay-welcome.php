@@ -1,6 +1,6 @@
 <?php
 /**
- * Team556 Solana Pay Welcome Screen
+ * Team556 Pay Welcome Screen
  * Handles the welcome screen after activation
  */
 
@@ -80,7 +80,11 @@ class Team556_Pay_Welcome {
                 </div>
                 <div class="team556-welcome-intro">
                     <h1><?php _e('Welcome to Team556 Pay!', 'team556-pay'); ?></h1>
+<<<<<<< HEAD
                     <p><?php _e('You\'re now ready to start accepting Team556 tokens as payment using Team556 Pay. This plugin allows your customers to pay with Team556 tokens directly from their Team556 wallet.', 'team556-pay'); ?></p>
+=======
+                    <p><?php _e('You\'re now ready to start accepting Team556 tokens as payment with Team556 Pay. This plugin allows your customers to pay with Team556 tokens directly from their Solana wallet.', 'team556-pay'); ?></p>
+>>>>>>> 2875fca9e7981c8ab550c37139069e2b197f9953
                 </div>
             </div>
             

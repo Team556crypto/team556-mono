@@ -151,7 +151,11 @@ class Team556_Pay_Dashboard {
         }
         
         wp_add_dashboard_widget(
+<<<<<<< HEAD
             'team556_pay_stats_widget',
+=======
+            'team556_solana_pay_stats_widget',
+>>>>>>> 2875fca9e7981c8ab550c37139069e2b197f9953
             __('Team556 Pay Stats', 'team556-pay'),
             array($this, 'render_dashboard_widget')
         );
@@ -312,6 +316,7 @@ class Team556_Pay_Dashboard {
         
         ?>
         <div class="wrap team556-admin-dashboard team556-dark-theme-wrapper">
+<<<<<<< HEAD
             <div class="team556-welcome-header" style="margin-bottom:var(--team556-spacing-large);">
                 <div class="team556-welcome-logo">
                     <img src="<?php echo TEAM556_PAY_PLUGIN_URL; ?>assets/images/logo-round-dark.png" alt="Team556 Pay" style="max-width:80px; height:auto;" />
@@ -320,10 +325,15 @@ class Team556_Pay_Dashboard {
                     <h1 style="margin:0;"><?php _e('Team556 Pay Dashboard', 'team556-pay'); ?></h1>
                 </div>
             </div>
+=======
+>>>>>>> 2875fca9e7981c8ab550c37139069e2b197f9953
             <h1><?php _e('Team556 Pay Dashboard', 'team556-pay'); ?></h1>
             
             <div class="team556-dashboard-header team556-portfolio-card">
                 <div class="team556-portfolio-info">
+                    <div class="team556-dashboard-logo">
+                        <img src="<?php echo TEAM556_PAY_PLUGIN_URL; ?>assets/images/logo-round-dark.png" alt="<?php esc_attr_e('Team556 Pay', 'team556-pay'); ?>" />
+                    </div>
                     <?php if (!empty($wallet_address)) : ?>
                         <div class="team556-portfolio-wallet">
                             <span class="dashicons dashicons-admin-users team556-portfolio-icon"></span>
@@ -466,9 +476,16 @@ class Team556_Pay_Dashboard {
                         </div>
                     </div>
                     
+<<<<<<< HEAD
                     
                     <div class="team556-help-step">
                         <div class="team556-step-number">3</div>
+=======
+                    <?php /* Step removed: Add Payment Buttons (legacy shortcode info) */ ?>
+                    
+                    <div class="team556-help-step">
+                        <div class="team556-step-number">2</div>
+>>>>>>> 2875fca9e7981c8ab550c37139069e2b197f9953
                         <div class="team556-step-content">
                             <h3><?php _e('Enable in WooCommerce', 'team556-pay'); ?></h3>
                             <p><?php _e('If you use WooCommerce, Team556 Pay has been automatically enabled. You can adjust settings in your payment methods.', 'team556-pay'); ?></p>

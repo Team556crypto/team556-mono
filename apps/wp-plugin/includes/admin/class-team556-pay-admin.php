@@ -49,7 +49,7 @@ class Team556_Pay_Admin {
         if (class_exists('WooCommerce')) {
             add_meta_box(
                 'team556_solana_pay_order_details',
-                __('Team556 Solana Pay Details', 'team556-pay'),
+                __('Team556 Pay Details', 'team556-pay'),
                 array($this, 'render_order_meta_box'),
                 'shop_order',
                 'side',
@@ -65,7 +65,7 @@ class Team556_Pay_Admin {
         $order = wc_get_order($post->ID);
         
         if (!$order || $order->get_payment_method() !== 'team556_solana_pay') {
-            echo '<p>' . __('This order was not paid with Team556 Solana Pay.', 'team556-pay') . '</p>';
+            echo '<p>' . __('This order was not paid with Team556 Pay.', 'team556-pay') . '</p>';
             return;
         }
         

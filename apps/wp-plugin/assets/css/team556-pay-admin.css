@@ -31,6 +31,7 @@
     --team556-spacing-small: 8px;
     --team556-spacing-medium: 16px;
     --team556-spacing-large: 24px;
+<<<<<<< HEAD
 
     /* Text colors */
     --team556-primary-text-color: var(--team556-text);
@@ -47,6 +48,8 @@
     --team556-border-color: var(--team556-border);
     --team556-input-background-color: var(--team556-background-light);
 
+=======
+>>>>>>> 2875fca9e7981c8ab550c37139069e2b197f9953
 }
 
 /* General Dashboard Styles */
@@ -74,6 +77,18 @@
 }
 
 /* --- Portfolio Header Card --- */
+.team556-dashboard-logo {
+    flex: 0 0 80px; /* Fixed width for logo */
+    margin-right: var(--team556-spacing-medium);
+}
+
+.team556-dashboard-logo img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 50%; /* Match round logo if needed */
+}
+
 .team556-portfolio-card { /* Replaces .team556-dashboard-header styling */
     display: flex;
     justify-content: space-between;
@@ -739,6 +754,7 @@
 .team556-view-all a,
 .team556-help-step a,
 .team556-welcome-wrap a.button {
+    margin-top: 6px;
     display: inline-block;
     padding: 8px 16px;
     background-color: var(--team556-primary);

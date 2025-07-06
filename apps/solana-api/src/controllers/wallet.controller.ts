@@ -5,6 +5,7 @@ import {
   PublicKey,
   LAMPORTS_PER_SOL,
   ParsedAccountData,
+  ParsedInstruction,
   Transaction,
   TransactionInstruction,
   SystemProgram
@@ -45,6 +46,22 @@ const signTransactionSchema = z.object({
 // --- Zod Schema for Send Transaction ---
 const sendTransactionSchema = z.object({
   signedTransaction: z.string().min(1, { message: 'Signed transaction is required' }) // Expect base64 string
+})
+
+// --- Zod Schema for Get Transactions ---
+const getTransactionsSchema = z.object({
+  address: z.string().refine(
+    addr => {
+      try {
+        new PublicKey(addr)
+        return true
+      } catch (e) {
+        return false
+      }
+    },
+    { message: 'Invalid Solana address format' }
+  ),
+  limit: z.number().int().positive().optional()
 })
 
 // --- Helper Functions ---
@@ -462,6 +479,142 @@ export const sendTransaction = async (req: Request, res: Response) => {
     return res.status(500).json({ 
       error: 'Failed to send transaction', 
       details: errorMessage 
+    })
+  }
+}
+
+export const getTransactions = async (req: Request, res: Response) => {
+  try {
+    const { address, limit = 20 } = getTransactionsSchema.parse(req.body)
+    const rpcUrl = process.env.GLOBAL__MAINNET_RPC_URL
+    if (!rpcUrl) {
+      throw new Error('RPC URL not configured')
+    }
+    const connection = new Connection(rpcUrl, 'confirmed')
+    const publicKey = new PublicKey(address)
+    const teamMintAddress = process.env.GLOBAL__TEAM_MINT || ''
+
+    // Support both Memo v1 and SPL Memo Program for parsing transaction memos
+    const MEMO_PROGRAM_ID_V1 = new PublicKey('Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo');
+    const SPL_MEMO_PROGRAM_ID = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcVtrp5GhoK1dujAFuk');
+
+    const signatures = await connection.getSignaturesForAddress(publicKey, { limit })
+    if (!signatures.length) {
+      return res.status(200).json({ transactions: [] })
+    }
+
+    const transactionDetails = await Promise.all(
+      signatures.map(s =>
+        connection.getParsedTransaction(s.signature, {
+          commitment: 'confirmed',
+          maxSupportedTransactionVersion: 0
+        })
+      )
+    )
+
+    const normalizedTransactions = transactionDetails
+      .map((tx, index) => {
+        if (!tx || !tx.meta || !tx.blockTime) {
+          return null
+        }
+        const { meta, transaction, blockTime } = tx
+        const date = blockTime ? new Date(blockTime * 1000).toISOString() : new Date().toISOString()
+
+        const memoInstruction = transaction.message.instructions.find(
+          (i): i is ParsedInstruction =>
+            'parsed' in i && (i.programId.equals(MEMO_PROGRAM_ID_V1) || i.programId.equals(SPL_MEMO_PROGRAM_ID))
+        )
+        const memo = (memoInstruction?.parsed as string) || null
+
+        const walletAccountIndex = tx.transaction.message.accountKeys.findIndex(acc => acc.pubkey.equals(publicKey))
+        let solBalanceChange = 0
+        if (walletAccountIndex !== -1) {
+          const preSolBalance = meta.preBalances?.[walletAccountIndex]
+          const postSolBalance = meta.postBalances?.[walletAccountIndex]
+          if (preSolBalance !== undefined && postSolBalance !== undefined) {
+            solBalanceChange = (postSolBalance - preSolBalance) / LAMPORTS_PER_SOL
+          }
+        }
+
+        const tokenBalanceChanges = (meta.preTokenBalances || [])
+          .filter(pre => pre.owner === address)
+          .map(preBalance => {
+            const postBalance = (meta.postTokenBalances || []).find(
+              post => post.accountIndex === preBalance.accountIndex
+            )
+            const change =
+              (postBalance?.uiTokenAmount?.uiAmount || 0) - (preBalance?.uiTokenAmount?.uiAmount || 0)
+            return {
+              mint: preBalance.mint,
+              change: change,
+              tokenSymbol: preBalance.mint === teamMintAddress ? 'TEAM' : preBalance.mint.slice(0, 4) + '...'
+            }
+          })
+          .filter(c => c.change !== 0)
+
+        let type = 'Unknown'
+        let amount = '0'
+        let token = ''
+
+        if (tokenBalanceChanges.length > 1) {
+          type = 'Swap'
+          const sent = tokenBalanceChanges.find(c => c.change < 0)
+          const received = tokenBalanceChanges.find(c => c.change > 0)
+          if (sent && received) {
+            amount = `${Math.abs(sent.change).toFixed(4)} ${sent.tokenSymbol} to ${Math.abs(
+              received.change
+            ).toFixed(4)} ${received.tokenSymbol}`
+          } else {
+            type = 'Complex Interaction'
+          }
+          token = ''
+        } else if (tokenBalanceChanges.length === 1) {
+          const changeInfo = tokenBalanceChanges[0]
+          if (changeInfo) {
+            type = changeInfo.change > 0 ? 'Receive' : 'Send'
+            amount = `${changeInfo.change.toFixed(4)}` // Keep the sign
+            token = changeInfo.tokenSymbol
+          }
+        } else if (solBalanceChange !== 0) {
+          type = solBalanceChange > 0 ? 'Receive' : 'Send'
+          let displayAmount = solBalanceChange
+          // For sends, the change includes the fee. We want to show the amount sent.
+          if (solBalanceChange < 0) {
+            displayAmount = solBalanceChange + meta.fee / LAMPORTS_PER_SOL
+          }
+          amount = `${displayAmount.toFixed(9)}`
+          token = 'SOL'
+        } else {
+          type = 'Contract Interaction'
+          amount = '0'
+          token = 'SOL'
+        }
+
+        // If a memo exists and starts with 'Team556 Pay', classify it as such.
+        if (memo && memo.startsWith('Team556 Pay')) {
+          type = 'Team556 Pay'
+        }
+
+        return {
+          signature: signatures[index]?.signature || '',
+          date,
+          type,
+          amount,
+          token,
+          from: 'N/A',
+          to: 'N/A',
+          memo
+        }
+      })
+      .filter(Boolean)
+
+    res.status(200).json({ transactions: normalizedTransactions })
+  } catch (error: unknown) {
+    console.error('Error in getTransactions:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error during transaction fetching'
+    return res.status(500).json({
+      error: 'Failed to fetch transactions',
+      details: errorMessage
     })
   }
 }

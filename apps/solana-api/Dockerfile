@@ -1,5 +1,6 @@
 # Stage 1: Build the application
-FROM node:20-alpine AS builder
+# Using node:20-slim for better native module compatibility than alpine
+FROM node:20-slim AS builder
 
 # Set working directory to the root for the monorepo context
 WORKDIR /app
@@ -21,7 +22,7 @@ COPY . .
 RUN yarn turbo run build --filter=solana-api
 
 # Stage 2: Create the final lightweight image
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
 
@@ -34,9 +35,6 @@ RUN yarn install --production --frozen-lockfile
 
 # Copy the built 'dist' directory from the correct location in the builder stage
 COPY --from=builder /app/apps/solana-api/dist ./dist/
-
-# Copy the global env loader script
-COPY --from=builder /app/apps/solana-api/load-global-env.js ./load-global-env.js
 
 # Expose the port (set via SOLANA_API__PORT secret, defaults to 4000)
 EXPOSE 4000

@@ -77,6 +77,7 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	wallet.Post("/presale/redeem", handlers.RedeemPresaleCode(db))
 	wallet.Post("/sign-transaction", handlers.SignTransactionHandler(db, cfg))
 	wallet.Post("/send-transaction", handlers.SendTransactionHandler(db, cfg))
+	wallet.Post("/transactions", handlers.GetTransactionsHandler(db, cfg))
 	wallet.Post("/webhook", handlers.SendWebhookHandler(db, cfg))
 	wallet.Post("/recovery-phrase", handlers.GetRecoveryPhraseHandler(db))
 

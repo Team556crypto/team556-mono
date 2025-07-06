@@ -11,6 +11,9 @@ console_command = '/bin/sh'
   # dockerfile = 'apps/solana-api/Dockerfile'
   dockerfile = "Dockerfile" # Path relative to this fly.toml file
 
+[env]
+  SOLANA_API__NODE_ENV = "production"
+
 [http_service]
   internal_port = 4000
   force_https = true

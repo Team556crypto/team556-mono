@@ -55,7 +55,9 @@ function InitialLayout() {
     const inOnboarding = currentSegment === 'onboarding'
     const inLogin = currentSegment === 'login'
     const allowedStandaloneRoutes = ['privacy', 'terms', 'signin', 'signup', 'auth'] // Explicitly allow these
-    const inAllowedStandalone = allowedStandaloneRoutes.includes(currentSegment)
+    // Check if the current route is in the allowed standalone routes or is a subdirectory of them
+    const inAllowedStandalone = allowedStandaloneRoutes.includes(currentSegment) || 
+      (segments.length > 1 && allowedStandaloneRoutes.includes(segments[0]))
 
     if (isAuthenticated) {
       // Ensure user object is loaded before checking verification or wallets

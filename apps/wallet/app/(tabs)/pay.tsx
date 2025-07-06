@@ -6,7 +6,7 @@ import { Colors } from '@/constants/Colors';
 import { ScreenLayout } from '@/components/layout/ScreenLayout';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions, BarcodeScanningResult, PermissionStatus } from 'expo-camera'; 
-import { PublicKey, Connection, Transaction, ConnectionConfig, Commitment, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { PublicKey, Connection, Transaction, TransactionInstruction, ConnectionConfig, Commitment, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { BigNumber } from 'bignumber.js';
 import { useAuthStore } from '@/store/authStore';
 import { useToastStore } from '@/store/toastStore';
@@ -291,6 +291,23 @@ export default function PayScreen() {
               )
             );
           }
+
+          // Add a structured memo to identify this as a Team556 Pay transaction
+          // and to store merchant information for display in transaction history.
+          let transactionMemo = `Team556 Pay`;
+          if (paymentDetails.label) {
+            transactionMemo += ` | Business: ${paymentDetails.label}`;
+          }
+          if (paymentDetails.message) {
+            transactionMemo += ` | Message: ${paymentDetails.message}`;
+          }
+          instructions.push(
+            new TransactionInstruction({
+              keys: [],
+              programId: new PublicKey('Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo'),
+              data: Buffer.from(transactionMemo, 'utf-8'),
+            })
+          );
 
           const transferAmount = BigInt(amountInLamports.toString());
           instructions.push(

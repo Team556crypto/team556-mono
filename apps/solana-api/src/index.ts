@@ -1,4 +1,3 @@
-import './_global-env'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
@@ -6,14 +5,20 @@ import dotenv from 'dotenv'
 import routes from './routes'
 import paymentRoutes from './routes/paymentRoutes'
 
-// Load environment variables from root
 import path from 'path'
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
+
+const isProduction = process.env.SOLANA_API__NODE_ENV === 'production'
+
+// In development, load variables from .env file.
+// In production, variables are expected to be set in the environment (e.g., Fly.io secrets).
+if (!isProduction) {
+  console.log('Development mode: Loading .env file.')
+  dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
+}
 
 const app = express()
 // Explicitly parse the port to a number
-const port = parseInt(process.env.SOLANA_API__PORT || '4000', 10)
-const isProduction = process.env.SOLANA_API__NODE_ENV === 'production'
+const port = parseInt(process.env.PORT || '4000', 10)
 
 // Middleware
 app.use(helmet())

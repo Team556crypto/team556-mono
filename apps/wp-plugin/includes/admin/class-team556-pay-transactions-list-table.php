@@ -12,202 +12,118 @@ class Team556_Pay_Transactions_List_Table extends WP_List_Table {
         parent::__construct([
             'singular' => __('Transaction', 'team556-pay'),
             'plural'   => __('Transactions', 'team556-pay'),
-            'ajax'     => false // true if you want to handle AJAX pagination/sorting
+            'ajax'     => false
         ]);
         $this->db = new Team556_Pay_DB();
     }
 
-    /**
-     * Get columns.
-     *
-     * @return array
-     */
     public function get_columns() {
-        $columns = [
-            'cb'            => '<input type="checkbox" />',
-            'order_id'      => __('Order ID', 'team556-pay'),
-            'amount'        => __('Amount', 'team556-pay'),
-            'currency'      => __('Currency', 'team556-pay'),
-            'status'        => __('Status', 'team556-pay'),
-            'signature'     => __('Solana Signature', 'team556-pay'),
-            'created_at'    => __('Date', 'team556-pay'),
-            'wc_order_link' => __('WooCommerce Order', 'team556-pay'),
+        return [
+            'cb'                    => '<input type="checkbox" />',
+            'id'                    => __('ID', 'team556-pay'),
+            'order_id'              => __('Order', 'team556-pay'),
+            'customer'              => __('Customer', 'team556-pay'),
+            'order_total'           => __('Order Total', 'team556-pay'),
+            'amount'                => __('TEAM556 Amount', 'team556-pay'),
+            'transaction_signature' => __('Solana Signature', 'team556-pay'),
+            'status'                => __('Status', 'team556-pay'),
+            'created_at'            => __('Date', 'team556-pay'),
         ];
-        return $columns;
     }
 
-    /**
-     * Sortable columns.
-     *
-     * @return array
-     */
     protected function get_sortable_columns() {
-        $sortable_columns = [
+        return [
+            'id'         => ['id', false],
             'order_id'   => ['order_id', false],
+            'customer'   => ['customer', false],
             'amount'     => ['amount', false],
             'status'     => ['status', false],
-            'created_at' => ['created_at', true] // True for default sort
+            'created_at' => ['created_at', true]
         ];
-        return $sortable_columns;
     }
 
-    /**
-     * Default column values.
-     *
-     * @param object $item
-     * @param string $column_name
-     * @return mixed
-     */
     protected function column_default($item, $column_name) {
         switch ($column_name) {
-            case 'order_id':
+            case 'id':
             case 'amount':
-            case 'currency':
-            case 'status':
-            case 'signature':
             case 'created_at':
                 return esc_html($item->$column_name);
             default:
-                return print_r($item, true); //Show the whole array for troubleshooting purposes
+                return '';
         }
     }
 
-    /**
-     * Checkbox column.
-     *
-     * @param object $item
-     * @return string
-     */
     protected function column_cb($item) {
-        return sprintf(
-            '<input type="checkbox" name="transaction_id[]" value="%s" />',
-            $item->id
-        );
+        return sprintf('<input type="checkbox" name="transactions[]" value="%s" />', $item->id);
     }
-    
-    /**
-     * Column for Order ID, making it linkable if possible.
-     */
+
     protected function column_order_id($item) {
-        $actions = [];
-        if ($item->order_id && intval($item->order_id) > 0) {
-            $order_url = admin_url('post.php?post=' . intval($item->order_id) . '&action=edit');
-            $actions['view_wc_order'] = sprintf('<a href="%s">%s</a>', esc_url($order_url), __('View WC Order', 'team556-pay'));
-            return sprintf('%1$s %2$s', esc_html($item->order_id), $this->row_actions($actions));
-        } 
-        return esc_html($item->order_id ?: __('N/A', 'team556-pay'));
+        if (empty($item->order_id)) {
+            return __('N/A', 'team556-pay');
+        }
+        $order_url = admin_url('post.php?post=' . intval($item->order_id) . '&action=edit');
+        $output = sprintf('<a href="%s" target="_blank">#%s</a>', esc_url($order_url), esc_html($item->order_id));
+        if (function_exists('wc_get_order') && ($order = wc_get_order($item->order_id))) {
+            $output .= '<div class="row-actions"><a href="' . esc_url($order_url) . '" target="_blank">' . __('View Order', 'team556-pay') . '</a></div>';
+        }
+        return $output;
     }
 
-    /**
-     * Column for Solana Signature, making it linkable to explorer.
-     */
-    protected function column_signature($item) {
-        if (!empty($item->signature)) {
-            $network = get_option('team556_solana_pay_network', 'mainnet');
-            $explorer_base_url = $network === 'mainnet' ? 'https://explorer.solana.com/tx/' : 'https://explorer.solana.com/tx/';
-            $explorer_cluster_param = $network === 'mainnet' ? '?cluster=mainnet-beta' : '?cluster=devnet';
-            $url = $explorer_base_url . esc_attr($item->signature) . $explorer_cluster_param;
-            return sprintf('<a href="%s" target="_blank" title="%s">%s...%s</a>',
-                esc_url($url),
-                esc_attr($item->signature),
-                esc_html(substr($item->signature, 0, 8)),
-                esc_html(substr($item->signature, -8))
-            );
+    protected function column_order_total($item) {
+        if ($item->order_id && function_exists('wc_get_order') && ($order = wc_get_order($item->order_id))) {
+            return wp_kses_post($order->get_formatted_order_total());
         }
         return __('N/A', 'team556-pay');
     }
 
-    /**
-     * Column for WooCommerce Order Link.
-     */
-    protected function column_wc_order_link($item) {
-        if ($item->order_id && intval($item->order_id) > 0) {
-            $order_url = admin_url('post.php?post=' . intval($item->order_id) . '&action=edit');
-            return sprintf('<a href="%s" class="button button-small" target="_blank">%s %s</a>', 
-                esc_url($order_url), 
-                '<span class="dashicons dashicons-external"></span>',
-                __('View Order', 'team556-pay')
-            );
+    protected function column_customer($item) {
+        if (!empty($item->billing_first_name) || !empty($item->billing_last_name)) {
+            $name = trim($item->billing_first_name . ' ' . $item->billing_last_name);
+            return esc_html($name);
+        }
+        if ($item->order_id) {
+            $order = wc_get_order($item->order_id);
+            if ($order) {
+                return esc_html($order->get_formatted_billing_full_name());
+            }
+        }
+        return __('Guest or N/A', 'team556-pay');
+    }
+
+    protected function column_transaction_signature($item) {
+        if (!empty($item->transaction_signature)) {
+            $url = sprintf('https://solscan.io/tx/%s', esc_attr($item->transaction_signature));
+            $short_sig = substr($item->transaction_signature, 0, 8) . '...' . substr($item->transaction_signature, -8);
+            return sprintf('<a href="%s" target="_blank" title="%s">%s</a>', esc_url($url), esc_attr($item->transaction_signature), esc_html($short_sig));
         }
         return __('N/A', 'team556-pay');
     }
 
-    /**
-     * Prepare items for the table.
-     */
+    protected function column_status($item) {
+        return !empty($item->status) ? esc_html(ucfirst($item->status)) : __('N/A', 'team556-pay');
+    }
+
     public function prepare_items() {
         $this->_column_headers = [$this->get_columns(), [], $this->get_sortable_columns()];
-
         $per_page = $this->get_items_per_page('transactions_per_page', 20);
         $current_page = $this->get_pagenum();
-        $total_items = $this->db->count_transactions(); // You might need to pass search/filter params here
+        $search_term = !empty($_REQUEST['s']) ? sanitize_text_field($_REQUEST['s']) : '';
+
+        $query_args = ['search' => $search_term];
+        $total_items = $this->db->count_transactions($query_args);
 
         $this->set_pagination_args([
             'total_items' => $total_items,
             'per_page'    => $per_page
         ]);
 
-        $args = [
+        $get_args = [
             'number'  => $per_page,
             'offset'  => ($current_page - 1) * $per_page,
             'orderby' => sanitize_sql_orderby(isset($_GET['orderby']) ? $_GET['orderby'] : 'created_at'),
             'order'   => isset($_GET['order']) && in_array(strtoupper($_GET['order']), ['ASC', 'DESC']) ? $_GET['order'] : 'DESC',
+            'search'  => $search_term,
         ];
-
-        // Handle search
-        if (!empty($_REQUEST['s'])) {
-            $args['search'] = sanitize_text_field($_REQUEST['s']);
-            // Adjust total_items count if search is applied
-            // This might require a separate count method in Team556_Pay_DB that accepts search terms
-            // For now, pagination might be inaccurate with search until $db->count_transactions($args) is implemented.
-        }
-
-        $this->items = $this->db->get_transactions($args);
-    }
-
-    /**
-     *  Associative array of columns
-     *
-     * @return array
-     */
-    function get_bulk_actions() {
-        $actions = [
-            // 'bulk-delete' => 'Delete' // Example, if you implement bulk actions
-        ];
-        return $actions;
-    }
-
-    /**
-     * Displays the search box.
-     *
-     * @param string $text     The 'submit' button label.
-     * @param string $input_id ID attribute value for the search input field.
-     */
-    public function search_box( $text, $input_id ) {
-        if ( empty( $_REQUEST['s'] ) && ! $this->has_items() ) {
-            return;
-        }
-
-        $input_id = $input_id . '-search-input';
-
-        if ( ! empty( $_REQUEST['orderby'] ) ) {
-            echo '<input type="hidden" name="orderby" value="' . esc_attr( $_REQUEST['orderby'] ) . '" />';
-        }
-        if ( ! empty( $_REQUEST['order'] ) ) {
-            echo '<input type="hidden" name="order" value="' . esc_attr( $_REQUEST['order'] ) . '" />';
-        }
-        if ( ! empty( $_REQUEST['post_mime_type'] ) ) {
-            echo '<input type="hidden" name="post_mime_type" value="' . esc_attr( $_REQUEST['post_mime_type'] ) . '" />';
-        }
-        if ( ! empty( $_REQUEST['detached'] ) ) {
-            echo '<input type="hidden" name="detached" value="' . esc_attr( $_REQUEST['detached'] ) . '" />';
-        }
-        ?>
-        <p class="search-box">
-            <label class="screen-reader-text" for="<?php echo esc_attr( $input_id ); ?>"><?php echo esc_html( $text ); ?>:</label>
-            <input type="search" id="<?php echo esc_attr( $input_id ); ?>" name="s" value="<?php _admin_search_query(); ?>" />
-            <?php submit_button( $text, '', '', false, array( 'id' => 'search-submit' ) ); ?>
-        </p>
-        <?php
+        $this->items = $this->db->get_transactions($get_args);
     }
 }

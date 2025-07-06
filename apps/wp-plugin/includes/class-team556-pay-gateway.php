@@ -48,7 +48,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         if (!$this->logger) {
             $this->logger = wc_get_logger();
         }
-        $this->logger->log($level, $message, array('source' => $source));
+        // $this->logger->log($level, $message, array('source' => $source));
     }
 
     /**
@@ -128,7 +128,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         // Initialize logger (always get a logger so we can write gateway logs)
     $this->logger = wc_get_logger();
     // Write an initialization log so the gateway log file is always created
-    $this->log_wc('Team556 Pay Gateway constructor executed', 'team556-pay-gateway', 'info');
+    // $this->log_wc('Team556 Pay Gateway constructor executed', 'team556-pay-gateway', 'info');
 
     // Additional logger instance for debug_mode if explicit WC_Logger class check is needed
     // Initialize logger if debug mode is enabled (legacy check retained for backwards compatibility)
@@ -152,7 +152,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         if ($this->debug_mode === 'yes' && is_object($this->logger)) {
             // Prepend context to the message for clarity in logs
             $log_message = '[' . strtoupper($context) . '] ' . $message;
-            $this->logger->debug($log_message, array('source' => 'team556-pay-gateway'));
+            // $this->logger->debug($log_message, array('source' => 'team556-pay-gateway'));
         }
     }
 
@@ -174,7 +174,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         }
         
         // Log the message
-        $this->logger->log($level, $message, array('source' => 'team556-pay-gateway'));
+        // $this->logger->log($level, $message, array('source' => 'team556-pay-gateway'));
     }
 
     /**
@@ -290,6 +290,25 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
      * @return array
      */
     public function process_payment($order_id) {
+    // Enforce maximum order total before any processing
+    $global_settings = get_option('team556_pay_settings');
+    $enable_max_total_limit = isset($global_settings['enable_max_order_total']) && $global_settings['enable_max_order_total'];
+    $max_total_setting = isset($global_settings['max_order_total']) ? $global_settings['max_order_total'] : '';
+
+    if ( $enable_max_total_limit && $max_total_setting !== '' && is_numeric( $max_total_setting ) && (float) $max_total_setting > 0 ) {
+        $order        = wc_get_order( $order_id );
+        $cart_total   = floatval( $order ? $order->get_total() : 0 );
+        $max_total    = floatval( $max_total_setting );
+        if ( $cart_total > $max_total ) {
+            $cart_plain = html_entity_decode( strip_tags( wc_price( $cart_total ) ) );
+            $max_plain  = html_entity_decode( strip_tags( wc_price( $max_total ) ) );
+            $error_message = sprintf( __( 'Team556 Pay is not available because your order total of %s exceeds the maximum of %s.', 'team556-pay' ), $cart_plain, $max_plain );
+            // Show error message to customer
+            wc_add_notice( $error_message, 'error' );
+            return [ 'result' => 'failure' ];
+        }
+    }
+
         $order = wc_get_order($order_id);
         
         // Check if we received a transaction signature from the frontend
@@ -797,6 +816,32 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
      * Payment fields
      */
     public function payment_fields() {
+        $max_total_raw = $this->get_option('max_order_total');
+        $max_total_value = !empty($max_total_raw) ? floatval($max_total_raw) : 0;
+        $current_cart_total = WC()->cart->get_total('edit');
+
+        if ($max_total_value > 0 && $current_cart_total > $max_total_value) {
+            $error_message = sprintf(
+                __('Team556 Pay is not available because your order total of %s exceeds the maximum of %s.', 'team556-pay'),
+                wc_price($current_cart_total),
+                wc_price($max_total_value)
+            );
+
+            echo '<div class="woocommerce-error">' . esc_html($error_message) . '</div>';
+
+            // JavaScript to disable the place order button
+            wc_enqueue_js("
+                jQuery(document).ready(function($) {
+                    var placeOrderButton = $('#place_order');
+                    if (placeOrderButton.length) {
+                        placeOrderButton.prop('disabled', true);
+                        console.log('Team556 Pay: Place order button disabled due to cart total exceeding limit.');
+                    }
+                });
+            ");
+
+            return; // Stop rendering the rest of the payment fields
+        }
         ?>
         <style>
             .team556-fields-container { border: 1px solid #e0e0e0; padding: 15px; border-radius: 5px; margin-top: 1em; }
@@ -913,18 +958,18 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
             ob_clean();
         }
         $logger = wc_get_logger();
-        $logger->debug('TEAM556 AJAX: static_ajax_check_order_status_handler called', array('source' => 'team556-pay-ajax'));
+        // $logger->debug('TEAM556 AJAX: static_ajax_check_order_status_handler called', array('source' => 'team556-pay-ajax'));
 
         // Ensure WooCommerce is active and its functions are available
         if (!class_exists('WooCommerce') || !WC()->payment_gateways()) {
-            $logger->error('TEAM556 AJAX Error: WooCommerce or Payment Gateways not available in static_ajax_check_order_status_handler.', array('source' => 'team556-pay-ajax'));
+            // $logger->error('TEAM556 AJAX Error: WooCommerce or Payment Gateways not available in static_ajax_check_order_status_handler.', array('source' => 'team556-pay-ajax'));
             wp_send_json_error(array('message' => 'WooCommerce critical components not available.'));
             return;
         }
 
         $gateways = WC()->payment_gateways->payment_gateways();
         if (!isset($gateways['team556_pay'])) {
-            $logger->error('TEAM556 AJAX Error: Team556_Pay_Gateway not found in available gateways.', array('source' => 'team556-pay-ajax'));
+            // $logger->error('TEAM556 AJAX Error: Team556_Pay_Gateway not found in available gateways.', array('source' => 'team556-pay-ajax'));
             wp_send_json_error(array('message' => 'Team556 Pay gateway not available.'));
             return;
         }
@@ -938,7 +983,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
         $gateway_instance->ajax_check_order_status();
         
         // Fallback if the instance method doesn't exit (it should)
-        $logger->warning('TEAM556 AJAX Warning: ajax_check_order_status instance method did not exit as expected.', array('source' => 'team556-pay-ajax'));
+        // $logger->warning('TEAM556 AJAX Warning: ajax_check_order_status instance method did not exit as expected.', array('source' => 'team556-pay-ajax'));
         wp_send_json_error(array('message' => 'Gateway handler did not terminate request.'));
     }
 
@@ -1037,6 +1082,25 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
      * @return bool
      */
     public function is_available() {
+        // Check parent availability first
+        $parent_available = parent::is_available();
+        if ( ! $parent_available ) {
+            return false;
+        }
+
+        // Enforce maximum order total
+        $global_settings = get_option( 'team556_pay_settings' );
+        $enable_max_total_limit = isset( $global_settings['enable_max_order_total'] ) && $global_settings['enable_max_order_total'];
+        $max_total_setting      = isset( $global_settings['max_order_total'] ) ? $global_settings['max_order_total'] : '';
+        if ( $enable_max_total_limit && $max_total_setting !== '' && is_numeric( $max_total_setting ) && (float) $max_total_setting > 0 ) {
+            // Use cart total if available, otherwise order amount
+            $cart_total = WC()->cart ? floatval( WC()->cart->total ) : 0;
+            if ( $cart_total > floatval( $max_total_setting ) ) {
+                // Do not mark unavailable; let frontend/payment_fields handle user messaging.
+                $this->log( 'Cart total exceeds max limit; keeping gateway available so user sees error message.', 'info' );
+            }
+        }
+
         // Check wallet_address specifically, considering global settings as per constructor logic
         $effective_wallet_address = $this->get_option('wallet_address');
         if (empty($effective_wallet_address)) {
@@ -1195,49 +1259,49 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
             ob_clean();
         }
         
-        $this->log_wc('ajax_check_order_status called', 'team556-pay-ajax');
-        $this->log_wc('POST data: ' . print_r($_POST, true), 'team556-pay-ajax');
+        // $this->log_wc('ajax_check_order_status called', 'team556-pay-ajax');
+        // // $this->log_wc('POST data: ' . print_r($_POST, true), 'team556-pay-ajax');
         
         try {
             // Check if nonce is present
             if (!isset($_POST['nonce'])) {
-                $this->log_wc('No nonce provided in POST data', 'team556-pay-ajax', 'error');
+                // $this->log_wc('No nonce provided in POST data', 'team556-pay-ajax', 'error');
                 wp_send_json_error(array('message' => 'No nonce provided'));
                 return;
             }
             
-            $this->log_wc('Nonce provided: ' . $_POST['nonce'], 'team556-pay-ajax');
+            // $this->log_wc('Nonce provided: ' . $_POST['nonce'], 'team556-pay-ajax');
             
             // Verify nonce
             if (!wp_verify_nonce($_POST['nonce'], 'team556_pay_check_order_status')) {
-                $this->log_wc('Nonce verification failed', 'team556-pay-ajax', 'error');
+                // $this->log_wc('Nonce verification failed', 'team556-pay-ajax', 'error');
                 wp_send_json_error(array('message' => 'Invalid nonce'));
                 return;
             }
             
-            $this->log_wc('Nonce verification successful', 'team556-pay-ajax');
+            // $this->log_wc('Nonce verification successful', 'team556-pay-ajax');
             
             $order_id = isset($_POST['order_id']) ? intval($_POST['order_id']) : 0;
             if (!$order_id) {
-                $this->log_wc('Invalid order ID: ' . $order_id, 'team556-pay-ajax', 'error');
+                // $this->log_wc('Invalid order ID: ' . $order_id, 'team556-pay-ajax', 'error');
                 wp_send_json_error(array('message' => 'Invalid order ID'));
                 return;
             }
             
-            $this->log_wc('Valid order ID: ' . $order_id, 'team556-pay-ajax');
+            // $this->log_wc('Valid order ID: ' . $order_id, 'team556-pay-ajax');
             
             $order = wc_get_order($order_id);
             if (!$order) {
-                $this->log_wc('Order not found: ' . $order_id, 'team556-pay-ajax', 'error');
+                // $this->log_wc('Order not found: ' . $order_id, 'team556-pay-ajax', 'error');
                 wp_send_json_error(array('message' => 'Order not found'));
                 return;
             }
             
-            $this->log_wc('Order found. Status: ' . $order->get_status(), 'team556-pay-ajax');
+            // $this->log_wc('Order found. Status: ' . $order->get_status(), 'team556-pay-ajax');
             
             // Check if order is paid or processing
             if (in_array($order->get_status(), array('processing', 'completed'))) {
-                $this->log_wc('Order is paid, redirecting', 'team556-pay-ajax');
+                // $this->log_wc('Order is paid, redirecting', 'team556-pay-ajax');
                 wp_send_json_success(array(
                     'status' => 'paid',
                     'redirect_url' => $this->get_return_url($order)
@@ -1248,13 +1312,13 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
             // Check for transaction signature in order meta
             $transaction_signature = $order->get_meta('_team556_transaction_signature');
             if (!empty($transaction_signature)) {
-                $this->log_wc('Transaction signature found: ' . $transaction_signature, 'team556-pay-ajax');
+                // $this->log_wc('Transaction signature found: ' . $transaction_signature, 'team556-pay-ajax');
                 
                 // Mark order as paid if not already
                 if (!$order->is_paid()) {
                     $order->payment_complete($transaction_signature);
                     $order->add_order_note(__('Payment completed via Team556 Pay. Transaction signature: ' . $transaction_signature, 'team556-pay'));
-                    $this->log_wc('Order marked as paid', 'team556-pay-ajax');
+                    // $this->log_wc('Order marked as paid', 'team556-pay-ajax');
                 }
                 
                 wp_send_json_success(array(
@@ -1267,13 +1331,13 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
             // Check webhook verification flag
             $webhook_verified = $order->get_meta('_team556_webhook_verified');
             if ($webhook_verified === 'yes') {
-                $this->log_wc('Webhook verification found', 'team556-pay-ajax');
+                // $this->log_wc('Webhook verification found', 'team556-pay-ajax');
                 
                 // Mark order as paid if not already
                 if (!$order->is_paid()) {
                     $order->payment_complete();
                     $order->add_order_note(__('Payment completed via Team556 Pay webhook verification.', 'team556-pay'));
-                    $this->log_wc('Order marked as paid via webhook', 'team556-pay-ajax');
+                    // $this->log_wc('Order marked as paid via webhook', 'team556-pay-ajax');
                 }
                 
                 wp_send_json_success(array(
@@ -1283,7 +1347,7 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
                 return;
             }
             
-            $this->log_wc('No payment detected yet', 'team556-pay-ajax');
+            // $this->log_wc('No payment detected yet', 'team556-pay-ajax');
             
             // Payment not detected yet
             wp_send_json_success(array(
@@ -1291,9 +1355,50 @@ class Team556_Pay_Gateway extends WC_Payment_Gateway {
             ));
             
         } catch (Exception $e) {
-            $this->log_wc('Exception occurred: ' . $e->getMessage(), 'team556-pay-ajax', 'error');
-            $this->log_wc('Exception trace: ' . $e->getTraceAsString(), 'team556-pay-ajax', 'debug');
+            // $this->log_wc('Exception occurred: ' . $e->getMessage(), 'team556-pay-ajax', 'error');
+            // $this->log_wc('Exception trace: ' . $e->getTraceAsString(), 'team556-pay-ajax', 'debug');
             wp_send_json_error(array('message' => 'Server error: ' . $e->getMessage()));
         }
     }
-} 
+
+    /**
+     * Display Team556 Pay transaction data in the WooCommerce admin order page.
+     *
+     * Hooked to woocommerce_admin_order_data_after_billing_address.
+     *
+     * @param WC_Order|int $order Order object or ID.
+     */
+    public function display_transaction_data_in_admin( $order ) {
+        if ( ! $order instanceof WC_Order ) {
+            $order = wc_get_order( $order );
+        }
+        if ( ! $order ) {
+            return;
+        }
+
+        $signature = $order->get_meta( '_team556_transaction_signature' );
+        if ( ! $signature ) {
+            // Fallback to legacy meta key.
+            $signature = $order->get_meta( '_team556_pay_signature' );
+        }
+
+        $network  = $this->network === 'mainnet' ? 'mainnet-beta' : 'devnet';
+        $explorer = $signature ? sprintf( 'https://explorer.solana.com/tx/%s?cluster=%s', $signature, $network ) : '';
+
+        echo '<div class="order_data_column">';
+        echo '<h4>' . esc_html__( 'Team556 Pay', 'team556-pay' ) . '</h4>';
+
+        if ( $signature ) {
+            echo '<p><strong>' . esc_html__( 'Transaction:', 'team556-pay' ) . '</strong> ';
+            echo '<a href="' . esc_url( $explorer ) . '" target="_blank" rel="noopener noreferrer">';
+            echo esc_html( substr( $signature, 0, 4 ) . '...' . substr( $signature, -4 ) );
+            echo '</a></p>';
+        } else {
+            echo '<p>' . esc_html__( 'No transaction signature recorded.', 'team556-pay' ) . '</p>';
+        }
+
+        echo '</div>';
+    }
+
+}
+ 

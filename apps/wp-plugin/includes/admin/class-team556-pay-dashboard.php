@@ -1,6 +1,6 @@
 <?php
 /**
- * Team556 Solana Pay Dashboard
+ * Team556 Pay Dashboard
  * Handles the admin dashboard for the plugin
  */
 
@@ -36,7 +36,7 @@ class Team556_Pay_Dashboard {
     public function add_admin_menu() {
         // Main dashboard page
         add_menu_page(
-            __('Team556 Solana Pay', 'team556-pay'),
+            __('Team556 Pay', 'team556-pay'),
             __('Team556 Pay', 'team556-pay'),
             'manage_options',
             'team556-pay',
@@ -117,7 +117,7 @@ class Team556_Pay_Dashboard {
         // Localize script
         wp_localize_script('team556-pay-admin', 'team556PayAdmin', array(
             'ajaxUrl' => admin_url('admin-ajax.php'),
-            'nonce'   => wp_create_nonce('team556-solana-pay-admin-nonce'),
+            'nonce'   => wp_create_nonce('team556-pay-admin-nonce'),
             'i18n'    => array(
                 'confirmDelete' => __('Are you sure you want to delete this transaction?', 'team556-pay'),
                 'deletingTransaction' => __('Deleting transaction...', 'team556-pay'),
@@ -151,8 +151,9 @@ class Team556_Pay_Dashboard {
         }
         
         wp_add_dashboard_widget(
-            'team556_solana_pay_stats_widget',
-            __('Team556 Solana Pay Stats', 'team556-pay'),
+            'team556_pay_stats_widget',
+            'team556_pay_stats_widget'
+            __('Team556 Pay Stats', 'team556-pay'),
             array($this, 'render_dashboard_widget')
         );
     }
@@ -218,8 +219,8 @@ class Team556_Pay_Dashboard {
                             <div class="team556-tx-main-info">
                                 <div class="team556-tx-signature">
                                     <a href="<?php echo esc_url($explorer_url); ?>" target="_blank" title="<?php echo esc_attr($transaction->signature); ?>">
-                                        <?php echo esc_html(substr($transaction->signature, 0, 8) . '...' . substr($transaction->signature, -8)); ?>
-                                        <span class="dashicons dashicons-external"></span>
+                                        <span class="dashicons dashicons-external"></span> <?php _e('Explorer', 'team556-pay'); ?>
+                                        
                                     </a>
                                 </div>
                                 <div class="team556-tx-date">
@@ -246,10 +247,12 @@ class Team556_Pay_Dashboard {
                                         </a>
                                     </div>
                                  <?php endif; ?>
-                                 <div class="team556-tx-payer" title="<?php echo esc_attr($transaction->wallet_address); ?>">
-                                    <?php _e('Payer:', 'team556-pay'); ?>
-                                    <?php echo esc_html(substr($transaction->wallet_address, 0, 4) . '...' . substr($transaction->wallet_address, -4)); ?>
-                                 </div>
+                                 <?php if (!empty($transaction->wallet_address) && strtolower($transaction->wallet_address) !== 'unknown') : ?>
+                                    <div class="team556-tx-payer" title="<?php echo esc_attr($transaction->wallet_address); ?>">
+                                        <?php _e('Wallet:', 'team556-pay'); ?>
+                                        <?php echo esc_html(substr($transaction->wallet_address, 0, 4) . '...' . substr($transaction->wallet_address, -4)); ?>
+                                    </div>
+                                 <?php endif; ?>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -286,11 +289,16 @@ class Team556_Pay_Dashboard {
         // $success_rate = ($total_transactions > 0) ? ($successful_transactions / $total_transactions) * 100 : 0; // Not used for now
         
         // Get payment wallet and token settings
-        $wallet_address = get_option('team556_solana_pay_wallet_address', '');
+        // Retrieve merchant wallet address from plugin settings (fallback to legacy option key)
+        $settings       = get_option('team556_pay_settings', array());
+        $wallet_address = isset($settings['merchant_wallet_address']) ? trim($settings['merchant_wallet_address']) : '';
+        if (!$wallet_address) {
+            $wallet_address = get_option('team556_solana_pay_wallet_address', '');
+        }
         
         // Recent transactions
         $recent_transactions = $db->get_transactions(array(
-            'number' => 10,
+            'number' => 5,
             'order' => 'DESC',
             'orderby' => 'created_at'
         ));
@@ -305,10 +313,20 @@ class Team556_Pay_Dashboard {
         
         ?>
         <div class="wrap team556-admin-dashboard team556-dark-theme-wrapper">
-            <h1><?php _e('Team556 Solana Pay Dashboard', 'team556-pay'); ?></h1>
+            <div class="team556-welcome-header" style="margin-bottom:var(--team556-spacing-large);">
+                <div class="team556-welcome-logo">
+                    <img src="<?php echo TEAM556_PAY_PLUGIN_URL; ?>assets/images/logo-round-dark.png" alt="Team556 Pay" style="max-width:80px; height:auto;" />
+                </div>
+                <div class="team556-welcome-intro">
+                    <h1 style="margin:0;"><?php _e('Team556 Pay Dashboard', 'team556-pay'); ?></h1>
+                </div>
+            </div>
             
             <div class="team556-dashboard-header team556-portfolio-card">
                 <div class="team556-portfolio-info">
+                    <div class="team556-dashboard-logo">
+                        <img src="<?php echo TEAM556_PAY_PLUGIN_URL; ?>assets/images/logo-round-dark.png" alt="<?php esc_attr_e('Team556 Pay', 'team556-pay'); ?>" />
+                    </div>
                     <?php if (!empty($wallet_address)) : ?>
                         <div class="team556-portfolio-wallet">
                             <span class="dashicons dashicons-admin-users team556-portfolio-icon"></span>
@@ -327,7 +345,7 @@ class Team556_Pay_Dashboard {
                         </div>
                         <div class="team556-portfolio-balance">
                             <div class="team556-balance-value"><?php echo esc_html($total_amount_display); ?></div>
-                            <div class="team556-balance-label"><?php _e('Total Received (Completed)', 'team556-pay'); ?></div>
+                            <div class="team556-balance-label"><?php _e('Total TEAM Received (Completed)', 'team556-pay'); ?></div>
                             <?php /* TODO: Potentially add token symbol here */ ?>
                         </div>
                     <?php else : ?>
@@ -368,8 +386,7 @@ class Team556_Pay_Dashboard {
                                 <div class="team556-tx-main-info">
                                     <div class="team556-tx-signature">
                                         <a href="<?php echo esc_url($explorer_url); ?>" target="_blank" title="<?php echo esc_attr($transaction->signature); ?>">
-                                            <?php echo esc_html(substr($transaction->signature, 0, 8) . '...' . substr($transaction->signature, -8)); ?>
-                                            <span class="dashicons dashicons-external"></span>
+                                             <?php _e('Explorer', 'team556-pay'); ?>
                                         </a>
                                     </div>
                                     <div class="team556-tx-date">
@@ -397,8 +414,31 @@ class Team556_Pay_Dashboard {
                                         </div>
                                      <?php endif; ?>
                                      <div class="team556-tx-payer" title="<?php echo esc_attr($transaction->wallet_address); ?>">
-                                        <?php _e('Payer:', 'team556-pay'); ?>
-                                        <?php echo esc_html(substr($transaction->wallet_address, 0, 4) . '...' . substr($transaction->wallet_address, -4)); ?>
+                                        <?php if (!empty($transaction->wallet_address) && strtolower($transaction->wallet_address) !== 'unknown') : ?>
+                                            <?php _e('Wallet:', 'team556-pay'); ?>
+                                            <?php echo esc_html(substr($transaction->wallet_address, 0, 4) . '...' . substr($transaction->wallet_address, -4)); ?>
+                                        <?php endif; ?>
+
+                                        <?php
+                                        // Additional details for dashboard card
+                                        $order_total_display = __('N/A', 'team556-pay');
+                                        $customer_display    = __('Guest', 'team556-pay');
+                                        if (!empty($transaction->order_id) && function_exists('wc_get_order')) {
+                                            $order = wc_get_order($transaction->order_id);
+                                            if ($order) {
+                                                $order_total_display = $order->get_formatted_order_total();
+                                                $customer_display    = $order->get_formatted_billing_full_name();
+                                            }
+                                        }
+                                        ?>
+                                        <div class="team556-tx-customer" title="<?php echo esc_attr($customer_display); ?>">
+                                            <?php _e('Customer:', 'team556-pay'); ?>
+                                            <?php echo esc_html($customer_display); ?>
+                                        </div>
+                                        <div class="team556-tx-order-total">
+                                            <?php _e('Order Total:', 'team556-pay'); ?>
+                                            <?php echo wp_kses_post($order_total_display); ?>
+                                        </div>
                                      </div>
                                 </div>
                             </div>
@@ -429,20 +469,12 @@ class Team556_Pay_Dashboard {
                         </div>
                     </div>
                     
-                    <div class="team556-help-step">
-                        <div class="team556-step-number">2</div>
-                        <div class="team556-step-content">
-                            <h3><?php _e('Add Payment Buttons', 'team556-pay'); ?></h3>
-                            <p><?php _e('Use the shortcode to add payment buttons to any page or post.', 'team556-pay'); ?></p>
-                            <code>[team556_pay_button amount="10" label="My Product"]</code>
-                        </div>
-                    </div>
                     
                     <div class="team556-help-step">
                         <div class="team556-step-number">3</div>
-                        <div class="team556-step-content">
+                                            <div class="team556-step-content">
                             <h3><?php _e('Enable in WooCommerce', 'team556-pay'); ?></h3>
-                            <p><?php _e('If you use WooCommerce, Team556 Solana Pay has been automatically enabled. You can adjust settings in your payment methods.', 'team556-pay'); ?></p>
+                            <p><?php _e('If you use WooCommerce, Team556 Pay has been automatically enabled. You can adjust settings in your payment methods.', 'team556-pay'); ?></p>
                             <?php if (class_exists('WooCommerce')) : ?>
                                 <a href="<?php echo esc_url(admin_url('admin.php?page=wc-settings&tab=checkout')); ?>" class="team556-button">
                                     <?php _e('WooCommerce Payment Settings', 'team556-pay'); ?>
@@ -464,9 +496,16 @@ class Team556_Pay_Dashboard {
     public function render_transactions_page() {
         ?>
         <div class="wrap team556-admin-page team556-transactions-page team556-dark-theme-wrapper">
-            <h1 class="wp-heading-inline">
+            <div class="team556-welcome-header" style="margin-bottom:var(--team556-spacing-large);">
+            <div class="team556-welcome-logo">
+                <img src="<?php echo TEAM556_PAY_PLUGIN_URL; ?>assets/images/logo-round-dark.png" alt="Team556 Pay" style="max-width:80px; height:auto;" />
+            </div>
+            <div class="team556-welcome-intro">
+                <h1 style="margin:0;">
                 <?php _e('Team556 Pay Transactions', 'team556-pay'); ?>
             </h1>
+            </div><!-- /.team556-welcome-intro -->
+            </div><!-- /.team556-welcome-header -->
 
             <?php
             // Ensure the list table class is loaded
@@ -485,7 +524,42 @@ class Team556_Pay_Dashboard {
                 <!-- For plugins, we also need to ensure that the form posts back to our current page -->
                 <input type="hidden" name="page" value="<?php echo esc_attr($_REQUEST['page']); ?>" />
                 <?php
-                $transactions_list_table->search_box(__('Search Transactions', 'team556-pay'), 'search_id');
+                // Summary stats
+        $db = new Team556_Pay_DB();
+        $total_transactions     = $db->count_transactions();
+        $successful_transactions = $db->count_transactions(array('status' => 'completed'));
+        $pending_transactions    = $db->count_transactions(array('status' => 'pending'));
+        $failed_transactions     = $db->count_transactions(array('status' => 'failed'));
+        $total_amount            = $db->get_total_amount();
+        ?>
+        <div class="team556-portfolio-card team556-transactions-summary" style="margin-top:20px;">
+            
+                
+            <div class="team556-stats-grid">
+                <div class="team556-stat-card">
+                    <div class="team556-stat-value"><?php echo esc_html(number_format_i18n($total_transactions)); ?></div>
+                    <div class="team556-stat-label"><?php _e('Total Transactions', 'team556-pay'); ?></div>
+                </div>
+                <div class="team556-stat-card">
+                    <div class="team556-stat-value"><?php echo esc_html(number_format_i18n($successful_transactions)); ?></div>
+                    <div class="team556-stat-label"><?php _e('Completed', 'team556-pay'); ?></div>
+                </div>
+                <div class="team556-stat-card">
+                    <div class="team556-stat-value"><?php echo esc_html(number_format_i18n($pending_transactions)); ?></div>
+                    <div class="team556-stat-label"><?php _e('Pending', 'team556-pay'); ?></div>
+                </div>
+                <div class="team556-stat-card">
+                    <div class="team556-stat-value"><?php echo esc_html(number_format_i18n($failed_transactions)); ?></div>
+                    <div class="team556-stat-label"><?php _e('Failed', 'team556-pay'); ?></div>
+                </div>
+                <div class="team556-stat-card">
+                    <div class="team556-stat-value"><?php echo esc_html(number_format_i18n($total_amount, 2)); ?></div>
+                    <div class="team556-stat-label"><?php _e('Total Amount (TEAM)', 'team556-pay'); ?></div>
+                </div>
+            </div>
+        </div>
+        <?php
+            $transactions_list_table->search_box(__('Search Transactions', 'team556-pay'), 'search_id');
                 $transactions_list_table->display();
                 ?>
             </form>

@@ -87,12 +87,15 @@ class Team556_Pay_DB {
         }
         
         $result = $wpdb->insert($this->transactions_table, $data);
-        
-        if ($result) {
-            return $wpdb->insert_id;
+        if (!$result) {
+            // Log database error to WooCommerce log system
+            if (function_exists('wc_get_logger')) {
+                $logger  = wc_get_logger();
+                $context = array( 'source' => 'team556-pay' );
+                $logger->error( 'DB insert failed: ' . $wpdb->last_error . ' | Data: ' . wp_json_encode( $data ), $context );
+            }
         }
-        
-        return false;
+        return $result ? $wpdb->insert_id : false;
     }
 
     /**
@@ -170,52 +173,60 @@ class Team556_Pay_DB {
         global $wpdb;
 
         $defaults = array(
-            'number'         => 20,
-            'offset'         => 0,
-            'orderby'        => 'id',
-            'order'          => 'DESC',
-            'status'         => '',
-            'wallet_address' => '',
-            'order_id'       => null,
-            'search'         => '',
+            'number'   => 20,
+            'offset'   => 0,
+            'orderby'  => 'id',
+            'order'    => 'DESC',
+            'status'   => '',
+            'order_id' => null,
+            'search'   => '',
         );
 
         $args = wp_parse_args($args, $defaults);
 
-        // Sanitize orderby to prevent SQL injection
-        $allowed_orderby = array('id', 'amount', 'status', 'created_at', 'order_id');
-        $orderby = in_array($args['orderby'], $allowed_orderby) ? $args['orderby'] : 'id';
+        // Whitelist orderby to prevent SQL injection
+        $allowed_orderby = ['id', 'amount', 'status', 'created_at', 'order_id', 'customer'];
+        $orderby_key = in_array($args['orderby'], $allowed_orderby) ? $args['orderby'] : 'id';
+        
+        // Map public keys to actual DB columns for sorting
+        $orderby_map = [
+            'id'         => 't.id',
+            'amount'     => 't.amount',
+            'status'     => 't.status',
+            'created_at' => 't.created_at',
+            'order_id'   => 't.order_id',
+            'customer'   => 'pm_lname.meta_value',
+        ];
+        $orderby = $orderby_map[$orderby_key];
         $order = strtoupper($args['order']) === 'ASC' ? 'ASC' : 'DESC';
 
-        $sql = "SELECT * FROM {$this->transactions_table}";
+        $sql = "SELECT t.*, 
+                       pm_fname.meta_value as billing_first_name, 
+                       pm_lname.meta_value as billing_last_name
+                FROM {$this->transactions_table} t 
+                LEFT JOIN {$wpdb->posts} p ON t.order_id = p.ID AND p.post_type = 'shop_order'
+                LEFT JOIN {$wpdb->postmeta} pm_fname ON p.ID = pm_fname.post_id AND pm_fname.meta_key = '_billing_first_name'
+                LEFT JOIN {$wpdb->postmeta} pm_lname ON p.ID = pm_lname.post_id AND pm_lname.meta_key = '_billing_last_name'";
+        
         $where = array();
         $params = array();
 
-        // Add search term filter
         if (!empty($args['search'])) {
             $search_term = '%' . $wpdb->esc_like($args['search']) . '%';
-            $where[] = "(transaction_signature LIKE %s OR wallet_address LIKE %s OR order_id LIKE %s OR id LIKE %s)";
+            $where[] = "(t.transaction_signature LIKE %s OR t.order_id LIKE %s OR t.id LIKE %s OR CONCAT(pm_fname.meta_value, ' ', pm_lname.meta_value) LIKE %s)";
             $params[] = $search_term;
             $params[] = $search_term;
             $params[] = $search_term;
             $params[] = $search_term;
         }
 
-        // Add status filter
         if (!empty($args['status'])) {
-            $where[] = "status = %s";
+            $where[] = "t.status = %s";
             $params[] = $args['status'];
         }
 
-        // Add wallet address filter
-        if (!empty($args['wallet_address'])) {
-            $where[] = "wallet_address = %s";
-            $params[] = $args['wallet_address'];
-        }
-
-        // Add order ID filter
         if (!is_null($args['order_id'])) {
-            $where[] = "order_id = %d";
+            $where[] = "t.order_id = %d";
             $params[] = $args['order_id'];
         }
 
@@ -223,7 +234,7 @@ class Team556_Pay_DB {
             $sql .= ' WHERE ' . implode(' AND ', $where);
         }
 
-        $sql .= " ORDER BY {$orderby} {$order}";
+        $sql .= " ORDER BY {$orderby} {$order}, t.id DESC";
 
         $sql .= " LIMIT %d, %d";
         $params[] = $args['offset'];
@@ -231,7 +242,6 @@ class Team556_Pay_DB {
 
         $transactions = $wpdb->get_results($wpdb->prepare($sql, $params));
 
-        // Unserialize metadata
         foreach ($transactions as $transaction) {
             if (!empty($transaction->metadata)) {
                 $transaction->metadata = maybe_unserialize($transaction->metadata);
@@ -239,6 +249,60 @@ class Team556_Pay_DB {
         }
 
         return $transactions;
+    }
+
+    /**
+     * Get total amount of transactions
+     *
+     * @param array $args Query arguments
+     * @return float Total amount
+     */
+    public function get_total_amount($args = array()) {
+        global $wpdb;
+
+        $defaults = array(
+            'status'   => '',
+            'order_id' => null,
+            'search'   => '',
+        );
+
+        $args = wp_parse_args($args, $defaults);
+
+        $sql = "SELECT SUM(t.amount) 
+                FROM {$this->transactions_table} t 
+                LEFT JOIN {$wpdb->posts} p ON t.order_id = p.ID AND p.post_type = 'shop_order'
+                LEFT JOIN {$wpdb->postmeta} pm_fname ON p.ID = pm_fname.post_id AND pm_fname.meta_key = '_billing_first_name'
+                LEFT JOIN {$wpdb->postmeta} pm_lname ON p.ID = pm_lname.post_id AND pm_lname.meta_key = '_billing_last_name'";
+
+        $where  = array();
+        $params = array();
+
+        if (!empty($args['search'])) {
+            $search_term = '%' . $wpdb->esc_like($args['search']) . '%';
+            $where[]     = "(t.transaction_signature LIKE %s OR t.order_id LIKE %s OR t.id LIKE %s OR CONCAT(pm_fname.meta_value, ' ', pm_lname.meta_value) LIKE %s)";
+            $params[]    = $search_term;
+            $params[]    = $search_term;
+            $params[]    = $search_term;
+            $params[]    = $search_term;
+        }
+
+        if (!empty($args['status'])) {
+            $where[]  = "t.status = %s";
+            $params[] = $args['status'];
+        }
+
+        if (!is_null($args['order_id'])) {
+            $where[]  = "t.order_id = %d";
+            $params[] = $args['order_id'];
+        }
+
+        if (!empty($where)) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+
+        $total = $wpdb->get_var($wpdb->prepare($sql, $params));
+
+        return $total ? (float) $total : 0;
     }
 
     /**
@@ -251,43 +315,38 @@ class Team556_Pay_DB {
         global $wpdb;
 
         $defaults = array(
-            'status'         => '',
-            'wallet_address' => '',
-            'order_id'       => null,
-            'search'         => '',
+            'status'   => '',
+            'order_id' => null,
+            'search'   => '',
         );
 
         $args = wp_parse_args($args, $defaults);
 
-        $sql = "SELECT COUNT(*) FROM {$this->transactions_table}";
+        $sql = "SELECT COUNT(DISTINCT t.id) 
+                FROM {$this->transactions_table} t 
+                LEFT JOIN {$wpdb->posts} p ON t.order_id = p.ID AND p.post_type = 'shop_order'
+                LEFT JOIN {$wpdb->postmeta} pm_fname ON p.ID = pm_fname.post_id AND pm_fname.meta_key = '_billing_first_name'
+                LEFT JOIN {$wpdb->postmeta} pm_lname ON p.ID = pm_lname.post_id AND pm_lname.meta_key = '_billing_last_name'";
+        
         $where = array();
         $params = array();
 
-        // Add search term filter
         if (!empty($args['search'])) {
             $search_term = '%' . $wpdb->esc_like($args['search']) . '%';
-            $where[] = "(transaction_signature LIKE %s OR wallet_address LIKE %s OR order_id LIKE %s OR id LIKE %s)";
+            $where[] = "(t.transaction_signature LIKE %s OR t.order_id LIKE %s OR t.id LIKE %s OR CONCAT(pm_fname.meta_value, ' ', pm_lname.meta_value) LIKE %s)";
             $params[] = $search_term;
             $params[] = $search_term;
             $params[] = $search_term;
             $params[] = $search_term;
         }
 
-        // Add status filter
         if (!empty($args['status'])) {
-            $where[] = "status = %s";
+            $where[] = "t.status = %s";
             $params[] = $args['status'];
         }
 
-        // Add wallet address filter
-        if (!empty($args['wallet_address'])) {
-            $where[] = "wallet_address = %s";
-            $params[] = $args['wallet_address'];
-        }
-
-        // Add order ID filter
         if (!is_null($args['order_id'])) {
-            $where[] = "order_id = %d";
+            $where[] = "t.order_id = %d";
             $params[] = $args['order_id'];
         }
 

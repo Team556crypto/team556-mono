@@ -68,12 +68,23 @@ const Content = () => {
 
         fetch(`${ajaxUrl}?${params.toString()}`)
             .then(response => {
+                // If response is not ok, we want to read the JSON body for an error message
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.json().then(errorBody => {
+                        // Throw an error that includes the message from the server, or a fallback
+                        const message = (errorBody && errorBody.data && errorBody.data.message) 
+                            ? errorBody.data.message 
+                            : `HTTP error! status: ${response.status}`;
+                        throw new Error(message);
+                    }).catch(() => {
+                        // If parsing the error body fails, throw a generic error
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    });
                 }
-                return response.json();
+                return response.json(); // If ok, parse the success body
             })
             .then(body => {
+                // This block now only handles successful responses
                 if (body.success && body.data) {
                     setPricingInfo({
                         tokenPrice: parseFloat(body.data.tokenPrice) || 0,
@@ -82,24 +93,41 @@ const Content = () => {
                         requiredTokenAmount: parseFloat(body.data.requiredTokenAmount) || 0,
                         loaded: true,
                         // Use errorMessage from AJAX if present, otherwise check if critical data is missing
-                        error: body.data.errorMessage || 
-                               (!body.data.requiredTokenAmount || parseFloat(body.data.requiredTokenAmount) <= 0 || !body.data.tokenPrice || parseFloat(body.data.tokenPrice) <= 0) 
-                               ? __('Could not load token price or calculate amount. Please ensure cart is not empty.', 'team556-pay') 
-                               : null
+                        error: body.data.errorMessage || null
                     });
                 } else {
-                    const errorMessage = body.data && body.data.errorMessage ? body.data.errorMessage : __('Failed to load payment details. Please try again.', 'team556-pay');
-                    console.error('Team556 Pay: Error fetching payment data:', body);
-                    setPricingInfo({ tokenPrice: 0, currency: '', cartTotalFiat: 0, requiredTokenAmount: 0, loaded: true, error: errorMessage });
+                    // This handles cases where the server returns 200 OK but success: false
+                    throw new Error(body.data.message || 'Invalid data structure from server.');
                 }
             })
             .catch(error => {
-                console.error('Team556 Pay: Network error fetching payment data:', error);
-                setPricingInfo({ tokenPrice: 0, currency: '', cartTotalFiat: 0, requiredTokenAmount: 0, loaded: true, error: __('Network error. Please check your connection and try again.', 'team556-pay') });
+                // The error object now has a useful message from the server or a fallback
+                console.error('Error fetching payment data:', error);
+                setPricingInfo({
+                    tokenPrice: 0,
+                    currency: '',
+                    cartTotalFiat: 0,
+                    requiredTokenAmount: 0,
+                    loaded: true,
+                    error: error.message || __('Failed to load payment details. Please try again.', 'team556-pay')
+                });
             });
     }, []);
 
     const { description } = settings;
+
+    // Disable or enable the Place Order button depending on error state
+    useEffect(() => {
+        if (!pricingInfo.loaded) return;
+        const placeOrderBtn = document.querySelector('.wc-block-checkout-place-order-button, button[type="submit"], #place_order');
+        if (placeOrderBtn) {
+            if (pricingInfo.error) {
+                placeOrderBtn.setAttribute('disabled', 'disabled');
+            } else {
+                placeOrderBtn.removeAttribute('disabled');
+            }
+        }
+    }, [pricingInfo.error, pricingInfo.loaded]);
 
     if (!pricingInfo.loaded) {
         return <p>{__('Loading payment information...', 'team556-pay')}</p>;

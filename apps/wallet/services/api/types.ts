@@ -96,6 +96,30 @@ export interface SignTransactionResponse {
   signedTransaction: string // base64 encoded signed transaction
 }
 
+// Type for send transaction request
+export interface SendTransactionRequest {
+  signedTransaction: string // base64 encoded signed transaction
+}
+
+// Type for send transaction response
+export type SendTransactionResponse = {
+  success: boolean;
+  signature: string;
+  confirmation?: any; // Can be a detailed confirmation object
+};
+
+// Type for send webhook request
+export type SendWebhookRequest = {
+  webhookUrl: string;
+  transaction: string;
+};
+
+// Type for send webhook response
+export type SendWebhookResponse = {
+  success: boolean;
+  message: string;
+};
+
 // --- Get Recovery Phrase ---
 export interface GetRecoveryPhraseRequest {
   password: string

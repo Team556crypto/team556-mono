@@ -25,6 +25,28 @@
     /* Keep black and white for potential utility */
     --black: #000;
     --white: #fff;
+
+    /* Spacing scale */
+    --team556-spacing-xsmall: 4px;
+    --team556-spacing-small: 8px;
+    --team556-spacing-medium: 16px;
+    --team556-spacing-large: 24px;
+
+    /* Text colors */
+    --team556-primary-text-color: var(--team556-text);
+    --team556-secondary-text-color: var(--team556-text-secondary);
+
+    /* Accent colors */
+    --team556-primary-accent-color: var(--team556-secondary);
+    --team556-primary-accent-color-rgb: 66, 211, 151;
+
+    /* Button text */
+    --team556-button-text-color: var(--team556-text);
+
+    /* Border & Input */
+    --team556-border-color: var(--team556-border);
+    --team556-input-background-color: var(--team556-background-light);
+
 }
 
 /* General Dashboard Styles */
@@ -52,6 +74,18 @@
 }
 
 /* --- Portfolio Header Card --- */
+.team556-dashboard-logo {
+    flex: 0 0 80px; /* Fixed width for logo */
+    margin-right: var(--team556-spacing-medium);
+}
+
+.team556-dashboard-logo img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 50%; /* Match round logo if needed */
+}
+
 .team556-portfolio-card { /* Replaces .team556-dashboard-header styling */
     display: flex;
     justify-content: space-between;
@@ -207,10 +241,10 @@
     background-color: var(--team556-background-light);
     border: 1px solid var(--team556-border);
     border-radius: 12px;
-    padding: 16px;
+    padding: 12px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
     transition: box-shadow 0.2s ease-in-out;
 }
 
@@ -250,7 +284,7 @@
 }
 
 .team556-tx-amount {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--team556-text);
 }
@@ -366,6 +400,46 @@
 }
 
 .team556-step-content p {
+    color: var(--team556-text-secondary);
+}
+
+/* Transactions Summary */
+.team556-transactions-summary {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+}
+.team556-summary-logo img {
+    height: 60px;
+    width: auto;
+}
+
+/* Stats Grid */
+.team556-stats-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    flex: 1;
+}
+
+.team556-stat-card {
+    background-color: var(--team556-background-light);
+    border: 1px solid var(--team556-border);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    flex: 0 0 160px;
+}
+
+.team556-stat-value {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--team556-text);
+    margin-bottom: 4px;
+}
+
+.team556-stat-label {
+    font-size: 13px;
     color: var(--team556-text-secondary);
 }
 
@@ -677,6 +751,7 @@
 .team556-view-all a,
 .team556-help-step a,
 .team556-welcome-wrap a.button {
+    margin-top: 6px;
     display: inline-block;
     padding: 8px 16px;
     background-color: var(--team556-primary);
@@ -696,8 +771,7 @@
     color: var(--team556-text);
 }
 
-/* ==========================================================================
-   Welcome Page Styles
+/* ===================================================================   Welcome Page Styles
    ========================================================================== */
 .team556-welcome-wrap {
     max-width: 900px;
@@ -825,8 +899,7 @@
     margin-top: var(--team556-spacing-small);
 }
 
-/* ==========================================================================
-   End Welcome Page Styles
+/* ===================================================================   End Welcome Page Styles
    ========================================================================== */
 
 /* --- Transactions Page (WP_List_Table) Styles --- */
@@ -1190,6 +1263,12 @@
 }
 
 /* --- End Settings Page Specific Styles --- */
+
+/* Hide duplicate footer header row in transactions table */
+.team556-transactions-page .wp-list-table tfoot {
+    display: none;
+}
+
 
 /* --- Welcome Page Styles --- */
 .team556-welcome-wrap {

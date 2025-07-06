@@ -13,8 +13,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/team556-mono/server/internal/config"
-	"github.com/team556-mono/server/internal/models"
 	"github.com/team556-mono/server/internal/crypto"
+	"github.com/team556-mono/server/internal/models"
 	"gorm.io/gorm"
 )
 
@@ -82,6 +82,30 @@ type SignTransactionRequest struct {
 // SignTransactionResponse defines the structure for the transaction signing response
 type SignTransactionResponse struct {
 	SignedTransaction string `json:"signedTransaction"` // Base64 encoded signed transaction
+}
+
+// SendTransactionRequest defines the structure for the transaction sending request
+type SendTransactionRequest struct {
+	SignedTransaction string `json:"signedTransaction" validate:"required"` // Base64 encoded signed transaction
+}
+
+// SendTransactionResponse defines the structure for the transaction sending response
+type SendTransactionResponse struct {
+	Success      bool   `json:"success"`
+	Signature    string `json:"signature"`
+	Confirmation any    `json:"confirmation,omitempty"`
+}
+
+// SendWebhookRequest defines the structure for the webhook sending request
+type SendWebhookRequest struct {
+	WebhookURL  string `json:"webhookUrl"`
+	Transaction string `json:"transaction"`
+}
+
+// SendWebhookResponse defines the structure for the webhook sending response
+type SendWebhookResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
 }
 
 // --- Structs for Internal Solana API Communication ---
@@ -405,7 +429,59 @@ func GetWalletTeamTokenBalanceHandler(db *gorm.DB, cfg *config.Config) fiber.Han
 			Price:   solanaResp.Price,
 		}
 
-		return c.Status(fiber.StatusOK).JSON(resp)
+		return c.JSON(resp)
+	}
+}
+
+// SendWebhookHandler proxies a webhook to the merchant's server to avoid CORS issues.
+func SendWebhookHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// --- Authentication ---
+		userIDInterface := c.Locals("userID")
+		if userIDInterface == nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized: User ID not found in context"})
+		}
+		if _, ok := userIDInterface.(uint); !ok {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized: Invalid user ID format"})
+		}
+
+	req := new(SendWebhookRequest)
+	if err := c.BodyParser(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse request"})
+	}
+
+	if req.WebhookURL == "" || req.Transaction == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Missing webhookUrl or transaction"})
+	}
+
+	// Prepare the payload for the merchant's server
+	payload := map[string]string{"transaction": req.Transaction}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Error marshalling webhook payload: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create webhook payload"})
+	}
+
+	// Send the webhook
+	resp, err := http.Post(req.WebhookURL, "application/json", bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		log.Printf("Error sending webhook to %s: %v", req.WebhookURL, err)
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "Failed to send webhook"})
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("Webhook to %s failed with status %d: %s", req.WebhookURL, resp.StatusCode, string(bodyBytes))
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "Webhook failed on merchant server"})
+	}
+
+	log.Printf("Successfully sent webhook to %s for transaction %s", req.WebhookURL, req.Transaction)
+
+	return c.JSON(SendWebhookResponse{
+		Success: true,
+		Message: "Webhook sent successfully",
+	})
 	}
 }
 
@@ -770,6 +846,86 @@ func SignTransactionHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 		return c.Status(fiber.StatusOK).JSON(SignTransactionResponse{
 			SignedTransaction: solanaResp.SignedTransaction,
 		})
+	}
+}
+
+// SendTransactionHandler handles sending a signed transaction to the blockchain via solana-api
+func SendTransactionHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// --- Authentication ---
+		userIDInterface := c.Locals("userID")
+		if userIDInterface == nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized: User ID not found in context"})
+		}
+		userID, ok := userIDInterface.(uint)
+		if !ok {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized: Invalid user ID format"})
+		}
+
+		// --- Parse and Validate Request Body ---
+		var req SendTransactionRequest
+		if err := c.BodyParser(&req); err != nil {
+			log.Printf("Error parsing send transaction request body: %v", err)
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body format"})
+		}
+
+		if req.SignedTransaction == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "signedTransaction is required"})
+		}
+
+		log.Printf("Processing send transaction request for user %d", userID)
+
+		// --- Call Solana API to Send Transaction ---
+		solanaAPIURL := cfg.SolanaAPIURL
+		if strings.Contains(solanaAPIURL, "//localhost") { // Normalize localhost for local dev
+			solanaAPIURL = strings.Replace(solanaAPIURL, "//localhost", "//127.0.0.1", 1)
+		}
+		if solanaAPIURL == "" {
+			log.Println("Error: SOLANA_API_BASE_URL not configured")
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Configuration error: Solana API URL missing"})
+		}
+		sendURL := fmt.Sprintf("%s/api/wallet/send", solanaAPIURL)
+
+		// Prepare request body for solana-api
+		solanaReqBody := map[string]string{
+			"signedTransaction": req.SignedTransaction,
+		}
+		jsonReqBody, err := json.Marshal(solanaReqBody)
+		if err != nil {
+			log.Printf("Error marshaling request body for solana-api: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to prepare send request"})
+		}
+
+		// Make the POST request
+		log.Printf("Calling Solana API Sender: POST %s", sendURL)
+		httpClient := &http.Client{Timeout: 60 * time.Second} // Longer timeout for blockchain confirmation
+		resp, err := httpClient.Post(sendURL, "application/json", bytes.NewBuffer(jsonReqBody))
+		if err != nil {
+			log.Printf("Error calling Solana API Sender: %v", err)
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "Failed to connect to Solana sending service"})
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK { // Expect 200 OK for successful sending
+			bodyBytes, _ := io.ReadAll(resp.Body)
+			log.Printf("Error from Solana API Sender (Status %d): %s", resp.StatusCode, string(bodyBytes))
+			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
+				"error":         "Failed to send transaction via Solana service",
+				"upstreamError": string(bodyBytes), // Provide upstream error if possible
+			})
+		}
+
+		// Decode the response from solana-api
+		var solanaResp map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&solanaResp); err != nil {
+			log.Printf("Error decoding Solana API Sender response: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to process Solana sending service response"})
+		}
+
+		log.Printf("Successfully received transaction response from solana-api for user %d", userID)
+
+		// --- Return Transaction Response ---
+		return c.Status(fiber.StatusOK).JSON(solanaResp)
 	}
 }
 

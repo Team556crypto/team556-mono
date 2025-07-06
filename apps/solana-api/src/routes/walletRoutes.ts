@@ -3,7 +3,8 @@ import {
   createWallet, 
   getBalance, 
   getTeamTokenBalance, 
-  signTransaction 
+  signTransaction,
+  sendTransaction 
 } from './../controllers/wallet.controller'
 
 const router: Router = Router()
@@ -15,5 +16,7 @@ router.get('/balance/:address', getBalance)
 router.get('/balance/team/:address', getTeamTokenBalance) // For TEAM Token
 // POST /wallet/sign - Receives mnemonic and unsigned transaction, returns signed transaction
 router.post('/sign', signTransaction)
+// POST /wallet/send - Receives signed transaction, sends to blockchain and waits for confirmation
+router.post('/send', sendTransaction)
 
 export default router

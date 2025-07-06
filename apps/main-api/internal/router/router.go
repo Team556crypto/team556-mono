@@ -20,7 +20,7 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	// CORS Middleware
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: "*",
-		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization, solana-client, Solana-Client",
 		AllowMethods: "GET, POST, HEAD, PUT, DELETE, PATCH, OPTIONS",
 	}))
 
@@ -76,6 +76,8 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	wallet.Post("/presale/check", handlers.CheckPresaleCode(db))
 	wallet.Post("/presale/redeem", handlers.RedeemPresaleCode(db))
 	wallet.Post("/sign-transaction", handlers.SignTransactionHandler(db, cfg))
+	wallet.Post("/send-transaction", handlers.SendTransactionHandler(db, cfg))
+	wallet.Post("/webhook", handlers.SendWebhookHandler(db, cfg))
 	wallet.Post("/recovery-phrase", handlers.GetRecoveryPhraseHandler(db))
 
 	// Swap Routes
@@ -95,6 +97,10 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	presale.Post("/claim/p1p1", presaleHandler.ClaimPresaleP1P1)
 	presale.Post("/claim/p1p2", presaleHandler.ClaimPresaleP1P2)
 
-	// --- Add other route groups here ---
+	// --- Solana RPC proxy ---
+	v1.Post("/solana/rpc", handlers.SolanaRpcProxy)
+	api.Post("/solana/rpc", handlers.SolanaRpcProxy) // direct without version prefix to match existing clients
+
+	// Payment request helper
 	v1.Post("/solana/payment-request", handlers.HandleCreateSolanaPaymentRequest)
 }

@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 /**
  * Plugin Name: Team556 Pay
  * Plugin URI: https://team556.com
- * Description: WordPress plugin to accept Team556 tokens using Solana Pay
+ * Description: WordPress plugin to accept Team556 tokens using Team556 Pay
  * Version: 1.0.0
  * Author: Team556
  * Text Domain: team556-pay
@@ -249,29 +249,25 @@ function team556_handle_get_block_payment_data_request() {
     $error_message = null;
 
     // Check maximum order total limit before processing payment
-    $team556_pay_options = get_option('team556_pay_settings');
-    $enable_max_total_limit = isset($team556_pay_options['enable_max_order_total']) && $team556_pay_options['enable_max_order_total'] == 1;
-    $max_total_setting = isset($team556_pay_options['max_order_total']) ? $team556_pay_options['max_order_total'] : '';
+    $global_settings = get_option('team556_pay_settings');
+    $enable_max_total_limit = isset($global_settings['enable_max_order_total']) && $global_settings['enable_max_order_total'];
+    $max_total_setting      = isset($global_settings['max_order_total']) ? $global_settings['max_order_total'] : '';
 
     if ($enable_max_total_limit && $max_total_setting !== '' && is_numeric($max_total_setting) && (float)$max_total_setting > 0) {
         $max_total_value = (float) $max_total_setting;
         if ($cart_total > $max_total_value) {
-            $formatted_cart_total = number_format($cart_total, 2);
-            $formatted_max_total = number_format($max_total_value, 2);
+            // Use plain text (no HTML tags) for prices to avoid showing raw markup in the JSON error message.
+            $cart_total_plain = html_entity_decode( strip_tags( wc_price( $cart_total ) ) );
+            $max_total_plain  = html_entity_decode( strip_tags( wc_price( $max_total_value ) ) );
+
             $error_message = sprintf(
-                __('Your order total %s exceeds the maximum allowed for Team556 Pay (%s). Please choose a different payment method or reduce your order total.', 'team556-pay'),
-                $formatted_cart_total . ' ' . $currency,
-                $formatted_max_total . ' ' . $currency
+                __('Team556 Pay is not available because your order total of %s exceeds the maximum of %s.', 'team556-pay'),
+                $cart_total_plain,
+                $max_total_plain
             );
-            // Return error to prevent payment URL generation
-            wp_send_json_error([
-                'message' => $error_message,
-                'tokenPrice' => null, 
-                'requiredTokenAmount' => null,
-                'cartTotalFiat' => $cart_total,
-                'currency' => $currency
-            ]);
-            wp_die();
+            // Use wp_send_json_error, which sends a non-200 status and a standard error format.
+            // The updated frontend JS will now correctly parse the message from this response.
+            wp_send_json_error(['message' => $error_message]);
         }
     }
 

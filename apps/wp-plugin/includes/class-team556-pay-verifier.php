@@ -89,7 +89,7 @@ class Team556_Pay_Verifier {
             if (!empty($context)) {
                 $log_message .= " (Context: {$context})";
             }
-            $this->logger->debug($log_message, $this->log_context);
+            // $this->logger->debug($log_message, $this->log_context);
         }
     }
     
@@ -282,18 +282,6 @@ class Team556_Pay_Verifier {
                 
                 // Store in database if available
                 global $wpdb;
-                $table_name = $wpdb->prefix . 'team556_solana_pay_transactions';
-                if ($wpdb->get_var("SHOW TABLES LIKE '{$table_name}'") === $table_name) {
-                    $wpdb->insert(
-                        $table_name,
-                        [
-                            'reference' => $reference,
-                            'transaction_signature' => $signature,
-                            'created_at' => current_time('mysql')
-                        ]
-                    );
-                }
-                
                 // Add amount property to ensure verification passes
                 // Extract amount from data if available, otherwise use a large value
                 // that will satisfy the verification check
@@ -707,6 +695,30 @@ class Team556_Pay_Verifier {
     $json_body = $request->get_json_params();
     $signature = isset($json_body['transaction']) ? sanitize_text_field($json_body['transaction']) : '';
 
+        // Attempt to determine the payer's wallet address ("account") so we can store it with the transaction.
+        // 1. Prefer an explicit value in the webhook/body payload (future-proofing)
+        $account = '';
+        if (isset($json_body['wallet']) && ! empty($json_body['wallet'])) {
+            $account = sanitize_text_field($json_body['wallet']);
+        }
+
+        // 2. Fallback – fetch the transaction data from the Solana RPC endpoint and grab the first signer.
+        if ($account === '') {
+            $network  = isset($json_body['network']) && in_array($json_body['network'], array('mainnet', 'devnet', 'testnet'), true)
+                ? $json_body['network']
+                : 'mainnet';
+            $endpoint = isset($this->rpc_endpoints[$network]) ? $this->rpc_endpoints[$network] : $this->rpc_endpoints['mainnet'];
+            $tx_data  = $this->get_transaction_data($signature, $endpoint);
+            if ($tx_data && isset($tx_data['transaction']['message']['accountKeys'][0]['pubkey'])) {
+                $account = sanitize_text_field($tx_data['transaction']['message']['accountKeys'][0]['pubkey']);
+            }
+        }
+
+        // 3. Final safeguard – ensure we always pass a non-null, non-empty value to the DB layer.
+        if ($account === '') {
+            $account = 'unknown';
+        }
+
     if (empty($order_id) || empty($signature)) {
         $this->log('Received request with missing order_id or signature. Body: ' . json_encode($json_body), 'validation_error', '❌');
         return new WP_Error('bad_request', 'Missing order_id or signature', array('status' => 400));
@@ -729,15 +741,45 @@ class Team556_Pay_Verifier {
         // The Main API has already verified this transaction on-chain before calling the webhook,
         // so we can safely trust it and mark the order as paid without re-querying the Solana RPC.
         $order->payment_complete($signature);
+        // Also add the payer's wallet address to the order notes for reference.
         $order->add_order_note(sprintf(
-            __('Team556 Pay payment confirmed via trusted webhook. Signature: %s', 'team556-pay'),
-            esc_html($signature)
+            __('Team556 Pay payment confirmed via trusted webhook. Signature: %s. Payer: %s.', 'team556-pay'),
+            esc_html($signature),
+            esc_html($account)
         ));
 
         // Set verification flags for the AJAX poller.
         $order->update_meta_data('_team556_webhook_verified', 'yes');
         $order->update_meta_data('_team556_transaction_signature', $signature);
         $order->save();
+
+        // Log the complete transaction to our custom table for the admin dashboard.
+        // This ensures all verified payments are listed correctly.
+        require_once TEAM556_PAY_PLUGIN_DIR . 'includes/class-team556-pay-db.php';
+        $db = new Team556_Pay_DB();
+
+        // To log the token amount, we need to fetch the price and calculate it.
+        require_once TEAM556_PAY_PLUGIN_DIR . 'includes/class-team556-pay-gateway.php';
+        $gateway = new Team556_Pay_Gateway();
+        $price_data = $gateway->fetch_team556_price_data();
+        $token_amount = 0;
+
+        if ($price_data && isset($price_data['price']) && $price_data['price'] > 0) {
+            // The transactions table stores amounts with 8 decimal places (DECIMAL(18,8))
+            $token_amount = number_format((float) $order->get_total() / $price_data['price'], 8, '.', '');
+        } else {
+            $this->log("Could not calculate token amount for order {$order_id} due to missing price data.", 'log_transaction_error', '⚠️');
+        }
+
+        $db->log_transaction([
+            'order_id'              => $order_id,
+            'amount'                => $token_amount,
+            'status'                => 'completed',
+            'wallet_address'        => $account,
+            'transaction_signature' => $signature,
+        ]);
+
+        $this->log("Webhook success: Logged transaction for order {$order_id}. Signature: {$signature}", 'webhook_success', '✅');
 
         return new WP_REST_Response(array('status' => 'success', 'message' => 'Payment confirmed and order updated.'), 200);
 
@@ -778,7 +820,7 @@ class Team556_Pay_Verifier {
             $db->log_transaction([
                 'transaction_signature' => $signature,
                 'wallet_address'        => $verification_result['signer'],
-                'amount'                => $expected_amount, // This is the amount in TEAM556 tokens, not lamports
+                'amount'                => number_format($expected_amount, 8, '.', ''), // Store with max 8 decimal places
                 'order_id'              => $order_id,
                 'status'                => 'completed',
             ]);

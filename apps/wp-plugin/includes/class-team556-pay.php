@@ -49,7 +49,7 @@ class Team556_Pay {
             
             // Get the unique request ID for logging
             $request_id = $this->get_unique_request_id();
-            $this->logger->debug("Team556_Pay constructor called. Request ID: {$request_id}", $this->log_context);
+            /* $this->logger->debug("Team556_Pay constructor called. Request ID: {$request_id}", $this->log_context); */
             $this->log_order_status("Team556 Pay plugin initialized", 'init');
         } else {
             // Fallback notice if WooCommerce logger is truly unavailable
@@ -72,11 +72,11 @@ class Team556_Pay {
             add_action('init', array($this, 'register_rest_routes'), 999);
             
             if ($this->logger) {
-                $this->logger->debug(
+                /* $this->logger->debug(
                     "Adding hooks for REST route registration. Request ID: {$request_id}\n" .
                     "Static flag set to prevent multiple registrations in this process.",
                     $this->log_context
-                );
+                ); */
             }
             
             // Force flush rewrite rules if not done recently (once per day)
@@ -84,25 +84,29 @@ class Team556_Pay {
             $day_in_seconds = 86400;
             
             if (time() - $last_flush > $day_in_seconds) {
-                if ($this->logger) $this->logger->debug(
-                    "Will flush rewrite rules (not done in >24 hours)", 
-                    $this->log_context
-                );
+                if ($this->logger) {
+                    /* $this->logger->debug(
+                        "Will flush rewrite rules (not done in >24 hours)", 
+                        $this->log_context
+                    ); */
+                }
                 
                 add_action('wp_loaded', function() use ($request_id) {
                     flush_rewrite_rules(true);
                     update_option('team556_last_flush_rewrite', time());
-                    if ($this->logger) $this->logger->debug(
-                        "Rewrite rules flushed successfully. Request ID: {$request_id}", 
-                        $this->log_context
-                    );
+                    if ($this->logger) {
+                        /* $this->logger->debug(
+                            "Rewrite rules flushed successfully. Request ID: {$request_id}", 
+                            $this->log_context
+                        ); */
+                    }
                 });
             }
         } else if ($this->logger) {
-            $this->logger->debug(
+            /* $this->logger->debug(
                 "Skipping REST route registration - already registered in this process. Request ID: {$request_id}",
                 $this->log_context
-            );
+            ); */
         }
     }
 
@@ -341,7 +345,6 @@ class Team556_Pay {
         }
         return false;
     }
-    
     /**
      * Register REST API routes for the plugin
      * This method might be called multiple times but we ensure routes are only registered once
@@ -349,45 +352,50 @@ class Team556_Pay {
     public function register_rest_routes() {
         static $routes_added = false;
         $request_id = $this->get_unique_request_id();
-        
+
         // Extra protection - only register routes once per method call across all instances
         if ($routes_added) {
-            if ($this->logger) $this->logger->debug(
-                "Routes already registered within this method. Skipping. Request ID: {$request_id}",
-                $this->log_context
-            );
+            if ($this->logger) {
+                /* $this->logger->debug(
+                    "Routes already registered in this process. Last init was at: " . 
+                    date('Y-m-d H:i:s', get_option(self::REST_API_INIT_OPTION, 'N/A')),
+                    $this->log_context
+                ); */
+            }
             return;
         }
-        
+
         // Set local static flag to prevent duplicate registrations within this method
         $routes_added = true;
-        
-        if ($this->logger) $this->logger->debug(
-            "REGISTERING ROUTES - Request ID: {$request_id}", 
-            $this->log_context
-        );
-        
+
+        if ($this->logger) {
+            /* $this->logger->debug(
+                "REGISTERING ROUTES - Request ID: {$request_id}", 
+                $this->log_context
+            ); */
+        }
+
         // Load the verifier class to handle callbacks
         require_once TEAM556_PAY_PLUGIN_DIR . 'includes/class-team556-pay-verifier.php';
         $this->verifier = new Team556_Pay_Verifier();
-        
+
         $namespace = 'team556-pay/v1';
-        
+
         // Register critical webhook endpoint for payment verification
         register_rest_route($namespace, '/verify-payment', array(
             'methods' => array('POST', 'GET'),
             'callback' => array($this, 'proxy_webhook_handler'), // Use the proxy handler
             'permission_callback' => '__return_true', // Publicly accessible
         ));
-        if ($this->logger) $this->logger->debug("Route registered: /{$namespace}/verify-payment [POST,GET]", $this->log_context);
-        
+        if ($this->logger) { /* $this->logger->debug("Route registered: /{$namespace}/verify-payment [POST,GET]", $this->log_context); */ }
+
         // Register OPTIONS method separately for CORS preflight requests
         register_rest_route($namespace, '/verify-payment', array(
             'methods' => 'OPTIONS',
             'callback' => array($this, 'handle_cors_preflight'),
             'permission_callback' => '__return_true',
         ));
-        if ($this->logger) $this->logger->debug("CORS OPTIONS route registered: /{$namespace}/verify-payment [OPTIONS]", $this->log_context);
+        if ($this->logger) { /* $this->logger->debug("CORS OPTIONS route registered: /{$namespace}/verify-payment [OPTIONS]", $this->log_context); */ }
 
         // Register healthcheck endpoint
         register_rest_route($namespace, '/healthcheck', array(
@@ -395,7 +403,7 @@ class Team556_Pay {
             'callback' => array($this, 'rest_healthcheck'),
             'permission_callback' => '__return_true',
         ));
-        if ($this->logger) $this->logger->debug("Route registered: /{$namespace}/healthcheck [GET]", $this->log_context);
+        if ($this->logger) { /* $this->logger->debug("Route registered: /{$namespace}/healthcheck [GET]", $this->log_context); */ }
         
         // Add special CORS headers for all REST API responses
         add_filter('rest_pre_serve_request', array($this, 'add_cors_headers'), 10, 4);
@@ -405,7 +413,7 @@ class Team556_Pay {
      * Proxy handler for the webhook to debug callback execution.
      */
     public function proxy_webhook_handler(WP_REST_Request $request) {
-        if ($this->logger) $this->logger->debug('PROXY HANDLER CALLED! Relaying to verifier.', $this->log_context);
+        if ($this->logger) { /* $this->logger->debug('PROXY HANDLER CALLED! Relaying to verifier.', $this->log_context); */ }
         
         if ($this->verifier && method_exists($this->verifier, 'handle_payment_verification_request')) {
             return $this->verifier->handle_payment_verification_request($request);
@@ -433,7 +441,6 @@ class Team556_Pay {
         return $served;
     }
 
-
     /**
      * Get a unique request ID for the current PHP process.
      * 
@@ -446,7 +453,7 @@ class Team556_Pay {
         
         if ($request_id === null) {
             $request_id = 'req_' . uniqid('', true);
-            if ($this->logger) $this->logger->debug('Generated new request ID: ' . $request_id, $this->log_context);
+            if ($this->logger) { /* $this->logger->debug('Generated new request ID: ' . $request_id, $this->log_context); */ }
         }
         
         return $request_id;
@@ -511,7 +518,7 @@ class Team556_Pay {
         $formatted_message .= ": {$message}";
         
         // Log with source that will show in WooCommerce status log list
-        $this->order_status_logger->add('team556-order-status', $formatted_message);
+        // $this->order_status_logger->add('team556-order-status', $formatted_message);
     }
     
     /**
@@ -527,7 +534,7 @@ class Team556_Pay {
             'rest_api_init' => get_option(self::REST_API_INIT_OPTION, 0),
         );
         
-        if ($this->logger) $this->logger->debug('Healthcheck endpoint called with response: ' . json_encode($debug_info), $this->log_context);
+        if ($this->logger) { /* $this->logger->debug('Healthcheck endpoint called with response: ' . json_encode($debug_info), $this->log_context); */ }
         
         return new WP_REST_Response($debug_info, 200);
     }
@@ -867,8 +874,8 @@ class Team556_Pay {
             
             // Also log to verify logger if available for extra debugging details
             if (isset($verify_logger)) {
-                $verify_logger->debug("💥 PAYMENT TRACKER - Exception in payment verification: " . $e->getMessage(), $verify_log_context);
-                $verify_logger->debug("Stack trace: " . $e->getTraceAsString(), $verify_log_context);
+                // $verify_logger->debug("💥 PAYMENT TRACKER - Exception in payment verification: " . $e->getMessage(), $verify_log_context);
+                // $verify_logger->debug("Stack trace: " . $e->getTraceAsString(), $verify_log_context);
             }
             
             wp_send_json_error(array(

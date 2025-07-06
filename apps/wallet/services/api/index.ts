@@ -19,6 +19,8 @@ export type {
   RedeemPresaleCodeResponse,
   SignTransactionRequest,
   SignTransactionResponse,
+  SendTransactionRequest,
+  SendTransactionResponse,
   GetRecoveryPhraseRequest,
   GetRecoveryPhraseResponse,
   QuoteResponseV6,

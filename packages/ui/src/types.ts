@@ -59,4 +59,35 @@ export type CreateFirearmPayload = {
   status?: string;
 };
 
+
+/**
+ * Represents an ammunition object, matching the structure from the main API.
+ */
+export interface Ammo {
+  id: number;
+  owner_user_id: number;
+  manufacturer: string;
+  caliber: string;
+  type: string; // e.g., FMJ, JHP
+  quantity: number;
+  grainWeight: string;
+  purchaseDate?: string; // ISO string
+  purchasePrice?: number;
+  notes?: string;
+  pictures?: string; // JSON string array of image URLs
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Represents the payload for creating new ammunition.
+ */
+export type CreateAmmoPayload = Omit<Ammo, 'id' | 'owner_user_id' | 'created_at' | 'updated_at'>;
+
+
+/**
+ * Represents the payload for updating existing ammunition.
+ */
+export type UpdateAmmoPayload = { id: number } & Partial<CreateAmmoPayload>;
+
 // Add other shared types here as needed

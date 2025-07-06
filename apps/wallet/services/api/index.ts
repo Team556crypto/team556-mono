@@ -1,5 +1,5 @@
 // Explicitly import and re-export Firearm-related types from the shared UI package
-export type { Firearm, CreateFirearmPayload, UpdateFirearmPayload } from '@team556/ui';
+export type { Firearm, CreateFirearmPayload, UpdateFirearmPayload, Ammo, CreateAmmoPayload, UpdateAmmoPayload } from '@team556/ui';
 
 // Explicitly export other types from the local types.ts file
 // This avoids exporting the conflicting local Firearm types
@@ -50,6 +50,9 @@ export * from './swap';
 
 // Export all functions from firearm.ts
 export * from './firearm';
+
+// Export all functions from ammo.ts
+export * from './ammo';
 
 // Export the ApiClientError and apiClient for direct use if needed
 export { apiClient, ApiClientError } from './client';

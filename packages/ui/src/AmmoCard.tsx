@@ -3,28 +3,28 @@ import { View, StyleSheet, Pressable } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useTheme } from './ThemeContext'
 import Text from './Text'
-import { Firearm } from './types'
+import { Ammo } from './types'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { Image } from 'expo-image'
-import { DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from './constants'
+import { Image } from 'expo-image';
+import { DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from './constants';
 
-interface FirearmCardProps {
-  firearm: Firearm
-  onPress?: (id: number) => void
-  width?: number
-  height?: number
+interface AmmoCardProps {
+  ammo: Ammo;
+  onPress?: (id: number) => void;
+  width?: number;
+  height?: number;
 }
 
-export default function FirearmCard({
-  firearm,
+export default function AmmoCard({
+  ammo,
   onPress,
   width = DEFAULT_CARD_WIDTH,
   height = DEFAULT_CARD_HEIGHT
-}: FirearmCardProps) {
+}: AmmoCardProps) {
   const { colors } = useTheme()
   const handlePress = () => {
     if (onPress) {
-      onPress(firearm.id)
+      onPress(ammo.id)
     }
   }
 
@@ -48,18 +48,6 @@ export default function FirearmCard({
       alignItems: 'center',
       justifyContent: 'center',
       overflow: 'hidden'
-    },
-    logoOverlay: {
-      position: 'absolute',
-      bottom: 8,
-      right: 8,
-      width: 36,
-      height: 36,
-      borderTopRightRadius: 18,
-      borderTopLeftRadius: 18,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: 'rgba(0, 0, 0, 0.5)'
     },
     categoryTag: {
       position: 'absolute',
@@ -88,11 +76,6 @@ export default function FirearmCard({
       alignItems: 'center',
       justifyContent: 'center'
     },
-    placeholderText: {
-      fontSize: 14,
-      color: colors.textTertiary,
-      fontWeight: '500'
-    },
     infoContainer: {
       flex: 1,
       justifyContent: 'center',
@@ -112,27 +95,25 @@ export default function FirearmCard({
     }
   })
 
-  const getFirearmIcon = () => {
-    const type = firearm.type?.toLowerCase() || ''
-    if (type.includes('pistol') || type.includes('handgun')) {
-      return 'target'
-    } else if (type.includes('rifle') || type.includes('shotgun')) {
-      return 'crosshairs'
-    } else if (type.includes('nfa')) {
-      return 'shield'
-    }
-    return 'crosshairs-gps'
-  }
-
   const renderImage = () => {
-    if (firearm.image) {
-      const imageUri = firearm.image
+    let firstImageUri: string | undefined;
+    if (ammo.pictures) {
+      try {
+        const parsedPictures = JSON.parse(ammo.pictures);
+        if (Array.isArray(parsedPictures) && parsedPictures.length > 0) {
+          firstImageUri = parsedPictures[0];
+        }
+      } catch (e) {
+        console.error("Failed to parse ammo pictures JSON:", e);
+      }
+    }
 
+    if (firstImageUri) {
       return (
         <>
-          <Image source={{ uri: imageUri }} style={styles.image} contentFit='cover' />
+          <Image source={{ uri: firstImageUri }} style={styles.image} contentFit='cover' />
           <View style={styles.categoryTag}>
-            <Text style={styles.categoryText}>{firearm.type || 'Firearm'}</Text>
+            <Text style={styles.categoryText}>{ammo.type || 'Ammo'}</Text>
           </View>
         </>
       )
@@ -140,11 +121,10 @@ export default function FirearmCard({
       return (
         <>
           <View style={styles.placeholder}>
-            <MaterialCommunityIcons name={getFirearmIcon()} size={36} color={colors.textTertiary} />
-            <Text style={styles.placeholderText}>No Image</Text>
+            <MaterialCommunityIcons name="ammunition" size={48} color={colors.textTertiary} />
           </View>
           <View style={styles.categoryTag}>
-            <Text style={styles.categoryText}>{firearm.type || 'Firearm'}</Text>
+            <Text style={styles.categoryText}>{ammo.type || 'Ammo'}</Text>
           </View>
         </>
       )
@@ -160,14 +140,13 @@ export default function FirearmCard({
         <View style={styles.imageContainer}>{renderImage()}</View>
         <View style={styles.infoContainer}>
           <Text style={styles.name} numberOfLines={2} ellipsizeMode='tail'>
-            {firearm.name}
+            {`${ammo.manufacturer} ${ammo.caliber}`}
           </Text>
           <Text style={styles.details} numberOfLines={1} ellipsizeMode='tail'>
-            {firearm.manufacturer ? `${firearm.manufacturer} ` : ''}
-            {firearm.model_name || ''}
+            {`${ammo.grainWeight}gr ${ammo.type}`}
           </Text>
           <Text style={styles.details} numberOfLines={1} ellipsizeMode='tail'>
-            {firearm.caliber || ''}
+            {`Qty: ${ammo.quantity}`}
           </Text>
         </View>
       </LinearGradient>

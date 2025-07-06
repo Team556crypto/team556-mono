@@ -12,13 +12,13 @@ import {
 } from 'react-native'
 import { useFirearmStore } from '@/store/firearmStore'
 import { useAuthStore } from '@/store/authStore'
-import { FirearmCard, Text, Button, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui'
+import { FirearmCard, Text, Button, EmptyState, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui'
 import { useTheme } from '@team556/ui'
 import { Firearm } from '@/services/api'
 import { useDrawerStore } from '@/store/drawerStore'
 import { FirearmDetailsDrawerContent } from '@/components/drawers/FirearmDetailsDrawerContent'
 import { AddFirearmDrawerContent } from '@/components/drawers/AddFirearmDrawerContent'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useFocusEffect } from '@react-navigation/native'
 
 // Responsive layout constants
@@ -79,6 +79,7 @@ export const FirearmsView = () => {
   const isLoading = useFirearmStore(state => state.isLoading)
   const firearmStoreError = useFirearmStore(state => state.error)
   const fetchInitialFirearms = useFirearmStore(state => state.fetchInitialFirearms)
+  const deleteFirearm = useFirearmStore(state => state.deleteFirearm)
   const hasAttemptedInitialFetch = useFirearmStore(state => state.hasAttemptedInitialFetch)
   const clearFirearmError = useFirearmStore(state => state.setError)
   const { openDrawer } = useDrawerStore()
@@ -95,6 +96,32 @@ export const FirearmsView = () => {
 
   const handleAddFirearm = () => {
     openDrawer(<AddFirearmDrawerContent />)
+  }
+
+  const handleDelete = (firearmId: number) => {
+    Alert.alert(
+      'Delete Firearm',
+      'Are you sure you want to delete this firearm? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          onPress: async () => {
+            try {
+              await deleteFirearm(firearmId, token)
+            } catch (error) {
+              // Error is already handled in the store, but you could add specific UI feedback here if needed
+              Alert.alert('Error', 'Failed to delete firearm.');
+            }
+          },
+          style: 'destructive',
+        },
+      ],
+      { cancelable: false }
+    )
   }
 
   const styles = StyleSheet.create({
@@ -124,7 +151,10 @@ export const FirearmsView = () => {
       justifyContent: 'flex-start',
       marginBottom: COLUMN_GAP * 1.5
     },
-    gridItem: {},
+    gridItem: {
+      margin: COLUMN_GAP / 2,
+      alignItems: 'center',
+    },
     cardWrapper: {
       width: '100%',
       alignItems: 'center',
@@ -190,6 +220,7 @@ export const FirearmsView = () => {
           <FirearmCard
             firearm={item}
             onPress={() => handleFirearmPress(item)}
+            onDelete={() => handleDelete(item.id)}
             width={dimensions.cardWidth}
             height={dimensions.cardHeight}
           />
@@ -215,17 +246,13 @@ export const FirearmsView = () => {
     )
   } else if (firearms.length === 0) {
     content = (
-      <View style={styles.emptyMessage}>
-        <Ionicons name='file-tray-stacked-outline' size={48} color={colors.textSecondary} />
-        <Text style={{ color: colors.textSecondary }}>No Firearms Yet</Text>
-        <Text style={{ color: colors.textSecondary, textAlign: 'center', marginBottom: 16 }}>
-          Get started by adding your first firearm to your armory.
-        </Text>
-        <Button variant='secondary' title='+ Add Firearm' onPress={handleAddFirearm} disabled={!canAddItem} />
-        {!isP1User && !canAddItem && (
-          <Text style={styles.limitReachedText}>Item limit reached. P1 presale members have unlimited additions.</Text>
-        )}
-      </View>
+      <EmptyState
+        icon={<MaterialCommunityIcons name='pistol' size={80} color={colors.primary} />}
+        title='No Firearms Yet'
+        subtitle='Get started by adding your first firearm to your armory.'
+        buttonText='+ Add Firearm'
+        onPress={handleAddFirearm}
+      />
     )
   } else {
     content = (

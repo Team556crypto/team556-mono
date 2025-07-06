@@ -9,24 +9,32 @@ import { Image } from 'expo-image'
 import { DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from './constants'
 
 interface FirearmCardProps {
-  firearm: Firearm
-  onPress?: (id: number) => void
-  width?: number
-  height?: number
+  firearm: Firearm;
+  onPress?: (id: number) => void;
+  onDelete?: (id: number) => void;
+  width?: number;
+  height?: number;
 }
 
 export default function FirearmCard({
   firearm,
   onPress,
+  onDelete,
   width = DEFAULT_CARD_WIDTH,
   height = DEFAULT_CARD_HEIGHT
 }: FirearmCardProps) {
   const { colors } = useTheme()
   const handlePress = () => {
     if (onPress) {
-      onPress(firearm.id)
+      onPress(firearm.id);
     }
-  }
+  };
+
+  const handleDelete = () => {
+    if (onDelete) {
+      onDelete(firearm.id);
+    }
+  };
 
   const styles = StyleSheet.create({
     card: {
@@ -99,6 +107,15 @@ export default function FirearmCard({
       alignItems: 'flex-start',
       paddingHorizontal: 12
     },
+    deleteButton: {
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      padding: 4,
+      borderRadius: 16,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      zIndex: 1,
+    },
     name: {
       fontWeight: '700',
       fontSize: 16,
@@ -152,25 +169,32 @@ export default function FirearmCard({
   }
 
   return (
-    <Pressable
-      style={({ pressed }) => [styles.card, { transform: [{ scale: pressed ? 0.98 : 1 }] }]}
-      onPress={handlePress}
-    >
-      <LinearGradient colors={[colors.backgroundCard, colors.backgroundDark]} style={styles.cardGradient}>
-        <View style={styles.imageContainer}>{renderImage()}</View>
-        <View style={styles.infoContainer}>
-          <Text style={styles.name} numberOfLines={2} ellipsizeMode='tail'>
-            {firearm.name}
-          </Text>
-          <Text style={styles.details} numberOfLines={1} ellipsizeMode='tail'>
-            {firearm.manufacturer ? `${firearm.manufacturer} ` : ''}
-            {firearm.model_name || ''}
-          </Text>
-          <Text style={styles.details} numberOfLines={1} ellipsizeMode='tail'>
-            {firearm.caliber || ''}
-          </Text>
-        </View>
-      </LinearGradient>
-    </Pressable>
+    <View style={styles.card}>
+      <Pressable
+        style={({ pressed }) => [{ width: '100%', height: '100%' }, { transform: [{ scale: pressed ? 0.98 : 1 }] }]}
+        onPress={handlePress}
+      >
+        <LinearGradient colors={[colors.backgroundCard, colors.backgroundDark]} style={styles.cardGradient}>
+          <View style={styles.imageContainer}>{renderImage()}</View>
+          <View style={styles.infoContainer}>
+            <Text style={styles.name} numberOfLines={2} ellipsizeMode='tail'>
+              {firearm.name}
+            </Text>
+            <Text style={styles.details} numberOfLines={1} ellipsizeMode='tail'>
+              {firearm.manufacturer ? `${firearm.manufacturer} ` : ''}
+              {firearm.model_name || ''}
+            </Text>
+            <Text style={styles.details} numberOfLines={1} ellipsizeMode='tail'>
+              {firearm.caliber || ''}
+            </Text>
+          </View>
+        </LinearGradient>
+      </Pressable>
+      {onDelete && (
+        <Pressable style={styles.deleteButton} onPress={handleDelete}>
+          <MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.text} />
+        </Pressable>
+      )}
+    </View>
   )
 }

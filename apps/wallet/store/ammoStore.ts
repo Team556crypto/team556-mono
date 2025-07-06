@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { Ammo, getAmmos, updateAmmo, UpdateAmmoPayload, createAmmo, CreateAmmoPayload } from '@/services/api'
+import { Ammo, getAmmos, updateAmmo, UpdateAmmoPayload, createAmmo, CreateAmmoPayload, deleteAmmo } from '@/services/api'
 import { useAuthStore } from './authStore';
 
 // Define the state structure for the ammo store
@@ -10,8 +10,8 @@ interface AmmoState {
   hasAttemptedInitialFetch: boolean;
   addAmmo: (payload: CreateAmmoPayload, token: string | null) => Promise<boolean>;
   updateAmmo: (ammoId: number, payload: UpdateAmmoPayload, token: string | null) => Promise<void>;
+  deleteAmmo: (ammoId: number, token: string | null) => Promise<void>;
   _updateLocalAmmo: (updatedAmmo: Ammo) => void;
-  removeAmmo: (ammoId: number) => void;
   setAmmos: (ammos: Ammo[]) => void;
   getAmmoById: (ammoId: number) => Ammo | undefined;
   setLoading: (loading: boolean) => void;
@@ -147,11 +147,29 @@ export const useAmmoStore = create<AmmoState>((set, get) => ({
     }
   },
 
-  // Action to remove an ammo entry by its ID
-  removeAmmo: ammoId =>
-    set(state => ({
-      ammos: state.ammos.filter(a => a.id !== ammoId)
-    })),
+  deleteAmmo: async (ammoId: number, token: string | null) => {
+    if (!token) {
+      const errorMsg = 'Authentication token is missing, cannot delete ammo.';
+      set({ error: errorMsg, isLoading: false });
+      throw new Error(errorMsg);
+    }
+
+    set({ isLoading: true, error: null });
+    try {
+      await deleteAmmo(ammoId, token);
+      set(state => ({
+        ammos: state.ammos.filter(a => a.id !== ammoId),
+        isLoading: false,
+      }));
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      set({ error: `Failed to delete ammo: ${errorMessage}`, isLoading: false });
+      // After a failed deletion, refetch the data to clear out any stale items
+      console.log('Deletion failed, refetching ammo list to clear stale data...');
+      get().fetchInitialAmmos(token);
+      throw error; // Re-throw the error so the component can handle it if needed
+    }
+  },
 
   // Action to replace the entire ammos array
   setAmmos: ammos => set({ ammos }),

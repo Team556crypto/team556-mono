@@ -220,3 +220,5 @@ export interface GetTransactionsRequest {
 export interface GetTransactionsResponse {
   transactions: Transaction[];
 }
+
+

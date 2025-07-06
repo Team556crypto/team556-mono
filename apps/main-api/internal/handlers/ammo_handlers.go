@@ -125,10 +125,17 @@ func DeleteAmmoHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 			return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ammo ID"})
 		}
 
-		if err := db.Where("id = ? AND user_id = ?", uint(ammoID), userID).Delete(&models.Ammo{}).Error; err != nil {
+		result := db.Where("id = ? AND user_id = ?", uint(ammoID), userID).Delete(&models.Ammo{})
+
+		if result.Error != nil {
+			log.Printf("Error deleting ammo: %v", result.Error)
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Could not delete ammo"})
 		}
 
-		return c.Status(http.StatusOK).JSON(fiber.Map{"message": "Ammo deleted successfully"})
+		if result.RowsAffected == 0 {
+			return c.Status(http.StatusNotFound).JSON(fiber.Map{"error": "Ammo not found"})
+		}
+
+		return c.SendStatus(http.StatusNoContent)
 	}
 }

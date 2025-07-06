@@ -21,6 +21,8 @@ export type {
   SignTransactionResponse,
   SendTransactionRequest,
   SendTransactionResponse,
+  SendWebhookRequest,
+  SendWebhookResponse,
   GetRecoveryPhraseRequest,
   GetRecoveryPhraseResponse,
   QuoteResponseV6,
@@ -30,7 +32,10 @@ export type {
   CreateTokenAccountsResponse,
   SubmitTokenAccountsRequest,
   SubmitTokenAccountsResponse,
-  ExecuteSwapResponseWithStatus
+  ExecuteSwapResponseWithStatus,
+  Transaction,
+  GetTransactionsRequest,
+  GetTransactionsResponse
 } from './types';
 
 // Export all functions from auth.ts
@@ -53,6 +58,7 @@ export * from './firearm';
 
 // Export all functions from ammo.ts
 export * from './ammo';
+export * from './gear';;
 
 // Export the ApiClientError and apiClient for direct use if needed
 export { apiClient, ApiClientError } from './client';

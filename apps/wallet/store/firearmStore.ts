@@ -1,23 +1,23 @@
-import { create } from 'zustand'
-import { Firearm, getFirearms, updateFirearm, UpdateFirearmPayload, createFirearm } from '@/services/api'
-import type { CreateFirearmPayload } from '@/services/api'
+import { create } from 'zustand';
+import { getFirearms, updateFirearm, createFirearm, deleteFirearm } from '@/services/api';
+import type { Firearm, CreateFirearmPayload, UpdateFirearmPayload } from '@team556/ui';
 import { useAuthStore } from './authStore';
 
 // Define the state structure for the firearm store
 interface FirearmState {
-  firearms: Firearm[]
-  isLoading: boolean
-  error: string | null
-  hasAttemptedInitialFetch: boolean
-  addFirearm: (payload: CreateFirearmPayload, token: string | null) => Promise<boolean>
-  updateFirearm: (firearmId: number, payload: UpdateFirearmPayload, token: string | null) => Promise<void>
-  _updateLocalFirearm: (updatedFirearm: Firearm) => void
-  removeFirearm: (firearmId: number) => void
-  setFirearms: (firearms: Firearm[]) => void
-  getFirearmById: (firearmId: number) => Firearm | undefined
-  setLoading: (loading: boolean) => void
-  setError: (error: string | null) => void
-  fetchInitialFirearms: (token: string | null) => Promise<void>
+  firearms: Firearm[];
+  isLoading: boolean;
+  error: string | null;
+  hasAttemptedInitialFetch: boolean;
+  addFirearm: (payload: CreateFirearmPayload, token: string | null) => Promise<boolean>;
+  updateFirearm: (firearmId: number, payload: UpdateFirearmPayload, token: string | null) => Promise<void>;
+  deleteFirearm: (firearmId: number, token: string | null) => Promise<void>;
+  _updateLocalFirearm: (updatedFirearm: Firearm) => void;
+  setFirearms: (firearms: Firearm[]) => void;
+  getFirearmById: (firearmId: number) => Firearm | undefined;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  fetchInitialFirearms: (token: string | null) => Promise<void>;
 }
 
 // Create the Zustand store
@@ -89,11 +89,24 @@ export const useFirearmStore = create<FirearmState>((set, get) => ({
     }
   },
 
-  // Action to remove a firearm by its ID
-  removeFirearm: firearmId =>
-    set(state => ({
-      firearms: state.firearms.filter(f => f.id !== firearmId)
-    })),
+  // Action to delete a firearm via API and remove from local state
+  deleteFirearm: async (firearmId, token) => {
+    set({ isLoading: true, error: null });
+    console.debug(`[FirearmStore] Attempting to delete firearm ${firearmId} via API...`);
+    try {
+      await deleteFirearm(firearmId, token);
+      set(state => ({
+        firearms: state.firearms.filter(f => f.id !== firearmId),
+        isLoading: false,
+      }));
+      console.debug(`[FirearmStore] Firearm ${firearmId} deleted successfully.`);
+    } catch (error: any) {
+      console.error(`[FirearmStore] Failed to delete firearm ${firearmId}:`, error);
+      const errorMessage = error?.response?.data?.error || error?.message || 'Failed to delete firearm';
+      set({ error: errorMessage, isLoading: false });
+      throw error; // Re-throw to allow UI to handle it
+    }
+  },
 
   // Action to replace the entire firearms array
   setFirearms: firearms => set({ firearms }),

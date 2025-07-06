@@ -90,4 +90,34 @@ export type CreateAmmoPayload = Omit<Ammo, 'id' | 'owner_user_id' | 'created_at'
  */
 export type UpdateAmmoPayload = { id: number } & Partial<CreateAmmoPayload>;
 
+
+/**
+ * Represents a gear object, matching the structure from the main API.
+ */
+export interface Gear {
+  id: number;
+  owner_user_id: number;
+  name: string;
+  type: string; // e.g., "Combat", "Hunting", "Camping"
+  manufacturer?: string;
+  model?: string;
+  quantity: number;
+  purchaseDate?: string; // ISO string
+  purchasePrice?: number;
+  notes?: string;
+  pictures?: string; // JSON string array of image URLs
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Represents the payload for creating new gear.
+ */
+export type CreateGearPayload = Omit<Gear, 'id' | 'owner_user_id' | 'created_at' | 'updated_at'>;
+
+/**
+ * Represents the payload for updating existing gear.
+ */
+export type UpdateGearPayload = { id: number } & Partial<CreateGearPayload>;
+
 // Add other shared types here as needed

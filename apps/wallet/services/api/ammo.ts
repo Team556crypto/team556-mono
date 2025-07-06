@@ -65,3 +65,21 @@ export const createAmmo = async (payload: CreateAmmoPayload, token: string | nul
     body: payload
   })
 }
+
+/**
+ * Deletes an ammunition item.
+ * @param ammoId - The ID of the ammunition to delete.
+ * @param token - The authentication token.
+ * @returns A promise that resolves when the ammunition is deleted.
+ * @throws An ApiClientError if the request fails.
+ */
+export const deleteAmmo = async (ammoId: number, token: string | null): Promise<void> => {
+  if (!token) {
+    return Promise.reject(new Error('Authentication token not provided.'));
+  }
+  return apiClient<void>({
+    method: 'DELETE',
+    endpoint: `/ammos/${ammoId}`,
+    token,
+  });
+};

@@ -38,6 +38,7 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	swap := api.Group("/swap", middleware.AuthMiddleware(cfg.JWTSecret))
 	firearms := api.Group("/firearms", middleware.AuthMiddleware(cfg.JWTSecret))
 	ammos := api.Group("/ammos", middleware.AuthMiddleware(cfg.JWTSecret))
+	gear := api.Group("/gear", middleware.AuthMiddleware(cfg.JWTSecret))
 	presale := api.Group("/presale", middleware.AuthMiddleware(cfg.JWTSecret))
 	v1 := api.Group("/v1")
 
@@ -100,6 +101,13 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	ammos.Get("/:id", handlers.GetAmmoByIDHandler(db, cfg))
 	ammos.Patch("/:id", handlers.UpdateAmmoHandler(db, cfg))
 	ammos.Delete("/:id", handlers.DeleteAmmoHandler(db, cfg))
+
+	// --- Gear Routes ---
+	gear.Post("/", handlers.CreateGearHandler(db, cfg))
+	gear.Get("/", handlers.GetGearsHandler(db, cfg))
+	gear.Get("/:id", handlers.GetGearByIDHandler(db, cfg))
+	gear.Patch("/:id", handlers.UpdateGearHandler(db, cfg))
+	gear.Delete("/:id", handlers.DeleteGearHandler(db, cfg))
 
 	// --- Presale Routes ---
 	presale.Get("/claim-status", presaleHandler.GetPresaleClaimStatus)

@@ -9,8 +9,11 @@ import (
 
 // Ammo represents ammunition owned by a user
 type Ammo struct {
-	gorm.Model
-	UserID        uint            `gorm:"not null;index" json:"-"`
+	ID            uint           `gorm:"primarykey" json:"id"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+	DeletedAt     gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
+	UserID        uint           `gorm:"not null;index" json:"owner_user_id"`
 	User          User            `gorm:"foreignKey:UserID" json:"-"`
 	Manufacturer  string          `gorm:"size:255" json:"manufacturer"`
 	Caliber       string          `gorm:"size:100" json:"caliber"`

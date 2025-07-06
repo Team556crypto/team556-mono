@@ -5,11 +5,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  useWindowDimensions
+  useWindowDimensions,
+  Alert
 } from 'react-native'
 import { useAmmoStore } from '@/store/ammoStore'
 import { useAuthStore } from '@/store/authStore'
-import { AmmoCard, Text, Button, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui' 
+import { AmmoCard, Text, Button, EmptyState, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui' 
 import { useTheme } from '@team556/ui'
 import { Ammo } from '@/services/api'
 import { useDrawerStore } from '@/store/drawerStore'
@@ -63,6 +64,7 @@ export const AmmoView = () => {
   const hasAttemptedInitialFetch = useAmmoStore(state => state.hasAttemptedInitialFetch)
   const clearAmmoError = useAmmoStore(state => state.setError)
   const { openDrawer } = useDrawerStore()
+  const deleteAmmo = useAmmoStore(state => state.deleteAmmo)
 
   useEffect(() => {
     if (token && !hasAttemptedInitialFetch && !isLoading) {
@@ -78,33 +80,106 @@ export const AmmoView = () => {
     openDrawer(<AddAmmoDrawerContent />)
   }
 
+  const handleDelete = (ammoId: number) => {
+    Alert.alert(
+      'Delete Ammo',
+      'Are you sure you want to delete this ammo? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          onPress: async () => {
+            try {
+              await deleteAmmo(ammoId, token);
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete ammo. Please try again.');
+            }
+          },
+          style: 'destructive',
+        },
+      ],
+    );
+  };
+
   const styles = StyleSheet.create({
-    container: { flex: 1 },
+    container: {
+      flex: 1
+    },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       marginBottom: 18
     },
-    headerTitleContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    flatListContainer: { flex: 1 },
-    gridContent: { flexGrow: 1, padding: PADDING },
-    columnWrapper: { justifyContent: 'space-between', marginBottom: COLUMN_GAP },
-    gridItem: { marginBottom: COLUMN_GAP },
-    cardWrapper: { alignItems: 'center' },
-    centerMessage: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    errorText: { color: colors.error, textAlign: 'center', marginBottom: 10 },
-    emptyMessage: {
+    headerTitleContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8
+    },
+    flatListContainer: {
+      flex: 1,
+      overflow: 'visible'
+    },
+    gridContent: {
+      paddingBottom: 40
+    },
+    columnWrapper: {
+      gap: COLUMN_GAP,
+      justifyContent: 'flex-start',
+      marginBottom: COLUMN_GAP * 1.5
+    },
+    gridItem: {
+      margin: COLUMN_GAP / 2,
+      alignItems: 'center',
+    },
+    cardWrapper: {
+      width: '100%',
+      alignItems: 'center',
+      justifyContent: 'center'
+    },
+    centerMessage: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
       padding: 20
     },
-    limitReachedText: { color: colors.textSecondary, fontSize: 12, fontStyle: 'italic', marginLeft: 8 },
-    addButtonLarge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(128, 90, 213, 0.1)', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, gap: 8 },
-    addButtonHeaderSmall: { padding: 8, borderRadius: 8 },
-    addButtonText: { color: '#805AD5', fontWeight: '600' }
-  })
+    errorText: {
+      color: colors.error,
+      textAlign: 'center',
+      marginTop: 8
+    },
+    limitReachedText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginVertical: 8,
+      paddingHorizontal: 16
+    },
+
+    addButton: {
+      borderRadius: 8
+    },
+    addButtonHeaderSmall: {
+      padding: 8,
+      borderRadius: 8
+    },
+    addButtonLarge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: 'rgba(128, 90, 213, 0.1)',
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+      gap: 8
+    },
+    addButtonText: {
+      color: '#805AD5',
+      fontWeight: '600'
+    }
+  });
 
   const renderItem = ({ item }: { item: Ammo }) => (
     <View style={[styles.gridItem, { width: dimensions.cardWidth }]}>
@@ -112,6 +187,7 @@ export const AmmoView = () => {
         <AmmoCard
           ammo={item}
           onPress={() => handleAmmoPress(item)}
+          onDelete={() => handleDelete(item.id)}
           width={dimensions.cardWidth}
           height={dimensions.cardHeight}
         />
@@ -131,17 +207,13 @@ export const AmmoView = () => {
     )
   } else if (ammos.length === 0) {
     content = (
-      <View style={styles.emptyMessage}>
-        <MaterialCommunityIcons name='ammunition' size={48} color={colors.textSecondary} />
-        <Text style={{ color: colors.textSecondary }}>No Ammo Yet</Text>
-        <Text style={{ color: colors.textSecondary, textAlign: 'center', marginBottom: 16 }}>
-          Get started by adding your first ammo type to your inventory.
-        </Text>
-        <Button variant='secondary' title='+ Add Ammo' onPress={handleAddAmmo} disabled={!canAddItem} />
-        {!isP1User && !canAddItem && (
-          <Text style={styles.limitReachedText}>Item limit reached. P1 presale members have unlimited additions.</Text>
-        )}
-      </View>
+      <EmptyState
+        icon={<MaterialCommunityIcons name='ammunition' size={80} color={colors.primary} />}
+        title='No Ammo Yet'
+        subtitle='Get started by adding your first ammo type to your inventory.'
+        buttonText='+ Add Ammo'
+        onPress={handleAddAmmo}
+      />
     )
   } else {
     content = (

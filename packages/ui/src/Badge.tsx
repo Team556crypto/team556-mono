@@ -1,5 +1,5 @@
 import React from 'react'
-import { Pressable, PressableProps, StyleSheet, StyleProp, ViewStyle } from 'react-native'
+import { Pressable, PressableProps, StyleSheet, StyleProp, ViewStyle, View } from 'react-native'
 import { useTheme } from './ThemeContext'
 import Text from './Text'
 
@@ -7,9 +7,10 @@ export interface BadgeProps extends Omit<PressableProps, 'style'> {
   label: string
   isActive?: boolean
   style?: StyleProp<ViewStyle>
+  icon?: React.ReactNode
 }
 
-export const Badge = ({ label, isActive, style, ...rest }: BadgeProps) => {
+export const Badge = ({ label, isActive, style, icon, ...rest }: BadgeProps) => {
   const { colors } = useTheme()
 
   const backgroundColor = isActive ? colors.primary : colors.backgroundCard
@@ -30,7 +31,12 @@ export const Badge = ({ label, isActive, style, ...rest }: BadgeProps) => {
       ]}
       {...rest}
     >
-      <Text style={[styles.text, { color: textColor, fontWeight: textWeight }]}>{label}</Text>
+      <View style={styles.content}>
+        {icon ? icon : null}
+        <Text style={[styles.text, { color: textColor, fontWeight: textWeight, marginLeft: icon ? 8 : 0 }]}>
+          {label}
+        </Text>
+      </View>
     </Pressable>
   )
 }
@@ -44,6 +50,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center'
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   text: {
     fontSize: 14,

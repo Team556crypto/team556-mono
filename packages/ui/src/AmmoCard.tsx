@@ -4,13 +4,14 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { useTheme } from './ThemeContext'
 import Text from './Text'
 import { Ammo } from './types'
-import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons'
 import { Image } from 'expo-image';
 import { DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from './constants';
 
 interface AmmoCardProps {
   ammo: Ammo;
   onPress?: (id: number) => void;
+  onDelete?: (id: number) => void;
   width?: number;
   height?: number;
 }
@@ -18,6 +19,7 @@ interface AmmoCardProps {
 export default function AmmoCard({
   ammo,
   onPress,
+  onDelete,
   width = DEFAULT_CARD_WIDTH,
   height = DEFAULT_CARD_HEIGHT
 }: AmmoCardProps) {
@@ -92,6 +94,14 @@ export default function AmmoCard({
       fontSize: 13,
       color: colors.textSecondary,
       fontWeight: '500'
+    },
+    deleteButton: {
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      padding: 4,
+      borderRadius: 8,
+      backgroundColor: 'rgba(0,0,0,0.5)',
     }
   })
 
@@ -149,6 +159,11 @@ export default function AmmoCard({
             {`Qty: ${ammo.quantity}`}
           </Text>
         </View>
+        {onDelete && (
+          <Pressable style={styles.deleteButton} onPress={() => onDelete(ammo.id)}>
+            <Ionicons name="trash-outline" size={20} color={colors.textSecondary} />
+          </Pressable>
+        )}
       </LinearGradient>
     </Pressable>
   )

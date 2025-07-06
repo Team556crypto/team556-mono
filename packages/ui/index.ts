@@ -9,7 +9,9 @@ export { default as TabBarBackground } from './src/TabBarBackground'
 export { default as IconSymbol } from './src/IconSymbol'
 export { default as FirearmCard } from './src/FirearmCard'
 export { default as AmmoCard } from './src/AmmoCard'
+export { default as GearCard } from './src/GearCard'
 export { default as Select } from './src/Select'
+export { default as EmptyState } from './src/EmptyState'
 
 // Named exports for specific functionality
 export * from './src/Input'
@@ -25,6 +27,7 @@ export * from './src/HorizontalBadgeScroll'
 export * from './src/ThemeContext'
 export * from './src/FirearmCard'
 export * from './src/AmmoCard'
+export * from './src/GearCard'
 export * from './src/Select'
 export * from './src/constants'
 

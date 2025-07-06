@@ -42,6 +42,11 @@ const signTransactionSchema = z.object({
   unsignedTransaction: z.string().min(1, { message: 'Unsigned transaction is required' }) // Expect base64 string
 })
 
+// --- Zod Schema for Send Transaction ---
+const sendTransactionSchema = z.object({
+  signedTransaction: z.string().min(1, { message: 'Signed transaction is required' }) // Expect base64 string
+})
+
 // --- Helper Functions ---
 
 // Updated Helper to fetch prices for SOL and TEAM token using Alchemy SDK
@@ -391,6 +396,73 @@ export const signTransaction = async (req: Request, res: Response) => {
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error during signing'
     return res.status(500).json({ message: 'Failed to sign transaction', error: errorMessage })
+  }
+}
+
+export const sendTransaction = async (req: Request, res: Response) => {
+  try {
+    // 1. Validate Request Body
+    const validationResult = sendTransactionSchema.safeParse(req.body)
+    if (!validationResult.success) {
+      console.warn('Invalid sendTransaction request body:', { errors: validationResult.error.errors, body: req.body })
+      return res.status(400).json({ error: 'Invalid request body', details: validationResult.error.flatten() })
+    }
+
+    const { signedTransaction } = validationResult.data
+
+    // 2. Setup RPC Connection
+    const rpcUrl = process.env.GLOBAL__MAINNET_RPC_URL
+    if (!rpcUrl) {
+      throw new Error('RPC URL not configured')
+    }
+    const connection = new Connection(rpcUrl, 'confirmed')
+
+    // 3. Deserialize Signed Transaction
+    const transactionBuffer = Buffer.from(signedTransaction, 'base64')
+    const transaction = Transaction.from(transactionBuffer)
+
+    // 4. Send Transaction to Blockchain
+    console.log('Sending transaction to blockchain...')
+    const signature = await connection.sendRawTransaction(transactionBuffer, {
+      skipPreflight: false,
+      preflightCommitment: 'confirmed'
+    })
+
+    console.log('Transaction sent with signature:', signature)
+
+    // 5. Wait for Confirmation
+    console.log('Waiting for transaction confirmation...')
+    const confirmation = await connection.confirmTransaction({
+      signature,
+      blockhash: transaction.recentBlockhash!,
+      lastValidBlockHeight: (await connection.getLatestBlockhash()).lastValidBlockHeight
+    }, 'confirmed')
+
+    if (confirmation.value.err) {
+      console.error('Transaction failed:', confirmation.value.err)
+      return res.status(400).json({
+        error: 'Transaction failed',
+        signature,
+        details: confirmation.value.err
+      })
+    }
+
+    console.log('Transaction confirmed successfully:', signature)
+
+    // 6. Return Success Response
+    return res.status(200).json({
+      success: true,
+      signature,
+      confirmation: confirmation.value
+    })
+
+  } catch (error: unknown) {
+    console.error('Error in sendTransaction:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error during transaction sending'
+    return res.status(500).json({ 
+      error: 'Failed to send transaction', 
+      details: errorMessage 
+    })
   }
 }
 

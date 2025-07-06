@@ -11,7 +11,7 @@ import { BigNumber } from 'bignumber.js';
 import { useAuthStore } from '@/store/authStore';
 import { useToastStore } from '@/store/toastStore';
 import { useDrawerStore } from '@/store/drawerStore';
-import { signTransaction } from '@/services/api';
+import { signTransaction, sendTransaction, sendWebhook } from '@/services/api';
 import { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, createTransferInstruction, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { parseURL, TransferRequestURL } from '@solana/pay';
 import { Buffer } from 'buffer'; // Add missing Buffer import
@@ -20,12 +20,17 @@ import ConfirmPaymentDrawerContent from '@/components/drawers/ConfirmPaymentDraw
 
 const TEAM556_MINT_ADDRESS = new PublicKey('AMNfeXpjD6kXyyTDB4LMKzNWypqNHwtgJUACHUmuKLD5');
 
-const RPC_ENDPOINTS = [
-  process.env.EXPO_PUBLIC_GLOBAL__HELIUS_RPC_URL || 'https://rpc.helius.xyz?api-key=YOUR_API_KEY_HERE',
-  process.env.EXPO_PUBLIC_GLOBAL__BACKUP_RPC_URL_1 || 'https://api.mainnet-beta.solana.com',
-  process.env.EXPO_PUBLIC_GLOBAL__BACKUP_RPC_URL_2 || 'https://try-rpc.mainnet.solana.blockdaemon.tech/',
-  process.env.EXPO_PUBLIC_GLOBAL__BACKUP_RPC_URL_3 || 'https://solana-mainnet.g.alchemy.com/v2/YOUR_ALCHEMY_API_KEY',
-];
+// Build a resilient list of RPC endpoints. Prefer keys from env but fall back to
+// CORS-enabled public endpoints so the web build works without secrets.
+// Base URL for the Go main-api (already used throughout the app via apiClient).
+const MAIN_API_BASE = process.env.EXPO_PUBLIC_GLOBAL__MAIN_API_URL || 'http://localhost:3000/api';
+
+// The proxy route that forwards JSON-RPC calls to Solana nodes; the server keeps private keys.
+const PROXY_RPC_ENDPOINT = `${MAIN_API_BASE}/solana/rpc`;
+
+// Always try the main-api proxy first (and usually only). If it ever fails we can
+// optionally add public fallbacks, but per requirement this should proxy ALL calls.
+const RPC_ENDPOINTS: string[] = [PROXY_RPC_ENDPOINT];
 
 async function createResilientConnection(endpoints: string[]): Promise<Connection> {
   for (const endpoint of endpoints) {
@@ -33,6 +38,7 @@ async function createResilientConnection(endpoints: string[]): Promise<Connectio
       const connection = new Connection(endpoint, {
         commitment: 'confirmed',
         confirmTransactionInitialTimeout: 60000,
+        wsEndpoint: undefined, // Disable WebSocket to avoid CORS issues with proxy
       });
       // Perform a quick version check to ensure the endpoint is responsive
       await connection.getVersion();
@@ -133,7 +139,7 @@ export default function PayScreen() {
 
 
   useEffect(() => {
-    if (permission && permission.status === PermissionStatus.UNDETERMINED) {
+    if (Platform.OS !== 'web' && permission && permission.status === PermissionStatus.UNDETERMINED) {
       requestPermission();
     }
   }, [permission, requestPermission]);
@@ -332,31 +338,21 @@ export default function PayScreen() {
           const signResponse = await signTransaction(token, password, base64Transaction);
           const signedTxBase64 = signResponse.signedTransaction;
 
-          const signedTxBytes = Buffer.from(signedTxBase64, 'base64');
-
-          const signature = await connection.sendRawTransaction(signedTxBytes, {
-            skipPreflight: false
-          });
-
-
-
-          const confirmationResult = await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
+          // Send the signed transaction through the main API instead of direct RPC
+          const sendResponse = await sendTransaction(token, signedTxBase64);
           
-          const confirmValue = confirmationResult as { value?: { err?: any } };
-          if (confirmValue?.value?.err) {
-            throw new Error(`Transaction confirmation failed: ${JSON.stringify(confirmValue.value.err)}`);
+          if (!sendResponse.success) {
+            throw new Error('Transaction failed to send or confirm');
           }
+          
+          const signature = sendResponse.signature;
           showToast(`Payment successful!`, 'success', 3000);
 
             // Send webhook callback so the merchant site can confirm the payment
                         if (paymentDetails.webhookUrl) {
               try {
-                                await fetch(paymentDetails.webhookUrl, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ transaction: signature }),
-                });
-                                console.log('Webhook POST sent to', paymentDetails.webhookUrl);
+                                await sendWebhook(token, paymentDetails.webhookUrl, signature);
+                console.log('Webhook POST sent via proxy to', paymentDetails.webhookUrl);
               } catch (webhookErr) {
                 console.warn('Failed to send payment webhook', webhookErr);
               }
@@ -423,8 +419,9 @@ export default function PayScreen() {
             Use Team556 to pay at your favorite firearm business that accepts Team556.
         </Text>
         
-        <View style={styles.scannerOuterContainer}>
-          <CameraView
+        {Platform.OS !== 'web' && (
+          <View style={styles.scannerOuterContainer}>
+            <CameraView
             onBarcodeScanned={scanned ? undefined : handleBarCodeScanned} 
             barcodeScannerSettings={{
               barcodeTypes: ['qr'], 
@@ -432,6 +429,7 @@ export default function PayScreen() {
             style={styles.cameraView}
           />
         </View>
+        )}
 
         <Text style={styles.manualInputLabel}>Or enter/paste Team556 Pay URL:</Text>
         <View style={styles.inputContainer}>

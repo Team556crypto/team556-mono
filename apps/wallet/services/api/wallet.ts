@@ -4,8 +4,12 @@ import type {
   CreateWalletResponse,
   SignTransactionRequest,
   SignTransactionResponse,
+  SendTransactionRequest,
+  SendTransactionResponse,
   GetRecoveryPhraseRequest,
   GetRecoveryPhraseResponse,
+  SendWebhookRequest,
+  SendWebhookResponse,
 } from './types';
 
 /**
@@ -59,6 +63,30 @@ export const signTransaction = async (
 };
 
 /**
+ * Makes a POST request to the send transaction endpoint.
+ * Requires authentication.
+ * @param token - The authentication token.
+ * @param signedTransaction - The base64 encoded signed Solana transaction.
+ * @returns A promise that resolves with the transaction signature and confirmation.
+ * @throws An ApiClientError if the request fails.
+ */
+export const sendTransaction = async (
+  token: string | null,
+  signedTransaction: string
+): Promise<SendTransactionResponse> => {
+  if (!token) {
+    return Promise.reject(new Error('Authentication token not provided.'));
+  }
+  const payload: SendTransactionRequest = { signedTransaction };
+  return apiClient<SendTransactionResponse>({
+    method: 'POST',
+    endpoint: '/wallet/send-transaction',
+    token,
+    body: payload,
+  });
+};
+
+/**
  * Fetches the user's decrypted recovery phrase from the backend.
  * Requires the user's password for decryption.
  * @param data - The request payload containing the password.
@@ -78,5 +106,31 @@ export const getRecoveryPhrase = async (
     endpoint: '/wallet/recovery-phrase',
     token,
     body: data,
+  });
+};
+
+/**
+ * Proxies a webhook POST request to the merchant's server via the main-api.
+ * Requires authentication.
+ * @param token - The authentication token.
+ * @param webhookUrl - The URL to send the webhook to.
+ * @param transaction - The transaction signature.
+ * @returns A promise that resolves with a success message.
+ * @throws An ApiClientError if the request fails.
+ */
+export const sendWebhook = async (
+  token: string | null,
+  webhookUrl: string,
+  transaction: string
+): Promise<SendWebhookResponse> => {
+  if (!token) {
+    return Promise.reject(new Error('Authentication token not provided.'));
+  }
+  const payload: SendWebhookRequest = { webhookUrl, transaction };
+  return apiClient<SendWebhookResponse>({
+    method: 'POST',
+    endpoint: '/wallet/webhook',
+    token,
+    body: payload,
   });
 };

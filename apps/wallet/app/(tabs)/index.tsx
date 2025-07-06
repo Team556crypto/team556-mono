@@ -20,6 +20,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ScreenLayout } from '@/components/layout/ScreenLayout'
 import AssetDetailsDrawerContent from '@/components/drawers/AssetDetailsDrawerContent'
 import AssetCard from '@/components/assets/AssetCard'
+import RecentTransactionsCard from '@/components/transactions/RecentTransactionsCard'
+import TransactionHistoryDrawer from '@/components/drawers/TransactionHistoryDrawer'
 
 // Define TokenOption type locally
 type TokenOption = 'SOL' | 'TEAM'
@@ -101,6 +103,10 @@ export default function HomeScreen() {
       // Handle case where address is not available (shouldn't happen if user is logged in)
       showToast('Wallet address not found.', 'error')
     }
+  }
+
+  const handleSeeAllTransactions = () => {
+    openDrawer(<TransactionHistoryDrawer onClose={closeDrawer} />)
   }
 
   const handleSendPress = (initialToken?: TokenOption) => {
@@ -205,10 +211,12 @@ export default function HomeScreen() {
       headerRightElement={renderHeaderRight()}
     >
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={[
           styles.scrollContentContainer,
           { paddingBottom: insets.bottom > 0 ? insets.bottom : 20 }
         ]}
+        nestedScrollEnabled={true}
       >
         {/* --- BEGIN: New Portfolio Section --- */}
         <View style={styles.portfolioSectionContainer}>
@@ -266,21 +274,9 @@ export default function HomeScreen() {
             accent={Colors.secondary}
             onPress={() => handleAssetPress('Team', teamBalance, 'TEAM', teamValue, teamPrice, TeamIcon)}
           />
+          {/* Recent Activity Section */}
+          <RecentTransactionsCard onSeeAllPress={handleSeeAllTransactions} />
         </View>
-
-        {/* Recent Activity Section */}
-        {/* <View style={[styles.sectionHeader, { marginTop: 20 }]}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
-          <TouchableOpacity>
-            <Text style={styles.seeAllText}>See all</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.emptyActivity}>
-          <Text style={styles.emptyActivityText} preset='h4'>
-            Coming Soon
-          </Text>
-        </View> */}
       </ScrollView>
     </ScreenLayout>
   )

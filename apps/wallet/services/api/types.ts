@@ -196,3 +196,27 @@ export interface ExecuteSwapResponseWithStatus {
 }
 
 // Add other shared types here as needed
+
+// --- TRANSACTION HISTORY ---
+
+export interface Transaction {
+  signature: string;
+  date: string;
+  type: 'Send' | 'Receive' | 'Swap' | 'Team556 Pay' | 'Contract Interaction' | 'Unknown' | 'Complex Interaction';
+  amount: string;
+  token: string;
+  from: string;
+  to: string;
+  memo?: string | null;
+  businessName?: string; // Name of the business for Team556 Pay transactions
+  businessId?: string; // ID of the business for Team556 Pay transactions
+}
+
+export interface GetTransactionsRequest {
+  address: string;
+  limit?: number;
+}
+
+export interface GetTransactionsResponse {
+  transactions: Transaction[];
+}

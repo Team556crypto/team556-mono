@@ -1,4 +1,6 @@
 import { create } from 'zustand'
+import { getTransactions } from '@/services/api/transactions'
+import type { Transaction } from '@/services/api/types'
 import { useAuthStore } from './authStore'
 
 // Define the polling interval in milliseconds
@@ -10,6 +12,12 @@ interface BalancePriceResponse {
 }
 
 interface WalletState {
+  transactions: Transaction[];
+  transactionsLoading: boolean;
+  transactionsError: string | null;
+  normalizeTransactions: (transactions: Transaction[]) => Transaction[];
+  fetchTransactions: (limit?: number) => Promise<void>;
+
   solBalance: number | null
   solPrice: number | null
   isSolLoading: boolean
@@ -40,6 +48,74 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   teamError: null,
 
   pollingIntervalId: null,
+
+  transactions: [],
+  transactionsLoading: false,
+  transactionsError: null,
+
+  // Helper function to normalize transaction types and detect Team556 Pay transactions
+  normalizeTransactions: (transactions: Transaction[]): Transaction[] => {
+    
+    return transactions.map(transaction => {
+      // Create a copy of the transaction to avoid mutating the original
+      const normalizedTransaction = { ...transaction };
+      
+      // Check if this is already explicitly marked as a Team556 Pay transaction
+      if (transaction.type.toLowerCase() === 'team556 pay' || 
+          transaction.type.toLowerCase() === 'team556pay') {
+        normalizedTransaction.type = 'Team556 Pay';
+        if (!normalizedTransaction.businessName) {
+          normalizedTransaction.businessName = 'Team556 Merchant';
+        }
+        return normalizedTransaction;
+      }
+      
+      // Check for the new structured memo format.
+      if (transaction.memo && transaction.memo.startsWith('Team556 Pay')) {
+        normalizedTransaction.type = 'Team556 Pay';
+
+        // Extract business name from the structured memo.
+        const businessMatch = transaction.memo.match(/Business: ([^|]+)/);
+        if (businessMatch && businessMatch[1]) {
+          normalizedTransaction.businessName = businessMatch[1].trim();
+        } else {
+          normalizedTransaction.businessName = 'Team556 Merchant';
+        }
+        // Removed console.log statement
+      }
+      
+      // Look for payment receipt information in the transaction data
+      // This is a fallback for transactions that might not have memo data
+      if (transaction.businessName || transaction.businessId) {
+        normalizedTransaction.type = 'Team556 Pay';
+        if (!normalizedTransaction.businessName) {
+          normalizedTransaction.businessName = 'Team556 Merchant';
+        }
+      }
+      
+      return normalizedTransaction;
+    });
+  },
+
+  fetchTransactions: async (limit?: number) => {
+    const { token, user } = useAuthStore.getState();
+    if (!token || !user?.wallets?.[0]?.address) {
+      set({ transactions: [], transactionsLoading: false, transactionsError: 'User or wallet not found.' });
+      return;
+    }
+
+    set({ transactionsLoading: true, transactionsError: null });
+
+    try {
+      const response = await getTransactions(token, user.wallets[0].address, limit);
+      // Normalize transaction types before setting state
+      const normalizedTransactions = get().normalizeTransactions(response.transactions);
+      set({ transactions: normalizedTransactions, transactionsLoading: false });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch transactions';
+      set({ transactions: [], transactionsLoading: false, transactionsError: errorMessage });
+    }
+  },
 
   fetchSolBalance: async () => {
     const token = useAuthStore.getState().token

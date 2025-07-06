@@ -108,6 +108,28 @@ type SendWebhookResponse struct {
 	Message string `json:"message"`
 }
 
+// GetTransactionsRequest defines the structure for the transaction history request
+type GetTransactionsRequest struct {
+	Address string `json:"address"`
+	Limit   int    `json:"limit,omitempty"`
+}
+
+// Transaction defines the structure for a single transaction
+type Transaction struct {
+	Signature string `json:"signature"`
+	Date      string `json:"date"`
+	Type      string `json:"type"`
+	Amount    string `json:"amount"`
+	Token     string `json:"token"`
+	From      string `json:"from"`
+	To        string `json:"to"`
+}
+
+// GetTransactionsResponse defines the structure for the transaction history response
+type GetTransactionsResponse struct {
+	Transactions []Transaction `json:"transactions"`
+}
+
 // --- Structs for Internal Solana API Communication ---
 type SolanaSignRequest struct {
 	Mnemonic            string `json:"mnemonic"`
@@ -923,6 +945,80 @@ func SendTransactionHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 		}
 
 		log.Printf("Successfully received transaction response from solana-api for user %d", userID)
+
+		// --- Return Transaction Response ---
+		return c.Status(fiber.StatusOK).JSON(solanaResp)
+	}
+}
+
+// GetTransactionsHandler handles fetching transaction history from the solana-api
+func GetTransactionsHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// --- Authentication ---
+		userIDInterface := c.Locals("userID")
+		if userIDInterface == nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized: User ID not found in context"})
+		}
+		userID, ok := userIDInterface.(uint)
+		if !ok {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized: Invalid user ID format"})
+		}
+
+		// --- Parse and Validate Request Body ---
+		var req GetTransactionsRequest
+		if err := c.BodyParser(&req); err != nil {
+			log.Printf("Error parsing get transactions request body: %v", err)
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body format"})
+		}
+
+		if req.Address == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "address is required"})
+		}
+
+		log.Printf("Processing get transactions request for user %d", userID)
+
+		// --- Call Solana API to Get Transactions ---
+		solanaAPIURL := cfg.SolanaAPIURL
+		if solanaAPIURL == "" {
+			log.Println("Error: SOLANA_API_BASE_URL not configured")
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Configuration error: Solana API URL missing"})
+		}
+		transactionsURL := fmt.Sprintf("%s/api/wallet/transactions", solanaAPIURL)
+
+		// Prepare request body for solana-api
+		jsonReqBody, err := json.Marshal(req)
+		if err != nil {
+			log.Printf("Error marshaling request body for solana-api: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to prepare get transactions request"})
+		}
+
+		// Make the POST request
+		log.Printf("Calling Solana API Transactions: POST %s", transactionsURL)
+		httpClient := &http.Client{Timeout: 60 * time.Second}
+		resp, err := httpClient.Post(transactionsURL, "application/json", bytes.NewBuffer(jsonReqBody))
+		if err != nil {
+			log.Printf("Error calling Solana API Transactions: %v", err)
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "Failed to connect to Solana transaction service"})
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			bodyBytes, _ := io.ReadAll(resp.Body)
+			log.Printf("Error from Solana API Transactions (Status %d): %s", resp.StatusCode, string(bodyBytes))
+			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
+				"error":         "Failed to get transactions from Solana service",
+				"upstreamError": string(bodyBytes),
+			})
+		}
+
+		// Decode the response from solana-api
+		var solanaResp GetTransactionsResponse
+		if err := json.NewDecoder(resp.Body).Decode(&solanaResp); err != nil {
+			log.Printf("Error decoding Solana API Transactions response: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to process Solana transaction service response"})
+		}
+
+		log.Printf("Successfully received transaction history from solana-api for user %d", userID)
 
 		// --- Return Transaction Response ---
 		return c.Status(fiber.StatusOK).JSON(solanaResp)

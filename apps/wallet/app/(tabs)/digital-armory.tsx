@@ -19,7 +19,7 @@ const CATEGORIES: BadgeItem[] = [
   { label: 'All', icon: <Ionicons name='grid' size={16} color={Colors.textSecondary} /> },
   { label: 'Firearms', icon: <MaterialCommunityIcons name='pistol' size={16} color={Colors.textSecondary} /> },
   { label: 'Ammo', icon: <MaterialCommunityIcons name='ammunition' size={16} color={Colors.textSecondary} /> },
-  { label: 'Gear', icon: <MaterialCommunityIcons name='cog' size={16} color={Colors.textSecondary} /> },
+  { label: 'Gear', icon: <MaterialCommunityIcons name='tent' size={16} color={Colors.textSecondary} /> },
   { label: 'Documents', icon: <Ionicons name='document-text' size={16} color={Colors.textSecondary} /> },
   { label: 'NFA', icon: <MaterialCommunityIcons name='file-certificate-outline' size={16} color={Colors.textSecondary} /> },
 ]

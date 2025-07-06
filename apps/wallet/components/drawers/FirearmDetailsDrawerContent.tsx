@@ -13,6 +13,21 @@ import * as FileSystem from 'expo-file-system'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 
+// Debounce utility
+function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
+  let timeout: NodeJS.Timeout | null = null
+
+  const debounced = (...args: Parameters<F>) => {
+    if (timeout !== null) {
+      clearTimeout(timeout)
+      timeout = null
+    }
+    timeout = setTimeout(() => func(...args), waitFor)
+  }
+
+  return debounced as (...args: Parameters<F>) => void
+}
+
 const SCREEN_HEIGHT = Dimensions.get('window').height
 const windowWidth = Dimensions.get('window').width
 
@@ -110,16 +125,51 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
     }
   }, [isEditing])
 
+  const debouncedUpdateUsageDetails = React.useCallback(
+    debounce(async (payload: Partial<UpdateFirearmPayload>) => {
+      if (!token) {
+        console.error('Auto-save failed: No auth token.')
+        return
+      }
+      try {
+        // We don't want to show loading indicators for auto-save
+        await updateFirearmAction(token, firearm.id, payload)
+      } catch (error) {
+        console.error('Auto-save failed:', error)
+      }
+    }, 1500), // 1.5-second debounce delay
+    [token, firearm.id, updateFirearmAction]
+  )
+
   if (!firearm) {
     return null
   }
 
   const handleInputChange = (field: keyof UpdateFirearmPayload, value: any) => {
-    setEditableFirearm((prev: EditableFirearm) => ({
-      ...prev,
-      [field]: value
-    }))
-    // If changing an image, value will be an object { uri: string, base64: string }
+    setEditableFirearm((prev: EditableFirearm) => {
+      let processedValue = value
+      // Ensure numeric fields are stored as numbers or null
+      if (field === 'round_count') {
+        const numValue = parseInt(value, 10)
+        processedValue = isNaN(numValue) ? null : numValue
+      } else if (field === 'purchase_price') {
+        const numValue = parseFloat(value)
+        processedValue = isNaN(numValue) ? null : numValue
+      }
+
+      const updatedFirearm = { ...prev, [field]: processedValue }
+
+      // Trigger auto-save for usage fields
+      const usageFields: Array<keyof UpdateFirearmPayload> = ['round_count', 'last_fired', 'last_cleaned']
+      if (usageFields.includes(field)) {
+        // Explicitly create payload to help with type inference
+        const payload: Partial<UpdateFirearmPayload> = { [field]: processedValue }
+        debouncedUpdateUsageDetails(payload)
+      }
+
+      return updatedFirearm
+    })
+
     // Clear specific errors when field changes
     if (fieldErrors[field as keyof typeof fieldErrors]) {
       setFieldErrors((prev: Partial<Record<keyof UpdateFirearmPayload, string>>) => ({ ...prev, [field]: undefined }))
@@ -127,7 +177,7 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
   }
 
   // Called by DateTimePicker's onChange inside the modal
-  const onDateChangeInModal = (event: DateTimePickerEvent, selectedDate?: Date) => {
+  const onDateChangeInModal = (event: DateTimePickerEvent, selectedDate?: Date | null) => {
     const date = selectedDate || modalSelectedDate // Fallback to current modal date if undefined
     if (Platform.OS === 'android') {
       // For Android, 'set' means a date was picked
@@ -282,7 +332,7 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
     return 'crosshairs-gps'
   }
 
-  const formatDateForDisplay = (dateString?: string | null | Date) => {
+  const formatDateForDisplay = (dateString?: string | number | null) => {
     if (!dateString) return 'N/A'
     try {
       const date = new Date(dateString)
@@ -873,95 +923,89 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
         <Text preset='h4' style={styles.sectionTitle}>
           Usage Details
         </Text>
-        {isEditing ? (
-          <>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Last Fired</Text>
-              {Platform.OS === 'web' ? (
-                <View style={styles.datePickerWeb}>
-                  <DatePicker
-                    selected={getDateForPicker(editableFirearm.last_fired)}
-                    onChange={(date: Date | null) => handleInputChange('last_fired', date)}
-                    dateFormat='yyyy-MM-dd'
-                    placeholderText='YYYY-MM-DD'
-                    customInput={
-                      <Input
-                        style={styles.inputField}
-                        onChangeText={(text: string) => handleInputChange('last_fired', text)}
-                      />
-                    }
-                    portalId='datepicker-portal'
-                    calendarClassName='dark-theme-datepicker'
-                    popperClassName='dark-theme-datepicker-popper'
-                  />
-                </View>
-              ) : (
-                <TouchableOpacity onPress={() => showDatepickerForField('last_fired')} style={styles.dateTouchable}>
-                  <MaterialCommunityIcons
-                    name='calendar-blank-outline'
-                    size={20}
-                    color={colors.textSecondary}
-                    style={styles.datePickerIcon}
-                  />
-                  <Text style={editableFirearm.last_fired ? styles.dateText : styles.placeholderDateText}>
-                    {editableFirearm.last_fired ? formatDateForDisplay(editableFirearm.last_fired) : 'Select Date'}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Round Count</Text>
-              <Input
-                style={styles.inputField}
-                value={editableFirearm.round_count ? String(editableFirearm.round_count) : ''}
-                onChangeText={text => handleInputChange('round_count', text)}
-                placeholder='Enter round count'
-                keyboardType='numeric'
-                placeholderTextColor={colors.textTertiary}
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Last Fired</Text>
+          {Platform.OS === 'web' ? (
+            <View style={styles.datePickerWeb}>
+              <DatePicker
+                selected={getDateForPicker(editableFirearm.last_fired)}
+                onChange={(date: Date | null) => {
+                  if (date) {
+                    handleInputChange('last_fired', date.toISOString().split('T')[0])
+                  } else {
+                    handleInputChange('last_fired', null)
+                  }
+                }}
+                dateFormat='yyyy-MM-dd'
+                placeholderText='YYYY-MM-DD'
+                customInput={<Input style={styles.inputField} />}
+                portalId='datepicker-portal'
+                calendarClassName='dark-theme-datepicker'
+                popperClassName='dark-theme-datepicker-popper'
               />
             </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Last Cleaned</Text>
-              {Platform.OS === 'web' ? (
-                <View style={styles.datePickerWeb}>
-                  <DatePicker
-                    selected={getDateForPicker(editableFirearm.last_cleaned)}
-                    onChange={(date: Date | null) => handleInputChange('last_cleaned', date)}
-                    dateFormat='yyyy-MM-dd'
-                    placeholderText='YYYY-MM-DD'
-                    customInput={
-                      <Input
-                        style={styles.inputField}
-                        onChangeText={(text: string) => handleInputChange('last_cleaned', text)}
-                      />
-                    }
-                    portalId='datepicker-portal'
-                    calendarClassName='dark-theme-datepicker'
-                    popperClassName='dark-theme-datepicker-popper'
-                  />
-                </View>
-              ) : (
-                <TouchableOpacity onPress={() => showDatepickerForField('last_cleaned')} style={styles.dateTouchable}>
-                  <MaterialCommunityIcons
-                    name='calendar-blank-outline'
-                    size={20}
-                    color={colors.textSecondary}
-                    style={styles.datePickerIcon}
-                  />
-                  <Text style={editableFirearm.last_cleaned ? styles.dateText : styles.placeholderDateText}>
-                    {editableFirearm.last_cleaned ? formatDateForDisplay(editableFirearm.last_cleaned) : 'Select Date'}
-                  </Text>
-                </TouchableOpacity>
-              )}
+          ) : (
+            <TouchableOpacity onPress={() => showDatepickerForField('last_fired')} style={styles.dateTouchable}>
+              <MaterialCommunityIcons
+                name='calendar-blank-outline'
+                size={20}
+                color={colors.textSecondary}
+                style={styles.datePickerIcon}
+              />
+              <Text style={editableFirearm.last_fired ? styles.dateText : styles.placeholderDateText}>
+                {editableFirearm.last_fired ? formatDateForDisplay(editableFirearm.last_fired) : 'Select Date'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Round Count</Text>
+          <Input
+            style={styles.inputField}
+            value={editableFirearm.round_count?.toString() ?? ''}
+            onChangeText={(text: string) => handleInputChange('round_count', text.replace(/[^0-9]/g, ''))}
+            keyboardType='numeric'
+            placeholder='Enter round count'
+            placeholderTextColor={colors.textSecondary}
+          />
+        </View>
+
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Last Cleaned</Text>
+          {Platform.OS === 'web' ? (
+            <View style={styles.datePickerWeb}>
+              <DatePicker
+                selected={getDateForPicker(editableFirearm.last_cleaned)}
+                onChange={(date: Date | null) => {
+                  if (date) {
+                    handleInputChange('last_cleaned', date.toISOString().split('T')[0])
+                  } else {
+                    handleInputChange('last_cleaned', null)
+                  }
+                }}
+                dateFormat='yyyy-MM-dd'
+                placeholderText='YYYY-MM-DD'
+                customInput={<Input style={styles.inputField} />}
+                portalId='datepicker-portal'
+                calendarClassName='dark-theme-datepicker'
+                popperClassName='dark-theme-datepicker-popper'
+              />
             </View>
-          </>
-        ) : (
-          <>
-            {renderDetailRow('Last Fired', formatDateForDisplay(firearm.last_fired))}
-            {renderDetailRow('Round Count', firearm.round_count)}
-            {renderDetailRow('Last Cleaned', formatDateForDisplay(firearm.last_cleaned), true)}
-          </>
-        )}
+          ) : (
+            <TouchableOpacity onPress={() => showDatepickerForField('last_cleaned')} style={styles.dateTouchable}>
+              <MaterialCommunityIcons
+                name='calendar-blank-outline'
+                size={20}
+                color={colors.textSecondary}
+                style={styles.datePickerIcon}
+              />
+              <Text style={editableFirearm.last_cleaned ? styles.dateText : styles.placeholderDateText}>
+                {editableFirearm.last_cleaned ? formatDateForDisplay(editableFirearm.last_cleaned) : 'Select Date'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {showDatePicker && (

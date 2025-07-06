@@ -11,7 +11,7 @@ export interface Firearm {
   model_name?: string; // Optional string
   caliber?: string;
   acquisition_date?: string; // ISO string
-  purchase_price?: string; // String representation of decimal
+  purchase_price?: number; // Represents a decimal value
   ballistic_performance?: string; // Assuming JSON string for now
   last_fired?: string; // ISO string
   image?: string; // Optional string
@@ -48,7 +48,7 @@ export type CreateFirearmPayload = {
   model_name?: string;
   caliber?: string;
   acquisition_date?: string;
-  purchase_price?: string;
+  purchase_price?: number;
   ballistic_performance?: string;
   last_fired?: string;
   image?: string; // URL, optional, will be set by server if image_base64 is provided

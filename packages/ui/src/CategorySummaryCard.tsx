@@ -6,7 +6,7 @@ interface CategorySummaryCardProps {
   icon: JSX.Element;
   title: string;
   count: number;
-  totalValue: number;
+  totalValue?: number;
   onPress?: () => void;
 }
 
@@ -64,12 +64,14 @@ export const CategorySummaryCard: React.FC<CategorySummaryCardProps> = ({ icon, 
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.countText}>{`${count} ${count === 1 ? 'item' : 'items'}`}</Text>
       </View>
-      <View style={styles.valueContainer}>
-        <Text style={styles.valueText}>
-          {`$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-        </Text>
-        <Text style={styles.valueLabel}>Total Value</Text>
-      </View>
+      {typeof totalValue === 'number' && (
+        <View style={styles.valueContainer}>
+          <Text style={styles.valueText}>
+            {`$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          </Text>
+          <Text style={styles.valueLabel}>Total Value</Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
 };

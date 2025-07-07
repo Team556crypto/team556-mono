@@ -106,8 +106,16 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	gear.Post("/", handlers.CreateGearHandler(db, cfg))
 	gear.Get("/", handlers.GetGearsHandler(db, cfg))
 	gear.Get("/:id", handlers.GetGearByIDHandler(db, cfg))
-	gear.Patch("/:id", handlers.UpdateGearHandler(db, cfg))
+	gear.Put("/:id", handlers.UpdateGearHandler(db, cfg))
 	gear.Delete("/:id", handlers.DeleteGearHandler(db, cfg))
+
+	// --- Documents Routes ---
+	documents := api.Group("/documents", middleware.AuthMiddleware(cfg.JWTSecret))
+	documents.Post("/", handlers.CreateDocumentHandler(db, cfg))
+	documents.Get("/", handlers.GetDocumentsHandler(db, cfg))
+	documents.Get("/:id", handlers.GetDocumentByIDHandler(db, cfg))
+	documents.Put("/:id", handlers.UpdateDocumentHandler(db, cfg))
+	documents.Delete("/:id", handlers.DeleteDocumentHandler(db, cfg))
 
 	// --- Presale Routes ---
 	presale.Get("/claim-status", presaleHandler.GetPresaleClaimStatus)

@@ -43,11 +43,12 @@ func InitDB(databaseURL string) (*gorm.DB, error) {
 	err = db.AutoMigrate(
 		&models.User{},
 		&models.Wallet{},
+		&models.PasswordResetCode{},
 		&models.PresaleCode{},
 		&models.Firearm{},
-		&models.PasswordResetCode{},
 		&models.Ammo{},
 		&models.Gear{},
+		&models.Document{},
 	)
 	if err != nil {
 		// Log migration errors but don't necessarily make it fatal

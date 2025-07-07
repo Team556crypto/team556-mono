@@ -14,6 +14,8 @@ import { NfaView } from '@/components/armory/NfaView'
 import AllItemsView from '@/components/armory/AllItemsView'
 import AddGearDrawerContent from '@/components/drawers/AddGearDrawerContent'
 import GearDetailsDrawerContent from '@/components/drawers/GearDetailsDrawerContent'
+import AddDocumentDrawerContent from '@/components/drawers/AddDocumentDrawerContent'
+import DocumentDetailsDrawerContent from '@/components/drawers/DocumentDetailsDrawerContent'
 
 const CATEGORIES: BadgeItem[] = [
   { label: 'All', icon: <Ionicons name='grid' size={16} color={Colors.textSecondary} /> },
@@ -47,7 +49,7 @@ export default function DigitalArmoryScreen() {
       case 'Gear':
         return <GearView openDrawer={openDrawer} />;
       case 'Documents':
-        return <DocumentsView />
+        return <DocumentsView openDrawer={openDrawer} />
       case 'NFA':
         return <NfaView />
       case 'All':
@@ -64,12 +66,16 @@ export default function DigitalArmoryScreen() {
         return <AddGearDrawerContent {...activeDrawer.props} closeDrawer={closeDrawer} />;
       case 'GearDetails':
         return <GearDetailsDrawerContent {...activeDrawer.props} closeDrawer={closeDrawer} openDrawer={openDrawer} />;
+      case 'AddDocument':
+        return <AddDocumentDrawerContent {...activeDrawer.props} closeDrawer={closeDrawer} />;
+      case 'DocumentDetails':
+        return <DocumentDetailsDrawerContent {...activeDrawer.props} closeDrawer={closeDrawer} openDrawer={openDrawer} />;
       default:
         return null;
     }
   };
 
-  const isScrollableView = ['All', 'Firearms', 'Ammo', 'Gear'].includes(selectedCategory);
+  const isScrollableView = ['All', 'Firearms', 'Ammo', 'Gear', 'Documents'].includes(selectedCategory);
 
   return (
     <BottomSheetModalProvider>

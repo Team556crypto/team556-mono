@@ -120,4 +120,49 @@ export type CreateGearPayload = Omit<Gear, 'id' | 'owner_user_id' | 'created_at'
  */
 export type UpdateGearPayload = { id: number } & Partial<CreateGearPayload>;
 
+/**
+ * Represents a document object, matching the structure from the main API.
+ */
+export interface Document {
+  id: number;
+  owner_user_id: number;
+  name: string;
+  type: string;
+  issuing_authority?: string;
+  issue_date?: string;
+  expiration_date?: string;
+  document_number?: string;
+  notes?: string;
+  attachments?: string; // JSON string of attachment URLs
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Represents the payload for creating a new document.
+ */
+export type CreateDocumentPayload = {
+  name: string;
+  type: string;
+  issuing_authority?: string;
+  issue_date?: string;
+  expiration_date?: string;
+  document_number?: string;
+  notes?: string;
+  attachments?: string;
+};
+
+/**
+ * Represents the payload for updating an existing document.
+ */
+export type UpdateDocumentPayload = { id: number } & Partial<CreateDocumentPayload>;
+
+export const documentTypeOptions = [
+  { label: 'License', value: 'license' },
+  { label: 'Permit', value: 'permit' },
+  { label: 'Registration', value: 'registration' },
+  { label: 'Insurance', value: 'insurance' },
+  { label: 'Other', value: 'other' },
+];
+
 // Add other shared types here as needed

@@ -52,7 +52,7 @@ export default function DigitalArmoryScreen() {
         return <NfaView />
       case 'All':
       default:
-        return <AllItemsView />
+        return <AllItemsView onCategorySelect={setSelectedCategory} />
     }
   }
 

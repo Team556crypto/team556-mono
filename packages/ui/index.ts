@@ -25,7 +25,8 @@ export * from './src/TabBarBackground'
 export * from './src/Badge'
 export * from './src/HorizontalBadgeScroll'
 export * from './src/ThemeContext'
-export * from './src/FirearmCard'
+export * from './src/FirearmCard';
+export * from './src/CategorySummaryCard';
 export * from './src/AmmoCard'
 export * from './src/GearCard'
 export * from './src/Select'

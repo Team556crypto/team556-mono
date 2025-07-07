@@ -11,6 +11,7 @@ export { default as FirearmCard } from './src/FirearmCard'
 export { default as AmmoCard } from './src/AmmoCard'
 export { default as GearCard } from './src/GearCard'
 export { default as DocumentCard } from './src/DocumentCard'
+export { default as NFACard } from './src/NFACard'
 export { default as Select } from './src/Select'
 export { default as EmptyState } from './src/EmptyState'
 

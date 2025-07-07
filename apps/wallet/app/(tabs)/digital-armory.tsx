@@ -22,8 +22,8 @@ const CATEGORIES: BadgeItem[] = [
   { label: 'Firearms', icon: <MaterialCommunityIcons name='pistol' size={16} color={Colors.textSecondary} /> },
   { label: 'Ammo', icon: <MaterialCommunityIcons name='ammunition' size={16} color={Colors.textSecondary} /> },
   { label: 'Gear', icon: <MaterialCommunityIcons name='tent' size={16} color={Colors.textSecondary} /> },
-  { label: 'Documents', icon: <Ionicons name='document-text' size={16} color={Colors.textSecondary} /> },
   { label: 'NFA', icon: <MaterialCommunityIcons name='file-certificate-outline' size={16} color={Colors.textSecondary} /> },
+  { label: 'Documents', icon: <Ionicons name='document-text' size={16} color={Colors.textSecondary} /> },
 ]
 
 export default function DigitalArmoryScreen() {
@@ -75,7 +75,7 @@ export default function DigitalArmoryScreen() {
     }
   };
 
-  const isScrollableView = ['All', 'Firearms', 'Ammo', 'Gear', 'Documents'].includes(selectedCategory);
+    const isScrollableView = ['All', 'Firearms', 'Ammo', 'Gear', 'NFA', 'Documents'].includes(selectedCategory);
 
   return (
     <BottomSheetModalProvider>

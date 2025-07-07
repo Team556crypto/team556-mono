@@ -109,7 +109,9 @@ export const useFirearmStore = create<FirearmState>((set, get) => ({
   },
 
   // Action to replace the entire firearms array
-  setFirearms: firearms => set({ firearms }),
+  setFirearms: firearms => set({ 
+    firearms: firearms.map(f => ({ ...f, value: Number(f.value || 0), purchase_price: Number(f.purchase_price || 0) }))
+  }),
 
   // Getter function to retrieve a firearm by ID
   getFirearmById: firearmId => {

@@ -165,4 +165,52 @@ export const documentTypeOptions = [
   { label: 'Other', value: 'other' },
 ];
 
+/**
+ * Represents an NFA item object, matching the structure from the main API.
+ */
+export interface NFA {
+  id: number;
+  user_id: number;
+  manufacturer: string;
+  model_name: string;
+  caliber: string;
+  type: string;
+  value?: number;
+  round_count?: number;
+  tax_stamp_type: string;
+  tax_stamp_submission_date?: string; // ISO string
+  tax_stamp_approval_date?: string; // ISO string
+  tax_stamp_id_number: string;
+  picture?: string; // URL
+  created_at: string; // ISO string
+  updated_at: string; // ISO string
+}
+
+/**
+ * Represents the payload for creating a new NFA item.
+ */
+export type CreateNFAPayload = Omit<NFA, 'id' | 'user_id' | 'created_at' | 'updated_at'> & {
+    picture_base64?: string; // For image uploads
+};
+
+/**
+ * Represents the payload for updating an existing NFA item.
+ */
+export type UpdateNFAPayload = { id: number } & Partial<CreateNFAPayload>;
+
+
+export const nfaTypeOptions = [
+    { label: 'Suppressor', value: 'suppressor' },
+    { label: 'Short Barrel Rifle', value: 'sbr' },
+    { label: 'Short Barrel Shotgun', value: 'sbs' },
+    { label: 'Machine Gun', value: 'machine_gun' },
+    { label: 'Destructive Device', value: 'destructive_device' },
+    { label: 'Any Other Weapon', value: 'aow' },
+];
+
+export const taxStampTypeOptions = [
+    { label: 'Form 1', value: 'form_1' },
+    { label: 'Form 4', value: 'form_4' },
+];
+
 // Add other shared types here as needed

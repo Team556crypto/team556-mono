@@ -49,6 +49,7 @@ func InitDB(databaseURL string) (*gorm.DB, error) {
 		&models.Ammo{},
 		&models.Gear{},
 		&models.Document{},
+		&models.NFA{},
 	)
 	if err != nil {
 		// Log migration errors but don't necessarily make it fatal

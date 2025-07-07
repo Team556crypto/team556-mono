@@ -117,6 +117,14 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	documents.Put("/:id", handlers.UpdateDocumentHandler(db, cfg))
 	documents.Delete("/:id", handlers.DeleteDocumentHandler(db, cfg))
 
+	// --- NFA Routes ---
+	nfa := api.Group("/nfa", middleware.AuthMiddleware(cfg.JWTSecret))
+	nfa.Post("/", handlers.CreateNFAHandler(db, cfg))
+	nfa.Get("/", handlers.GetNFAItemsHandler(db, cfg))
+	nfa.Get("/:id", handlers.GetNFAByIDHandler(db, cfg))
+	nfa.Put("/:id", handlers.UpdateNFAHandler(db, cfg))
+	nfa.Delete("/:id", handlers.DeleteNFAHandler(db, cfg))
+
 	// --- Presale Routes ---
 	presale.Get("/claim-status", presaleHandler.GetPresaleClaimStatus)
 	presale.Post("/claim/p1p1", presaleHandler.ClaimPresaleP1P1)

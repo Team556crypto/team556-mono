@@ -157,7 +157,9 @@ export const useGearStore = create<GearState>((set, get) => ({
     }
   },
 
-  setGear: gear => set({ gear }),
+  setGear: gear => set({ 
+    gear: gear.map(g => ({ ...g, purchasePrice: Number(g.purchasePrice || 0) }))
+  }),
 
   getGearById: gearId => {
     return get().gear.find(g => g.id === gearId);

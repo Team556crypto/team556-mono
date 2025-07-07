@@ -172,7 +172,9 @@ export const useAmmoStore = create<AmmoState>((set, get) => ({
   },
 
   // Action to replace the entire ammos array
-  setAmmos: ammos => set({ ammos }),
+  setAmmos: ammos => set({ 
+    ammos: ammos.map(a => ({ ...a, purchasePrice: Number(a.purchasePrice || 0) }))
+  }),
 
   // Getter function to retrieve an ammo entry by ID
   getAmmoById: ammoId => {

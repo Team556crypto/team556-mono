@@ -45,17 +45,17 @@ const AllItemsView: React.FC<AllItemsViewProps> = ({ onCategorySelect }) => {
   // Memoized calculations for summaries
   const firearmSummary = useMemo(() => ({
     count: firearms.length,
-    totalValue: firearms.reduce((sum, item) => sum + (item.value || 0), 0),
+    totalValue: firearms.reduce((sum, item) => sum + Number(item.value || 0), 0),
   }), [firearms]);
 
   const ammoSummary = useMemo(() => ({
     count: ammo.length,
-    totalValue: ammo.reduce((sum, item) => sum + (item.purchasePrice || 0), 0),
+    totalValue: ammo.reduce((sum, item) => sum + Number(item.purchasePrice || 0), 0),
   }), [ammo]);
 
   const gearSummary = useMemo(() => ({
     count: gear.length,
-    totalValue: gear.reduce((sum, item) => sum + (item.purchasePrice || 0), 0),
+    totalValue: gear.reduce((sum, item) => sum + Number(item.purchasePrice || 0), 0),
   }), [gear]);
 
   const documentSummary = useMemo(() => ({
@@ -64,7 +64,7 @@ const AllItemsView: React.FC<AllItemsViewProps> = ({ onCategorySelect }) => {
 
   const nfaSummary = useMemo(() => ({
     count: nfaItems.length,
-    totalValue: nfaItems.reduce((sum, item) => sum + (item.value || 0), 0),
+    totalValue: nfaItems.reduce((sum, item) => sum + Number(item.value || 0), 0),
   }), [nfaItems]);
 
   const styles = StyleSheet.create({
@@ -103,35 +103,35 @@ const AllItemsView: React.FC<AllItemsViewProps> = ({ onCategorySelect }) => {
       <CategorySummaryCard
         icon={<MaterialCommunityIcons name="pistol" size={24} color={colors.primary} />}
         title="Firearms"
-        count={firearmSummary.count}
-        totalValue={firearmSummary.totalValue}
+        count={Number(firearmSummary.count)}
+        totalValue={Number(firearmSummary.totalValue)}
         onPress={() => onCategorySelect('Firearms')}
       />
       <CategorySummaryCard
         icon={<MaterialCommunityIcons name="ammunition" size={24} color={colors.primary} />}
         title="Ammunition"
-        count={ammoSummary.count}
-        totalValue={ammoSummary.totalValue}
+        count={Number(ammoSummary.count)}
+        totalValue={Number(ammoSummary.totalValue)}
         onPress={() => onCategorySelect('Ammo')}
       />
       <CategorySummaryCard
         icon={<MaterialCommunityIcons name="tent" size={24} color={colors.primary} />}
         title="Gear"
-        count={gearSummary.count}
-        totalValue={gearSummary.totalValue}
+        count={Number(gearSummary.count)}
+        totalValue={Number(gearSummary.totalValue)}
         onPress={() => onCategorySelect('Gear')}
       />
       <CategorySummaryCard
         icon={<MaterialCommunityIcons name="file-document-outline" size={24} color={colors.primary} />}
         title="NFA Items"
-        count={nfaSummary.count}
-        totalValue={nfaSummary.totalValue}
+        count={Number(nfaSummary.count)}
+        totalValue={Number(nfaSummary.totalValue)}
         onPress={() => onCategorySelect('NFA')}
       />
       <CategorySummaryCard
         icon={<MaterialCommunityIcons name="file-document-outline" size={24} color={colors.primary} />}
         title="Documents"
-        count={documentSummary.count}
+        count={Number(documentSummary.count)}
         onPress={() => onCategorySelect('Documents')}
       />
     </ScrollView>

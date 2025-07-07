@@ -10,7 +10,7 @@ interface CategorySummaryCardProps {
   onPress?: () => void;
 }
 
-export const CategorySummaryCard: React.FC<CategorySummaryCardProps> = ({ icon, title, count, totalValue, onPress }) => {
+export const CategorySummaryCard = ({ icon, title, count, totalValue, onPress }: CategorySummaryCardProps): JSX.Element => {
   const { colors } = useTheme();
 
   const styles = StyleSheet.create({

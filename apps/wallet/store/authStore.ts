@@ -1,7 +1,11 @@
 import { create } from 'zustand'
 import { saveToken, getToken, deleteToken } from '@/utils/secureStore'
 import { loginUser, signupUser, getUserProfile, UserCredentials, User } from '@/services/api' // Assuming api service exports these
-import { useFirearmStore } from './firearmStore' // Import firearmStore
+import { useFirearmStore } from './firearmStore'
+import { useGearStore } from './gearStore'
+import { useDocumentStore } from './documentStore'
+import { useAmmoStore } from './ammoStore'
+import { useNFAStore } from './nfaStore'
 import { router } from 'expo-router'; // Added for navigation
 
 interface AuthState {
@@ -18,7 +22,7 @@ interface AuthState {
   setError: (error: string | null) => void
   fetchAndUpdateUser: () => Promise<void>
   isP1PresaleUser: () => boolean // New selector
-  canAddItem: () => boolean // New selector
+  canAddItem: (itemType: 'firearm' | 'gear' | 'document' | 'ammo' | 'nfa') => boolean // New selector
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -194,13 +198,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return !!user && user.presale_type === 1;
   },
 
-  canAddItem: () => {
+    canAddItem: (itemType: 'firearm' | 'gear' | 'document' | 'ammo' | 'nfa') => {
     if (get().isP1PresaleUser()) {
       return true; // P1 users can always add items
     }
-    // For non-P1 users, check the firearm count from firearmStore
-    const firearmCount = useFirearmStore.getState().firearms.length;
-    return firearmCount < 2;
+
+    // For non-P1 users, check the count from the relevant store
+    switch (itemType) {
+      case 'firearm':
+        return useFirearmStore.getState().firearms.length < 2;
+      case 'gear':
+        return useGearStore.getState().gear.length < 2;
+      case 'document':
+        return useDocumentStore.getState().documents.length < 2;
+      case 'ammo':
+        return useAmmoStore.getState().ammos.length < 2;
+      case 'nfa':
+        return useNFAStore.getState().nfaItems.length < 2;
+      default:
+        return false;
+    }
   }
 }))
 

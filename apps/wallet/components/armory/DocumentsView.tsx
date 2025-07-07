@@ -13,6 +13,9 @@ import { useAuthStore } from '@/store/authStore';
 import { DocumentCard, Text, Button, EmptyState, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui';
 import { useTheme } from '@team556/ui';
 import { Document } from '@/services/api';
+import { useDrawerStore } from '@/store/drawerStore';
+import DocumentDetailsDrawerContent from '@/components/drawers/DocumentDetailsDrawerContent';
+import AddDocumentDrawerContent from '@/components/drawers/AddDocumentDrawerContent';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -20,13 +23,10 @@ const COLUMN_GAP = 16;
 const PADDING = 16;
 const MEDIUM_SCREEN_BREAKPOINT = 768;
 
-interface DocumentsViewProps {
-  openDrawer: (type: string, props: any) => void;
-}
-
-export const DocumentsView: React.FC<DocumentsViewProps> = ({ openDrawer }) => {
+export const DocumentsView = () => {
   const { colors } = useTheme();
   const token = useAuthStore(state => state.token);
+  const canAddItem = useAuthStore(state => state.canAddItem('document'));
   const { width: screenWidth } = useWindowDimensions();
 
   const getResponsiveLayout = () => {
@@ -52,6 +52,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({ openDrawer }) => {
   );
 
   const { documents, isLoading, error, fetchInitialDocuments, deleteDocument, hasAttemptedInitialFetch, setError } = useDocumentStore();
+  const { openDrawer, closeDrawer } = useDrawerStore();
   const validDocuments = Array.isArray(documents) ? documents.filter(item => item && item.id) : [];
 
   useEffect(() => {
@@ -61,11 +62,11 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({ openDrawer }) => {
   }, [token, hasAttemptedInitialFetch, isLoading, fetchInitialDocuments]);
 
   const handleDocumentPress = (doc: Document) => {
-    openDrawer('DocumentDetails', { document: doc });
+    openDrawer(<DocumentDetailsDrawerContent document={doc} closeDrawer={closeDrawer} openDrawer={openDrawer} />, { maxHeight: '90%' });
   };
 
   const handleAddDocument = () => {
-    openDrawer('AddDocument', {});
+    openDrawer(<AddDocumentDrawerContent closeDrawer={closeDrawer} />);
   };
 
   const handleDelete = (documentId: number) => {
@@ -166,13 +167,15 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({ openDrawer }) => {
           <Text preset="h3">My Documents</Text>
           <Text style={{ fontSize: 18, color: colors.textSecondary }}>{`(${validDocuments.length})`}</Text>
         </View>
-        <TouchableOpacity
-          onPress={handleAddDocument}
-          style={screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? styles.addButtonLarge : styles.addButtonHeaderSmall}
-        >
-          <Ionicons name="add" size={screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? 20 : 24} color={colors.primary} />
-          {screenWidth >= MEDIUM_SCREEN_BREAKPOINT && <Text style={styles.addButtonText}>Add Document</Text>}
-        </TouchableOpacity>
+        {canAddItem && (
+          <TouchableOpacity
+            onPress={handleAddDocument}
+            style={screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? styles.addButtonLarge : styles.addButtonHeaderSmall}
+          >
+            <Ionicons name="add" size={screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? 20 : 24} color={colors.primary} />
+            {screenWidth >= MEDIUM_SCREEN_BREAKPOINT && <Text style={styles.addButtonText}>Add Document</Text>}
+          </TouchableOpacity>
+        )}
       </View>
       {content}
     </View>

@@ -13,6 +13,9 @@ import { useAuthStore } from '@/store/authStore';
 import { GearCard, Text, Button, EmptyState, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui';
 import { useTheme } from '@team556/ui';
 import { Gear } from '@/services/api';
+import { useDrawerStore } from '@/store/drawerStore';
+import GearDetailsDrawerContent from '@/components/drawers/GearDetailsDrawerContent';
+import AddGearDrawerContent from '@/components/drawers/AddGearDrawerContent';
 
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -25,14 +28,10 @@ const MEDIUM_SCREEN_BREAKPOINT = 768;
 const LARGE_SCREEN_BREAKPOINT = 1024;
 const XLARGE_SCREEN_BREAKPOINT = 1366;
 
-interface GearViewProps {
-  openDrawer: (type: string, props: any) => void;
-}
-
-export const GearView: React.FC<GearViewProps> = ({ openDrawer }) => {
+export const GearView = () => {
   const { colors } = useTheme();
   const token = useAuthStore(state => state.token);
-  const canAddItem = useAuthStore(state => state.canAddItem());
+  const canAddItem = useAuthStore(state => state.canAddItem('gear'));
   const isP1User = useAuthStore(state => state.isP1PresaleUser());
   const { width: screenWidth } = useWindowDimensions();
 
@@ -70,6 +69,7 @@ export const GearView: React.FC<GearViewProps> = ({ openDrawer }) => {
     state => state.hasAttemptedInitialFetch,
   );
   const clearGearError = useGearStore(state => state.setError);
+  const { openDrawer, closeDrawer } = useDrawerStore();
 
 
   useEffect(() => {
@@ -79,11 +79,11 @@ export const GearView: React.FC<GearViewProps> = ({ openDrawer }) => {
   }, [token, hasAttemptedInitialFetch, isLoading, fetchInitialGear]);
 
   const handleGearPress = (gear: Gear) => {
-    openDrawer('GearDetails', { gear });
+    openDrawer(<GearDetailsDrawerContent gearId={gear.id} closeDrawer={closeDrawer} openDrawer={openDrawer} />, { maxHeight: '90%' });
   };
 
   const handleAddGear = () => {
-    openDrawer('AddGear', {});
+    openDrawer(<AddGearDrawerContent closeDrawer={closeDrawer} />);
   };
 
   const handleDelete = (gearId: number) => {
@@ -119,7 +119,8 @@ export const GearView: React.FC<GearViewProps> = ({ openDrawer }) => {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: 18
+      marginBottom: 18,
+      paddingHorizontal: PADDING
     },
     headerTitleContainer: {
       flexDirection: 'row',

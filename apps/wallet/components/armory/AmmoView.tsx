@@ -12,10 +12,11 @@ import { useAmmoStore } from '@/store/ammoStore'
 import { useAuthStore } from '@/store/authStore'
 import { AmmoCard, Text, Button, EmptyState, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui' 
 import { useTheme } from '@team556/ui'
-import { Ammo } from '@/services/api'
-import { useDrawerStore } from '@/store/drawerStore'
-import { AmmoDetailsDrawerContent } from '@/components/drawers/AmmoDetailsDrawerContent' 
-import { AddAmmoDrawerContent } from '@/components/drawers/AddAmmoDrawerContent' 
+import { Ammo } from '@/services/api';
+import { useDrawerStore } from '@/store/drawerStore';
+
+import AmmoDetailsDrawerContent from '@/components/drawers/AmmoDetailsDrawerContent';
+import AddAmmoDrawerContent from '@/components/drawers/AddAmmoDrawerContent'; 
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useFocusEffect } from '@react-navigation/native'
 
@@ -29,7 +30,7 @@ const XLARGE_SCREEN_BREAKPOINT = 1366
 export const AmmoView = () => {
   const { colors } = useTheme()
   const token = useAuthStore(state => state.token)
-  const canAddItem = useAuthStore(state => state.canAddItem())
+  const canAddItem = useAuthStore(state => state.canAddItem('ammo'))
   const isP1User = useAuthStore(state => state.isP1PresaleUser())
   const { width: screenWidth } = useWindowDimensions()
 
@@ -62,8 +63,9 @@ export const AmmoView = () => {
   const ammoStoreError = useAmmoStore(state => state.error)
   const fetchInitialAmmos = useAmmoStore(state => state.fetchInitialAmmos)
   const hasAttemptedInitialFetch = useAmmoStore(state => state.hasAttemptedInitialFetch)
-  const clearAmmoError = useAmmoStore(state => state.setError)
-  const { openDrawer } = useDrawerStore()
+  const clearAmmoError = useAmmoStore(state => state.setError);
+  const { openDrawer, closeDrawer } = useDrawerStore();
+  
   const deleteAmmo = useAmmoStore(state => state.deleteAmmo)
 
   useEffect(() => {
@@ -73,11 +75,11 @@ export const AmmoView = () => {
   }, [token, hasAttemptedInitialFetch, isLoading, fetchInitialAmmos])
 
   const handleAmmoPress = (ammo: Ammo) => {
-    openDrawer(<AmmoDetailsDrawerContent ammo={ammo} />, { maxHeight: '90%' })
+    openDrawer(<AmmoDetailsDrawerContent ammo={ammo} />, { maxHeight: '90%' });
   }
 
   const handleAddAmmo = () => {
-    openDrawer(<AddAmmoDrawerContent />)
+    openDrawer(<AddAmmoDrawerContent />);
   }
 
   const handleDelete = (ammoId: number) => {
@@ -112,7 +114,8 @@ export const AmmoView = () => {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: 18
+      marginBottom: 18,
+      paddingHorizontal: PADDING
     },
     headerTitleContainer: {
       flexDirection: 'row',

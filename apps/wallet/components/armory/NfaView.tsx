@@ -10,12 +10,13 @@ import {
 } from 'react-native'
 import { useNFAStore } from '@/store/nfaStore'
 import { useAuthStore } from '@/store/authStore'
-import { NFACard, Text, Button, EmptyState, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui' 
+import { NFACard, Text, Button, EmptyState, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui'
 import { useTheme } from '@team556/ui'
-import { NFA } from '@/services/api' 
-import { useDrawerStore } from '@/store/drawerStore'
-import { NFADetailsDrawerContent } from '@/components/drawers/NFADetailsDrawerContent' 
-import { AddNFADrawerContent } from '@/components/drawers/AddNFADrawerContent' 
+import { NFA } from '@/services/api';
+import { useDrawerStore } from '@/store/drawerStore';
+
+import { NFADetailsDrawerContent } from '@/components/drawers/NFADetailsDrawerContent';
+import { AddNFADrawerContent } from '@/components/drawers/AddNFADrawerContent';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useFocusEffect } from '@react-navigation/native'
 
@@ -27,10 +28,10 @@ const MEDIUM_SCREEN_BREAKPOINT = 768
 const LARGE_SCREEN_BREAKPOINT = 1024
 const XLARGE_SCREEN_BREAKPOINT = 1366
 
-export const NfaView = () => { 
+export const NfaView = () => {
   const { colors } = useTheme()
   const token = useAuthStore(state => state.token)
-  const canAddItem = useAuthStore(state => state.canAddItem())
+  const canAddItem = useAuthStore(state => state.canAddItem('nfa'))
   const isP1User = useAuthStore(state => state.isP1PresaleUser())
   const { width: screenWidth } = useWindowDimensions()
 
@@ -46,9 +47,16 @@ export const NfaView = () => {
       numColumns = 3
     }
 
+    // Calculate container width (accounting for the sidebar on large screens)
     const effectiveWidth = screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? screenWidth - 240 : screenWidth
+
+    // Calculate available width for grid (minus padding and gap)
     const availableWidth = effectiveWidth - PADDING * 2 - COLUMN_GAP * (numColumns - 1)
+
+    // Card width is calculated based on available space
     const cardWidth = Math.max(DEFAULT_CARD_WIDTH, Math.floor(availableWidth / numColumns))
+
+    // Calculate cardHeight proportionally
     const cardHeight = Math.floor(cardWidth * (DEFAULT_CARD_HEIGHT / DEFAULT_CARD_WIDTH))
 
     return { numColumns, cardWidth, cardHeight, effectiveWidth }
@@ -56,6 +64,7 @@ export const NfaView = () => {
 
   const { numColumns, cardWidth, cardHeight } = getResponsiveLayout()
 
+  // Listen for screen dimension changes
   const [dimensions, setDimensions] = useState({ cardWidth, cardHeight, numColumns })
 
   useFocusEffect(
@@ -71,8 +80,9 @@ export const NfaView = () => {
   const fetchInitialNFAItems = useNFAStore(state => state.fetchInitialNFAItems)
   const deleteNFAItem = useNFAStore(state => state.deleteNFAItem)
   const hasAttemptedInitialFetch = useNFAStore(state => state.hasAttemptedInitialFetch)
-  const clearNFAError = useNFAStore(state => state.setError)
-  const { openDrawer } = useDrawerStore()
+  const clearNFAError = useNFAStore(state => state.setError);
+  const { openDrawer } = useDrawerStore();
+  
 
   useEffect(() => {
     if (token && !hasAttemptedInitialFetch && !isLoading) {
@@ -81,11 +91,11 @@ export const NfaView = () => {
   }, [token, hasAttemptedInitialFetch, isLoading, fetchInitialNFAItems])
 
   const handleNFAPress = (nfaItem: NFA) => {
-    openDrawer(<NFADetailsDrawerContent nfaItem={nfaItem} />, { maxHeight: '90%' })
+    openDrawer(<NFADetailsDrawerContent nfaItem={nfaItem} />, { maxHeight: '90%' });
   }
 
   const handleAddNFA = () => {
-    openDrawer(<AddNFADrawerContent />)
+    openDrawer(<AddNFADrawerContent />);
   }
 
   const handleDelete = (nfaId: number) => {
@@ -99,68 +109,95 @@ export const NfaView = () => {
         },
         {
           text: 'Delete',
-          style: 'destructive',
           onPress: async () => {
             try {
               await deleteNFAItem(nfaId, token)
             } catch (error) {
-              console.error('Failed to delete NFA item from view:', error)
+              // Error is already handled in the store, but you could add specific UI feedback here if needed
+              Alert.alert('Error', 'Failed to delete NFA item.');
             }
           },
+          style: 'destructive',
         },
-      ]
+      ],
+      { cancelable: false }
     )
   }
 
   const styles = StyleSheet.create({
     container: {
-      flex: 1,
-      backgroundColor: colors.background,
-      padding: PADDING,
+      flex: 1
     },
     header: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 16,
+      justifyContent: 'space-between',
+      marginBottom: 18,
+      paddingHorizontal: PADDING
     },
     headerTitleContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
+      gap: 8
     },
     flatListContainer: {
       flex: 1,
+      overflow: 'visible'
     },
     gridContent: {
-      paddingBottom: 48,
+      paddingBottom: 40
     },
     columnWrapper: {
       gap: COLUMN_GAP,
+      justifyContent: 'flex-start',
+      marginBottom: COLUMN_GAP * 1.5
     },
     gridItem: {
-      marginBottom: COLUMN_GAP,
+      margin: COLUMN_GAP / 2,
+      alignItems: 'center',
     },
     cardWrapper: {
-      borderRadius: 12,
-      overflow: 'hidden',
+      width: '100%',
+      alignItems: 'center',
+      justifyContent: 'center'
     },
     centerMessage: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
+      padding: 20
     },
     errorText: {
       color: colors.error,
       textAlign: 'center',
-      marginTop: 8,
+      marginTop: 8
     },
     limitReachedText: {
       fontSize: 14,
       color: colors.textSecondary,
       textAlign: 'center',
       marginVertical: 8,
-      paddingHorizontal: 16,
+      paddingHorizontal: 16
+    },
+    emptyMessage: {
+      flex: 1,
+      width: '100%',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: 12,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: colors.backgroundLight,
+      backgroundColor: 'rgba(0,0,0,0.2)',
+      gap: 12,
+      paddingVertical: 48
+    },
+    addButton: {
+      borderRadius: 8
+    },
+    addButtonHeaderSmall: {
+      padding: 8,
+      borderRadius: 8
     },
     addButtonLarge: {
       flexDirection: 'row',
@@ -169,21 +206,17 @@ export const NfaView = () => {
       paddingHorizontal: 16,
       paddingVertical: 8,
       borderRadius: 8,
-      gap: 8,
-    },
-    addButtonHeaderSmall: {
-      padding: 8,
-      borderRadius: 8,
+      gap: 8
     },
     addButtonText: {
       color: '#805AD5',
-      fontWeight: '600',
-    },
+      fontWeight: '600'
+    }
   })
 
   const renderItem = ({ item }: { item: NFA }) => {
     return (
-      <View style={[styles.gridItem, { width: dimensions.cardWidth }]}>
+      <View style={[styles.gridItem, { width: dimensions.cardWidth }]}> 
         <View style={styles.cardWrapper}>
           <NFACard
             nfa={item}
@@ -215,7 +248,7 @@ export const NfaView = () => {
   } else if (nfaItems.length === 0) {
     content = (
       <EmptyState
-        icon={<MaterialCommunityIcons name='file-document-edit-outline' size={80} color={colors.primary} />}
+        icon={<MaterialCommunityIcons name='file-certificate-outline' size={80} color={colors.primary} />}
         title='No NFA Items Yet'
         subtitle='Get started by adding your first NFA item to your armory.'
         buttonText='+ Add NFA Item'
@@ -256,7 +289,7 @@ export const NfaView = () => {
         </View>
         {canAddItem && (
           <TouchableOpacity 
-            onPress={handleAddNFA}
+            onPress={handleAddNFA} 
             style={screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? styles.addButtonLarge : styles.addButtonHeaderSmall} 
           >
             <Ionicons 
@@ -274,15 +307,3 @@ export const NfaView = () => {
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1
-  },
-  comingSoonContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20
-  }
-})

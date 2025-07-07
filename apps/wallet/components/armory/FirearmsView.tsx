@@ -14,8 +14,9 @@ import { useFirearmStore } from '@/store/firearmStore'
 import { useAuthStore } from '@/store/authStore'
 import { FirearmCard, Text, Button, EmptyState, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui'
 import { useTheme } from '@team556/ui'
-import { Firearm } from '@/services/api'
-import { useDrawerStore } from '@/store/drawerStore'
+import { Firearm } from '@/services/api';
+import { useDrawerStore } from '@/store/drawerStore';
+
 import { FirearmDetailsDrawerContent } from '@/components/drawers/FirearmDetailsDrawerContent'
 import { AddFirearmDrawerContent } from '@/components/drawers/AddFirearmDrawerContent'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
@@ -32,7 +33,7 @@ const XLARGE_SCREEN_BREAKPOINT = 1366
 export const FirearmsView = () => {
   const { colors } = useTheme()
   const token = useAuthStore(state => state.token)
-  const canAddItem = useAuthStore(state => state.canAddItem())
+  const canAddItem = useAuthStore(state => state.canAddItem('firearm'))
   const isP1User = useAuthStore(state => state.isP1PresaleUser())
   const { width: screenWidth } = useWindowDimensions()
 
@@ -81,8 +82,9 @@ export const FirearmsView = () => {
   const fetchInitialFirearms = useFirearmStore(state => state.fetchInitialFirearms)
   const deleteFirearm = useFirearmStore(state => state.deleteFirearm)
   const hasAttemptedInitialFetch = useFirearmStore(state => state.hasAttemptedInitialFetch)
-  const clearFirearmError = useFirearmStore(state => state.setError)
-  const { openDrawer } = useDrawerStore()
+  const clearFirearmError = useFirearmStore(state => state.setError);
+  const { openDrawer } = useDrawerStore();
+  
 
   useEffect(() => {
     if (token && !hasAttemptedInitialFetch && !isLoading) {
@@ -91,11 +93,11 @@ export const FirearmsView = () => {
   }, [token, hasAttemptedInitialFetch, isLoading, fetchInitialFirearms])
 
   const handleFirearmPress = (firearm: Firearm) => {
-    openDrawer(<FirearmDetailsDrawerContent firearm={firearm} />, { maxHeight: '90%' })
+    openDrawer(<FirearmDetailsDrawerContent firearm={firearm} />, { maxHeight: '90%' });
   }
 
   const handleAddFirearm = () => {
-    openDrawer(<AddFirearmDrawerContent />)
+    openDrawer(<AddFirearmDrawerContent />);
   }
 
   const handleDelete = (firearmId: number) => {
@@ -132,7 +134,8 @@ export const FirearmsView = () => {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: 18
+      marginBottom: 18,
+      paddingHorizontal: PADDING
     },
     headerTitleContainer: {
       flexDirection: 'row',
@@ -279,7 +282,7 @@ export const FirearmsView = () => {
       <View style={styles.header}>
         <View style={styles.headerTitleContainer}>
           <Text preset='h3' accessibilityRole='header'>
-            My Armory
+            My Firearms
           </Text>
           <Text style={{ fontSize: 18, color: colors.textSecondary }}>{`(${firearms.length})`}</Text>
           {!isP1User && !canAddItem && firearms.length >= 2 && (

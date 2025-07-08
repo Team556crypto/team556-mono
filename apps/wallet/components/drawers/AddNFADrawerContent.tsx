@@ -1,184 +1,426 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  Platform,
-  Image,
-  TouchableOpacity
+import { 
+  Image, 
+  ScrollView, 
+  StyleSheet, 
+  TouchableOpacity, 
+  View, 
+  Platform, 
+  TextInput, 
+  Modal, 
+  Animated, 
+  Dimensions, 
+  Alert,
+  KeyboardTypeOptions
 } from 'react-native';
-import { Text, useTheme, Button, Select, Input } from '@team556/ui';
+import { useNFAStore } from '@/store/nfaStore';
+import { useDrawerStore } from '@/store/drawerStore';
+import { Button, Text, Select, useTheme } from '@team556/ui';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { useAuthStore } from '@/store/authStore';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import * as ImagePicker from 'expo-image-picker';
-import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { CreateNFAPayload, nfaTypeOptions, taxStampTypeOptions } from '@/services/api';
-import { useNFAStore } from '@/store/nfaStore';
-import { useAuthStore } from '@/store/authStore';
-import { useDrawerStore } from '@/store/drawerStore';
 
-type NFAFormState = Omit<CreateNFAPayload, 'tax_stamp_submission_date' | 'tax_stamp_approval_date'> & {
-  tax_stamp_submission_date?: Date | string | undefined;
-  tax_stamp_approval_date?: Date | string | undefined;
+// Screen dimensions for calculating progress bar
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const TOTAL_HORIZONTAL_PADDING_FOR_PROGRESS_BAR = 32; // 16px padding on each side
+const PROGRESS_BAR_RENDER_WIDTH = SCREEN_WIDTH - TOTAL_HORIZONTAL_PADDING_FOR_PROGRESS_BAR;
+
+// Define the form state type with string values for the form that will be converted to numbers for the API payload
+type NFAFormState = {
+  serial: string;
+  manufacturer: string;
+  model: string;
+  caliber: string;
+  nfaType: string;
+  additionalInfo: string;
+  tax_stamp_submission_date: string;
+  tax_stamp_approval_date: string;
+  taxStampType: string;
+  taxStampNumber: string;
+  value: string;
+  round_count: string;
+  images: string[];
 };
 
 const initialState: NFAFormState = {
+  serial: '',
   manufacturer: '',
-  model_name: '',
+  model: '',
   caliber: '',
-  type: '',
-  tax_stamp_id_number: '',
-  tax_stamp_type: '',
-  tax_stamp_submission_date: undefined,
-  tax_stamp_approval_date: undefined,
-  value: 0,
-  round_count: 0,
-  picture_base64: undefined,
+  nfaType: '',
+  additionalInfo: '',
+  tax_stamp_submission_date: '',
+  tax_stamp_approval_date: '',
+  taxStampType: '',
+  taxStampNumber: '',
+  value: '0',
+  round_count: '0',
+  images: [],
 };
 
-export const AddNFADrawerContent = () => {
+const AddNFADrawerContent = () => {
   const { colors } = useTheme();
   const { addNFAItem, isLoading, error: storeError } = useNFAStore();
-  const token = useAuthStore(state => state.token);
-    const { closeDrawer } = useDrawerStore();
-
-  const styles = StyleSheet.create({
-    label: {
-      fontSize: 16,
-      color: colors.text,
-      marginBottom: 8,
-    },
-    errorText: {
-      color: colors.error,
-      marginTop: 4,
-    },
-  });
+  const { token } = useAuthStore();
+  const { closeDrawer } = useDrawerStore();
 
   const [formState, setFormState] = useState<NFAFormState>(initialState);
   const [currentStep, setCurrentStep] = useState(1);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof NFAFormState, string>>>({});
-  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
 
-  const steps = ['Core Details', 'Tax Stamp Info', 'Additional Details'];
+  const [imagePickerVisible, setImagePickerVisible] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
 
+  // Step progress animation
+  const steps = ['NFA Details', 'Tax Stamp Info', 'Additional Info'];
+  const progressAnim = useRef(new Animated.Value(0)).current;
+
+  // Date picker state
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerField, setDatePickerField] = useState<keyof NFAFormState | null>(null);
+  const [currentDateValue, setCurrentDateValue] = useState<Date>(new Date());
 
-  const handleInputChange = (field: keyof NFAFormState, value: any) => {
-    setFormState(prev => ({ ...prev, [field]: value }));
+  // State for image
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
+  
+  // Animate progress bar when step changes
+  useEffect(() => {
+    Animated.timing(progressAnim, {
+      toValue: currentStep - 1,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  }, [currentStep, progressAnim]);
+
+  // Handle input changes
+  const handleInputChange = (field: keyof NFAFormState, value: string | number | boolean | null) => {
+    setFormState((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+
+    // Clear any error for this field when it's edited
     if (fieldErrors[field]) {
-      setFieldErrors(prev => ({ ...prev, [field]: undefined }));
+      setFieldErrors((prev) => ({
+        ...prev,
+        [field]: undefined,
+      }));
     }
   };
 
-  const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === 'ios');
-    if (selectedDate && datePickerField) {
-      handleInputChange(datePickerField, selectedDate);
-    }
-  };
+  // DatePicker modal date functions
+  const showMode = (fieldKey: keyof NFAFormState) => {
+    const fieldValue = formState[fieldKey] as string;
+    const initialDate =
+      typeof fieldValue === 'string' && fieldValue && !isNaN(new Date(fieldValue).getTime())
+        ? new Date(fieldValue)
+        : new Date();
 
-  const showDatepicker = (field: keyof NFAFormState) => {
-    setDatePickerField(field);
+    setCurrentDateValue(initialDate);
+    setDatePickerField(fieldKey);
     setShowDatePicker(true);
   };
 
-  const validateStep = () => {
-    const errors: Partial<Record<keyof NFAFormState, string>> = {};
-    if (currentStep === 1) {
-      if (!formState.manufacturer) errors.manufacturer = 'Manufacturer is required';
-      if (!formState.model_name) errors.model_name = 'Model is required';
-      if (!formState.caliber) errors.caliber = 'Caliber is required';
-      if (!formState.type) errors.type = 'Type is required';
-    } else if (currentStep === 2) {
-      if (!formState.tax_stamp_id_number) errors.tax_stamp_id_number = 'Tax Stamp ID is required';
-      if (!formState.tax_stamp_type) errors.tax_stamp_type = 'Tax Stamp Type is required';
+  // Handle confirming a date selection
+  const handleConfirmDate = () => {
+    if (datePickerField && currentDateValue) {
+      // Update form state with ISO string when confirming
+      handleInputChange(datePickerField, currentDateValue.toISOString());
     }
+    setShowDatePicker(false); // Close the modal
+    setDatePickerField(null); // Reset the field being edited
+  };
+
+  // Handle canceling a date selection
+  const handleCancelDate = () => {
+    setShowDatePicker(false); // Close the modal without updating state
+    setDatePickerField(null); // Reset the field being edited
+  };
+
+  // Function to parse dates for the picker
+  const getDateForPicker = (value: string | Date | undefined): Date => {
+    if (!value) return new Date();
+    if (value instanceof Date) return value;
+    const parsed = new Date(value);
+    return isNaN(parsed.getTime()) ? new Date() : parsed;
+  };
+
+  // Function to render form detail rows with consistent styling
+  const renderDetailRow = (
+    label: string,
+    field: keyof NFAFormState,
+    placeholder: string,
+    inputType: 'text' | 'date' | 'select' = 'text',
+    items?: Array<{ label: string; value: string | number }>,
+    keyboardType: KeyboardTypeOptions = 'default'
+  ) => {
+    const fieldValue = formState[field];
+    const error = fieldErrors[field];
+
+    let inputComponent: React.ReactNode = null;
+
+    if (inputType === 'date') {
+      // Date input display formatting
+      const displayValue = fieldValue
+        ? fieldValue instanceof Date
+          ? (fieldValue as Date).toLocaleDateString()
+          : typeof fieldValue === 'string' && new Date(fieldValue).toString() !== 'Invalid Date'
+            ? new Date(fieldValue as string).toLocaleDateString()
+            : placeholder
+        : placeholder;
+
+      inputComponent = (
+        <TouchableOpacity onPress={() => showMode(field)} style={styles.dateContainer}>
+          <Text style={[styles.dateText, fieldValue ? {} : styles.placeholderText]}>{displayValue}</Text>
+          <MaterialCommunityIcons name="calendar" size={20} color="#6C63FF" style={styles.calendarIcon} />
+        </TouchableOpacity>
+      );
+    } else if (inputType === 'select') {
+      // Select dropdown
+      inputComponent = (
+        <View style={styles.selectContainer}>
+          <Select
+            items={items || []}
+            selectedValue={fieldValue as string | number | undefined}
+            onValueChange={value => handleInputChange(field, value)}
+            placeholder={placeholder}
+            style={{
+              selectButton: styles.selectButton,
+              selectButtonText: fieldValue ? styles.selectButtonText : styles.selectPlaceholderText,
+              arrow: {
+                color: '#6C63FF',
+                fontSize: 14
+              },
+              modalContent: {
+                backgroundColor: '#1B1F2F',
+                borderColor: '#6C63FF',
+                borderWidth: 1,
+                borderRadius: 12,
+                paddingVertical: 8
+              },
+              modalItem: {
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+                borderBottomColor: 'rgba(108, 99, 255, 0.2)'
+              },
+              modalItemText: {
+                fontSize: 15,
+                color: '#fff'
+              },
+              modalOverlay: {
+                backgroundColor: 'rgba(0,0,0,0.8)'
+              }
+            }}
+          />
+        </View>
+      );
+    } else {
+      // Regular text input
+      inputComponent = (
+        <TextInput
+          style={styles.fieldInput}
+          value={typeof fieldValue === 'number' ? String(fieldValue) : fieldValue as string}
+          onChangeText={(text: string) => handleInputChange(field, text)}
+          placeholder={placeholder}
+          placeholderTextColor="rgba(255, 255, 255, 0.5)"
+          keyboardType={keyboardType}
+        />
+      );
+    }
+
+    return (
+      <View style={styles.fieldRow}>
+        <Text style={styles.fieldLabel}>{label}</Text>
+        {inputComponent}
+        {error && <Text style={styles.errorTextBelow}>{error}</Text>}
+      </View>
+    );
+  };
+
+  // Function to handle image picking
+  const pickImageAsync = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        setImageUploading(true);
+        setImageError(null);
+        
+        // Compress the image
+        const manipResult = await ImageManipulator.manipulateAsync(
+          result.assets[0].uri,
+          [{ resize: { width: 800 } }],
+          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+        );
+        
+        // Convert to base64
+        const base64 = await FileSystem.readAsStringAsync(manipResult.uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        
+        setSelectedImageUri(manipResult.uri);
+        handleInputChange('images', [base64]);
+        setImageUploading(false);
+      }
+    } catch (error) {
+      console.error('Error picking or processing image:', error);
+      setImageError('Failed to process image');
+      setImageUploading(false);
+    }
+  };
+
+  // Validate form fields for the current step
+  const validateCurrentStep = () => {
+    const errors: Partial<Record<keyof NFAFormState, string>> = {};
+    
+    if (currentStep === 1) {
+      // Validate Step 1: Basic NFA details
+      if (!formState.manufacturer) errors.manufacturer = 'Manufacturer is required';
+      if (!formState.model) errors.model = 'Model is required';
+      if (!formState.serial) errors.serial = 'Serial number is required';
+      if (!formState.caliber) errors.caliber = 'Caliber is required';
+      if (!formState.nfaType) errors.nfaType = 'NFA type is required';
+    } else if (currentStep === 2) {
+      // Validate Step 2: Tax stamp details
+      if (!formState.taxStampType) errors.taxStampType = 'Tax stamp type is required';
+      if (!formState.taxStampNumber) errors.taxStampNumber = 'Tax stamp number is required';
+      if (!formState.tax_stamp_submission_date) errors.tax_stamp_submission_date = 'Submission date is required';
+      if (!formState.tax_stamp_approval_date) errors.tax_stamp_approval_date = 'Approval date is required';
+    } else if (currentStep === 3) {
+      // Validate Step 3: Additional info
+      if (!formState.value) errors.value = 'Value is required';
+      if (!formState.round_count) errors.round_count = 'Round count is required';
+      if (formState.images.length === 0) errors.images = 'At least one image is required';
+    }
+
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
+  // Handle next step
   const handleNextStep = () => {
-    if (validateStep()) {
-      setCurrentStep(prev => prev + 1);
+    if (validateCurrentStep()) {
+      if (currentStep < steps.length) {
+        setCurrentStep(currentStep + 1);
+      }
     }
   };
 
-  const handleSave = async () => {
-    if (!validateStep()) return;
-
-        let picture_base64: string | undefined;
-    if (selectedImageUri) {
-      const manipResult = await manipulateAsync(
-        selectedImageUri,
-        [],
-        { compress: 0.7, format: SaveFormat.JPEG, base64: true }
-      );
-      picture_base64 = `data:image/jpeg;base64,${manipResult.base64}`;
-    }
-
-    const payload: CreateNFAPayload = {
-      ...formState,
-      tax_stamp_submission_date: formState.tax_stamp_submission_date instanceof Date ? formState.tax_stamp_submission_date.toISOString() : undefined,
-      tax_stamp_approval_date: formState.tax_stamp_approval_date instanceof Date ? formState.tax_stamp_approval_date.toISOString() : undefined,
-      picture_base64
-    };
-
-    const success = await addNFAItem(payload, token);
-    if (success) {
-      closeDrawer();
+  // Handle previous step
+  const handlePrevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
     }
   };
 
-  const pickImageAsync = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
-      quality: 1,
-      base64: true,
+  // Handle form submission
+  const handleSaveNFA = async () => {
+    if (validateCurrentStep()) {
+      try {
+        // Prepare payload with correct types
+        const payload: CreateNFAPayload = {
+          model_name: formState.model,
+          type: formState.nfaType,
+          manufacturer: formState.manufacturer,
+          caliber: formState.caliber,
+          serial: formState.serial,
+          value: parseFloat(formState.value),
+          round_count: parseInt(formState.round_count, 10),
+          additionalInfo: formState.additionalInfo,
+          tax_stamp_submission_date: formState.tax_stamp_submission_date,
+          tax_stamp_approval_date: formState.tax_stamp_approval_date,
+          tax_stamp_type: formState.taxStampType,
+          tax_stamp_id_number: formState.taxStampNumber,
+          picture_base64: formState.images[0] || '',
+        };
+
+        await addNFAItem(payload, token);
+        closeDrawer();
+      } catch (error) {
+        console.error('Error saving NFA:', error);
+        Alert.alert('Error', 'Failed to save NFA item.');
+      }
+    }
+  };
+
+  // Render content for each step
+  const renderStepContent = () => {
+    const animatedProgressWidth = progressAnim.interpolate({
+      inputRange: [0, steps.length - 1],
+      outputRange: ['33%', '100%'],
     });
 
-    if (!result.canceled) {
-      setSelectedImageUri(result.assets[0].uri);
-    } else {
-      alert('You did not select any image.');
-    }
-  };
-
-  const renderStepContent = () => {
     switch (currentStep) {
       case 1:
         return (
-          <View>
-            <Input label="Manufacturer" value={formState.manufacturer} onChangeText={text => handleInputChange('manufacturer', text)} error={fieldErrors.manufacturer} />
-            <Input label="Model" value={formState.model_name} onChangeText={text => handleInputChange('model_name', text)} error={fieldErrors.model_name} />
-            <Input label="Caliber" value={formState.caliber} onChangeText={text => handleInputChange('caliber', text)} error={fieldErrors.caliber} />
-                                    <View>
-              <Text style={styles.label}>Type</Text>
-              <Select<string> items={nfaTypeOptions} onValueChange={value => handleInputChange('type', value)} selectedValue={formState.type} placeholder="Select NFA Type" headerTitle="Select NFA Type" />
-              {fieldErrors.type && <Text style={styles.errorText}>{fieldErrors.type}</Text>}
+          <View style={styles.sectionWrapper}>
+            <View style={styles.sectionHeader}>
+              <MaterialCommunityIcons name="shield-outline" size={24} color={colors.primary} style={styles.sectionIcon} />
+              <Text style={styles.sectionTitle}>NFA Details</Text>
+            </View>
+            <View style={styles.sectionContent}>
+              {renderDetailRow('Serial Number', 'serial', 'Enter serial number')}
+              {renderDetailRow('Manufacturer', 'manufacturer', 'Enter manufacturer')}
+              {renderDetailRow('Model', 'model', 'Enter model')}
+              {renderDetailRow('Caliber', 'caliber', 'Enter caliber')}
+              {renderDetailRow('Type', 'nfaType', 'Select NFA type', 'select', nfaTypeOptions)}
             </View>
           </View>
         );
       case 2:
         return (
-          <View>
-            <Input label="Tax Stamp ID" value={formState.tax_stamp_id_number} onChangeText={text => handleInputChange('tax_stamp_id_number', text)} error={fieldErrors.tax_stamp_id_number} />
-                                    <View>
-              <Text style={styles.label}>Tax Stamp Type</Text>
-              <Select<string> items={taxStampTypeOptions} onValueChange={value => handleInputChange('tax_stamp_type', value)} selectedValue={formState.tax_stamp_type} placeholder="Select Tax Stamp Type" headerTitle="Select Tax Stamp Type" />
-              {fieldErrors.tax_stamp_type && <Text style={styles.errorText}>{fieldErrors.tax_stamp_type}</Text>}
+          <View style={styles.sectionWrapper}>
+            <View style={styles.sectionHeader}>
+              <MaterialCommunityIcons name="file-document-outline" size={24} color={colors.primary} style={styles.sectionIcon} />
+              <Text style={styles.sectionTitle}>Tax Stamp Information</Text>
             </View>
-            <TouchableOpacity onPress={() => showDatepicker('tax_stamp_submission_date')}><Input label="Submission Date" value={formState.tax_stamp_submission_date instanceof Date ? formState.tax_stamp_submission_date.toLocaleDateString() : ''} editable={false} /></TouchableOpacity>
-            <TouchableOpacity onPress={() => showDatepicker('tax_stamp_approval_date')}><Input label="Approval Date" value={formState.tax_stamp_approval_date instanceof Date ? formState.tax_stamp_approval_date.toLocaleDateString() : ''} editable={false} /></TouchableOpacity>
+            <View style={styles.sectionContent}>
+              {renderDetailRow('Tax Stamp Type', 'taxStampType', 'Select tax stamp type', 'select', taxStampTypeOptions)}
+              {renderDetailRow('Tax Stamp Number', 'taxStampNumber', 'Enter tax stamp number')}
+              {renderDetailRow('Submission Date', 'tax_stamp_submission_date', 'Select date', 'date')}
+              {renderDetailRow('Approval Date', 'tax_stamp_approval_date', 'Select date', 'date')}
+            </View>
           </View>
         );
       case 3:
         return (
-          <View>
-            <Input label="Value" value={String(formState.value)} onChangeText={text => handleInputChange('value', Number(text))} keyboardType="numeric" />
-            <Input label="Round Count" value={String(formState.round_count)} onChangeText={text => handleInputChange('round_count', Number(text))} keyboardType="numeric" />
-            <Button title="Select Image" onPress={pickImageAsync} />
-            {selectedImageUri && <Image source={{ uri: selectedImageUri }} style={{ width: 100, height: 100, alignSelf: 'center', marginVertical: 10 }} />}
+          <View style={styles.sectionWrapper}>
+            <View style={styles.sectionHeader}>
+              <MaterialCommunityIcons name="information-outline" size={24} color={colors.primary} style={styles.sectionIcon} />
+              <Text style={styles.sectionTitle}>Additional Information</Text>
+            </View>
+            <View style={styles.sectionContent}>
+              {renderDetailRow('Value', 'value', 'Enter value', 'text', undefined, 'numeric')}
+              {renderDetailRow('Round Count', 'round_count', 'Enter round count', 'text', undefined, 'numeric')}
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>NFA Image</Text>
+                <View style={{ flex: 1.5, alignItems: 'flex-end' }}>
+                  <Button 
+                    title='Select Image' 
+                    onPress={pickImageAsync} 
+                    variant='outline' 
+                    style={{ marginBottom: 0 }}
+                  />
+                </View>
+              </View>
+              {selectedImageUri && (
+                <View style={{ alignItems: 'center', marginTop: 10 }}>
+                  <Image source={{ uri: selectedImageUri }} style={styles.imagePreview} />
+                </View>
+              )}
+              {fieldErrors.images && <Text style={styles.errorTextBelow}>{fieldErrors.images}</Text>}
+              {renderDetailRow('Additional Info', 'additionalInfo', 'Enter additional information (optional)')}
+            </View>
           </View>
         );
       default:
@@ -187,35 +429,321 @@ export const AddNFADrawerContent = () => {
   };
 
   return (
-    <ScrollView style={{ flex: 1, padding: 16 }}>
-      <View style={{ alignItems: 'center', marginBottom: 20 }}>
-        <Text preset="h3">Add NFA Item</Text>
-        <Text>{steps[currentStep - 1]}</Text>
-      </View>
+    <React.Fragment>
+      <ScrollView style={styles.container} keyboardShouldPersistTaps='handled'>
+        <View style={styles.headerContainer}>
+          <View style={styles.header}>
+            <View style={styles.headerIconContainer}>
+              <MaterialCommunityIcons
+                name="shield"
+                size={48}
+                color="#6C63FF"
+              />
+            </View>
+            <Text style={styles.title}>Add New NFA Item</Text>
+            <Text style={styles.subtitle}>Enter the details below to add a new NFA item to your collection</Text>
+          </View>
+        </View>
 
-      {renderStepContent()}
+        <View style={styles.progressContainer}>
+          <Animated.View style={[styles.progressBar, { width: animatedProgressWidth }]} />
+        </View>
 
-      {storeError && <Text style={{ color: colors.error, textAlign: 'center', marginVertical: 10 }}>{storeError}</Text>}
+        {renderStepContent()}
 
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 }}>
-        {currentStep > 1 && <Button title="Previous" onPress={() => setCurrentStep(prev => prev - 1)} variant="outline" />}
-        {currentStep < steps.length ? (
-          <Button title="Next" onPress={handleNextStep} />
-        ) : (
-          <Button title={isLoading ? 'Saving...' : 'Save'} onPress={handleSave} disabled={isLoading} />
+        {storeError && (
+          <View style={styles.errorContainer}>
+            <MaterialCommunityIcons name='alert-circle' size={20} color="#FF6B6B" />
+            <Text style={styles.errorText}>Error: {storeError}</Text>
+          </View>
         )}
-      </View>
 
-      <Button title="Cancel" onPress={closeDrawer} variant="ghost" style={{ marginTop: 12 }} />
+        <View style={styles.stepButtonContainer}>
+          {currentStep > 1 ? (
+            <Button
+              title='Previous'
+              onPress={handlePrevStep}
+              variant='outline'
+              style={styles.buttonHalfWidth}
+            />
+          ) : (
+            <View style={styles.buttonHalfWidth} />
+          )}
+          {currentStep < steps.length && (
+            <Button title='Next' onPress={handleNextStep} variant='primary' style={styles.buttonHalfWidth} />
+          )}
+        </View>
 
+        {currentStep === steps.length && (
+          <View style={styles.buttonContainer}>
+            <Button
+              title={isLoading ? 'Adding...' : 'Add NFA Item'}
+              onPress={handleSaveNFA}
+              disabled={isLoading}
+              variant='primary'
+            />
+            <Button title='Cancel' onPress={closeDrawer} variant='ghost' style={{ marginTop: 12 }} />
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Date Picker Modal */}
       {showDatePicker && (
-                <DateTimePicker
-          value={datePickerField && formState[datePickerField] instanceof Date ? formState[datePickerField] as Date : new Date()}
-          mode="date"
-          display="default"
-          onChange={onDateChange}
-        />
+        <Modal
+          transparent={true}
+          animationType="fade"
+          visible={showDatePicker}
+          onRequestClose={handleCancelDate}
+        >
+          <TouchableOpacity
+            style={styles.modalContainer}
+            activeOpacity={1}
+            onPress={handleCancelDate}
+          >
+            <TouchableOpacity activeOpacity={1} onPress={e => e.stopPropagation()}>
+              <View style={styles.datePickerContainer}>
+                <Text style={styles.datePickerTitle}>Select Date</Text>
+                <View style={styles.datePickerContent}>
+                  <DateTimePicker
+                    testID='dateTimePicker'
+                    value={currentDateValue}
+                    mode={'date'}
+                    is24Hour={true}
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={(event, date) => {
+                      if (date) setCurrentDateValue(date);
+                    }}
+                    themeVariant='dark'
+                    textColor="#FFFFFF"
+                    accentColor="#6C63FF"
+                  />
+                </View>
+
+                <View style={styles.datePickerActions}>
+                  <Button
+                    title='Cancel'
+                    onPress={handleCancelDate}
+                    variant='ghost'
+                    style={{ marginRight: 8 }}
+                  />
+                  <Button
+                    title='Confirm'
+                    onPress={handleConfirmDate}
+                    variant='primary'
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
       )}
-    </ScrollView>
+    </React.Fragment>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    marginBottom: 20,
+    paddingHorizontal: 16
+  },
+  headerContainer: {
+    marginBottom: 24
+  },
+  header: {
+    alignItems: 'center',
+    paddingVertical: 16
+  },
+  headerIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(108, 99, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 8
+  },
+  subtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'center',
+    paddingHorizontal: 16
+  },
+  progressContainer: {
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 2,
+    marginBottom: 24,
+    marginHorizontal: 0
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#6C63FF',
+    borderRadius: 2
+  },
+  sectionWrapper: {
+    backgroundColor: 'transparent',
+    marginBottom: 16,
+    paddingHorizontal: 0,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    borderBottomWidth: 0
+  },
+  sectionIcon: {
+    marginRight: 8,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+    marginLeft: 4
+  },
+  sectionContent: {
+    paddingHorizontal: 0
+  },
+  // Form field styles
+  fieldRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  fieldLabel: {
+    color: '#fff',
+    fontSize: 16,
+    flex: 1,
+  },
+  fieldInput: {
+    flex: 1.5,
+    height: 40,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(30, 33, 50, 1)',
+    color: '#fff',
+  },
+  selectContainer: {
+    flex: 1.5,
+  },
+  selectButton: {
+    backgroundColor: 'rgba(30, 33, 50, 1)',
+    borderWidth: 0,
+    borderRadius: 8,
+    height: 40,
+    paddingHorizontal: 12,
+  },
+  selectButtonText: {
+    color: '#fff',
+    fontSize: 15,
+  },
+  selectPlaceholderText: {
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontSize: 15,
+  },
+  dateContainer: {
+    flex: 1.5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 40,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(30, 33, 50, 1)',
+  },
+  dateText: {
+    color: '#fff',
+    fontSize: 15
+  },
+  placeholderText: {
+    color: 'rgba(255, 255, 255, 0.5)'
+  },
+  calendarIcon: {
+    marginLeft: 'auto'
+  },
+  errorTextBelow: {
+    fontSize: 12,
+    color: '#FF6B6B',
+    marginTop: 4,
+    paddingLeft: 4
+  },
+  errorText: {
+    color: '#FF6B6B',
+    fontSize: 14,
+    marginLeft: 8
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16
+  },
+  stepButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 24,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+  },
+  buttonContainer: {
+    marginTop: 24,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+  },
+  buttonHalfWidth: {
+    flex: 1,
+    marginHorizontal: 4
+  },
+  imagePreview: {
+    width: 120,
+    height: 120,
+    borderRadius: 8,
+    marginTop: 8
+  },
+  // Date picker modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  datePickerContainer: {
+    backgroundColor: '#1B1F2F',
+    borderRadius: 16,
+    padding: 16,
+    width: '90%',
+    maxWidth: 340,
+    borderWidth: 1,
+    borderColor: 'rgba(108, 99, 255, 0.3)'
+  },
+  datePickerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 16
+  },
+  datePickerContent: {
+    marginBottom: 16
+  },
+  datePickerActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end'
+  }
+});
+
+export default AddNFADrawerContent;

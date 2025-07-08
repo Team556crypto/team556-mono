@@ -10,7 +10,9 @@ import {
   Dimensions,
   Animated, // Ensure this is from 'react-native'
   Easing,
-  Image
+  Image,
+  Alert,
+  Linking
 } from 'react-native'
 import { Text, useTheme, Button, Select } from '@team556/ui'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
@@ -38,11 +40,17 @@ const PROGRESS_BAR_RENDER_WIDTH = SCREEN_WIDTH - TOTAL_HORIZONTAL_PADDING_FOR_PR
 
 // Define a type for the form state that allows Date objects for date fields
 // before they are converted to ISO strings for the API payload.
-type FirearmFormState = Omit<CreateFirearmPayload, 'acquisition_date' | 'last_fired' | 'last_cleaned'> & {
+type FirearmFormState = Omit<
+  CreateFirearmPayload,
+  'acquisition_date' | 'last_fired' | 'last_cleaned' | 'purchase_price' | 'round_count' | 'value'
+> & {
   acquisition_date?: Date | string | undefined
   last_fired?: Date | string | undefined
   last_cleaned?: Date | string | undefined
   image_base64?: string | null
+  purchase_price: string
+  round_count: string
+  value: string
 }
 
 const initialFirearmState: FirearmFormState = {
@@ -56,8 +64,8 @@ const initialFirearmState: FirearmFormState = {
   purchase_price: '',
   ballistic_performance: '',
   image_base64: undefined,
-  round_count: 0,
-  value: 0.0,
+  round_count: '0',
+  value: '0',
   status: '',
   last_fired: undefined,
   last_cleaned: undefined
@@ -544,137 +552,64 @@ export const AddFirearmDrawerContent = () => {
   }
 
   const handleSaveFirearm = async () => {
-    // Ensure all step 1 fields are validated again before final save, in case user navigated back and forth
-    const isStep1Valid = validateStep1()
-    if (currentStep === 1 && !isStep1Valid) {
-      // If on step 1 and validation fails, stop here. Errors are already set by validateStep1.
-      return
-    }
-    if (currentStep !== 1 && !isStep1Valid) {
-      // If not on step 1, but step 1 is invalid, navigate to step 1 and show errors.
-      setCurrentStep(1)
-      return
-    }
-
-    // Step 4 validation
-    let imageError = false
-    if (!selectedImageBase64) {
-      // Check if a base64 image is selected
-      setFieldErrors(prev => ({ ...prev, image_base64: 'Image is required' }))
-      imageError = true
-    } else {
-      // Image is selected, make sure it's valid
-      setFieldErrors(prev => ({ ...prev, image_base64: undefined }))
-      console.log('Image base64 data is available (length):', selectedImageBase64.length)
+    // Final validation before saving
+    if (!validateStep1() || !validateStep2() || !validateStep3()) {
+      // If any validation fails, find the first step with an error and navigate to it.
+      if (!validateStep1()) {
+        setCurrentStep(1)
+        return
+      }
+      if (!validateStep2()) {
+        setCurrentStep(2)
+        return
+      }
+      if (!validateStep3()) {
+        setCurrentStep(3)
+        return
+      }
+      return // Should not be reached, but for safety
     }
 
-    if (imageError) {
-      // If image error exists and we are not on step 4, navigate to step 4
-      if (currentStep !== 4) setCurrentStep(4)
-      return
-    }
-
-    // Prepare the payload for the API - this should match CreateFirearmPayload
+    // Prepare the payload for the API, converting types as needed.
     const firearmToSave: CreateFirearmPayload = {
-      // Required string fields
-      name: newFirearm.name,
+      // Required fields
+      name: newFirearm.name.trim(),
       type: newFirearm.type,
-      serial_number: newFirearm.serial_number,
+      serial_number: newFirearm.serial_number.trim(),
 
-      // Optional string fields - send as plain string or undefined
-      manufacturer:
-        newFirearm.manufacturer?.trim().toLowerCase() === 'sdf' || !newFirearm.manufacturer?.trim()
-          ? undefined
-          : newFirearm.manufacturer.trim(),
+      // Optional string fields
+      manufacturer: newFirearm.manufacturer?.trim() || undefined,
+      model_name: newFirearm.model_name?.trim() || undefined,
+      caliber: newFirearm.caliber?.trim() || undefined,
+      ballistic_performance: newFirearm.ballistic_performance?.trim() || undefined,
+      status: newFirearm.status?.trim() || undefined,
 
-      model_name:
-        newFirearm.model_name?.trim().toLowerCase() === 'sdf' || !newFirearm.model_name?.trim()
-          ? undefined
-          : newFirearm.model_name.trim(),
+      // Date fields (convert to ISO string or undefined)
+      acquisition_date: newFirearm.acquisition_date ? new Date(newFirearm.acquisition_date).toISOString() : undefined,
+      last_fired: newFirearm.last_fired ? new Date(newFirearm.last_fired).toISOString() : undefined,
+      last_cleaned: newFirearm.last_cleaned ? new Date(newFirearm.last_cleaned).toISOString() : undefined,
 
-      caliber:
-        newFirearm.caliber?.trim().toLowerCase() === 'sdf' || !newFirearm.caliber?.trim()
-          ? undefined
-          : newFirearm.caliber.trim(),
+      // Numeric fields (parse from string or set to undefined)
+      purchase_price: newFirearm.purchase_price ? parseFloat(newFirearm.purchase_price) : undefined,
+      round_count: newFirearm.round_count ? parseInt(newFirearm.round_count, 10) : undefined,
+      value: newFirearm.value ? parseFloat(newFirearm.value) : undefined,
 
-      // For dates, send as ISO string or undefined
-      acquisition_date: newFirearm.acquisition_date
-        ? newFirearm.acquisition_date instanceof Date
-          ? newFirearm.acquisition_date.toISOString()
-          : typeof newFirearm.acquisition_date === 'string' && !isNaN(new Date(newFirearm.acquisition_date).getTime())
-            ? new Date(newFirearm.acquisition_date).toISOString()
-            : undefined
-        : undefined,
-
-      // Purchase price as string or undefined
-      purchase_price:
-        newFirearm.purchase_price?.trim().toLowerCase() === 'sdf' || !newFirearm.purchase_price?.trim()
-          ? undefined
-          : String(newFirearm.purchase_price).trim(),
-
-      ballistic_performance:
-        newFirearm.ballistic_performance?.trim().toLowerCase() === 'sdf' || !newFirearm.ballistic_performance?.trim()
-          ? undefined
-          : newFirearm.ballistic_performance.trim(),
-
-      image_base64: selectedImageBase64 || undefined, // Add base64 image
-      image: undefined, // Explicitly set image URL to undefined as server will handle it
-
-      // Numeric values - send as number or undefined
-      round_count:
-        newFirearm.round_count !== undefined && newFirearm.round_count !== null
-          ? parseInt(String(newFirearm.round_count), 10)
-          : undefined,
-
-      value:
-        newFirearm.value !== undefined && newFirearm.value !== null ? parseFloat(String(newFirearm.value)) : undefined,
-
-      // Status as string or undefined
-      status:
-        newFirearm.status?.trim().toLowerCase() === 'sdf' || !newFirearm.status?.trim()
-          ? undefined
-          : newFirearm.status?.trim(),
-
-      // Dates as ISO string or undefined
-      last_fired: newFirearm.last_fired
-        ? newFirearm.last_fired instanceof Date
-          ? newFirearm.last_fired.toISOString()
-          : typeof newFirearm.last_fired === 'string' && !isNaN(new Date(newFirearm.last_fired).getTime())
-            ? new Date(newFirearm.last_fired).toISOString()
-            : undefined
-        : undefined,
-
-      last_cleaned: newFirearm.last_cleaned
-        ? newFirearm.last_cleaned instanceof Date
-          ? newFirearm.last_cleaned.toISOString()
-          : typeof newFirearm.last_cleaned === 'string' && !isNaN(new Date(newFirearm.last_cleaned).getTime())
-            ? new Date(newFirearm.last_cleaned).toISOString()
-            : undefined
-        : undefined
+      // Image field
+      image_base64: selectedImageBase64 || undefined,
+      image: undefined, // Let the backend handle generating the image URL
     }
 
     console.log('AddFirearmDrawerContent: Saving firearm with payload:', JSON.stringify(firearmToSave, null, 2))
 
-    // console.log('AddFirearmDrawerContent: Attempting to save firearm:', firearmToSave);
-    // console.log('AddFirearmDrawerContent: Auth token:', token);
-
-    // Call the store action to add the firearm
-    // The store action should handle the API call
-    const success = await addFirearm(firearmToSave, token) // Pass token and await
+    const success = await addFirearm(firearmToSave, token)
 
     if (success) {
-      // console.log('AddFirearmDrawerContent: Firearm saved successfully');
-      setNewFirearm(initialFirearmState) // Reset form
-      setCurrentStep(1) // Reset to first step
-      closeDrawer() // Close the drawer
-      // Optionally: Show a success message to the user (e.g., using a toast notification)
+      setNewFirearm(initialFirearmState)
+      setSelectedImageUri(null)
+      setSelectedImageBase64(null)
+      setCurrentStep(1)
+      closeDrawer()
     } else {
-      // console.error('AddFirearmDrawerContent: Failed to save firearm. Store error:', storeError);
-      // Error is already set in the store by addFirearm action if API call failed.
-      // You might want to show a generic error message here or rely on a global error display.
-      // Alert.alert('Save Failed', storeError || 'Could not save firearm. Please try again.');
-      // If storeError is specific and user-friendly, you can display it.
-      // For now, we assume the store handles setting a displayable error message if needed.
       setFieldErrors(prev => ({
         ...prev,
         formError: storeError || 'Failed to save firearm. Please check your connection or try again.'
@@ -840,14 +775,28 @@ export const AddFirearmDrawerContent = () => {
   // Image Picker Logic
   const requestMediaLibraryPermissions = async () => {
     if (Platform.OS !== 'web') {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+      const { status, canAskAgain } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+
       if (status !== 'granted') {
-        alert('Sorry, we need camera roll permissions to make this work!')
+        if (canAskAgain) {
+          // The user was prompted, but might have dismissed it.
+          // We can show a simple alert.
+          Alert.alert('Permission Required', 'We need access to your photo library to select an image.')
+        } else {
+          // Guide user to settings if permission is permanently denied
+          Alert.alert(
+            'Permission Required',
+            'Access to the photo library is permanently denied. Please go to your device settings to enable it.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Open Settings', onPress: () => Linking.openSettings() }
+            ]
+          )
+        }
         return false
       }
-      return true
     }
-    return true // Permissions not typically needed on web for file input
+    return true
   }
 
   const pickImageAsync = async () => {

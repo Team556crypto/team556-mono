@@ -1,32 +1,36 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react'
 import {
   View,
+  ScrollView,
   ActivityIndicator,
   StyleSheet,
   TouchableOpacity,
+  Dimensions,
   FlatList,
   useWindowDimensions,
-} from 'react-native';
-import { useGearStore } from '@/store/gearStore';
-import { Alert } from 'react-native';
-import { useAuthStore } from '@/store/authStore';
-import { GearCard, Text, Button, EmptyState, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui';
-import { useTheme } from '@team556/ui';
-import { Gear } from '@/services/api';
-import { useDrawerStore } from '@/store/drawerStore';
-import GearDetailsDrawerContent from '@/components/drawers/GearDetailsDrawerContent';
-import AddGearDrawerContent from '@/components/drawers/AddGearDrawerContent';
+  Alert
+} from 'react-native'
+import { useGearStore } from '@/store/gearStore'
+import { useAuthStore } from '@/store/authStore'
+import { GearCard, Text, Button, EmptyState, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui'
+import { useTheme } from '@team556/ui'
+import { Gear } from '@/services/api'
+import { useDrawerStore } from '@/store/drawerStore'
 
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import GearDetailsDrawerContent from '@/components/drawers/GearDetailsDrawerContent'
+import AddGearDrawerContent from '@/components/drawers/AddGearDrawerContent'
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
+import { useFocusEffect } from '@react-navigation/native'
 
 // Responsive layout constants
-const COLUMN_GAP = 16;
-const PADDING = 16;
-const SMALL_SCREEN_BREAKPOINT = 480;
+const SMALL_SCREEN_BREAKPOINT = 576;
 const MEDIUM_SCREEN_BREAKPOINT = 768;
-const LARGE_SCREEN_BREAKPOINT = 1024;
-const XLARGE_SCREEN_BREAKPOINT = 1366;
+const LARGE_SCREEN_BREAKPOINT = 992;
+const XLARGE_SCREEN_BREAKPOINT = 1200;
+
+// Grid layout constants
+const PADDING = 16;
+const COLUMN_GAP = 16;
 
 export const GearView = () => {
   const { colors } = useTheme();
@@ -35,19 +39,32 @@ export const GearView = () => {
   const isP1User = useAuthStore(state => state.isP1PresaleUser());
   const { width: screenWidth } = useWindowDimensions();
 
+  // Responsive sizing based on screen width
   const getResponsiveLayout = () => {
-    let numColumns = 2;
-    if (screenWidth >= XLARGE_SCREEN_BREAKPOINT) numColumns = 5;
-    else if (screenWidth >= LARGE_SCREEN_BREAKPOINT) numColumns = 4;
-    else if (screenWidth >= MEDIUM_SCREEN_BREAKPOINT) numColumns = 3;
+    let numColumns = 2 // Default for small screens
 
-    const effectiveWidth = screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? screenWidth - 240 : screenWidth;
-    const availableWidth = effectiveWidth - PADDING * 2 - COLUMN_GAP * (numColumns - 1);
-    const cardWidth = Math.max(DEFAULT_CARD_WIDTH, Math.floor(availableWidth / numColumns));
-    const cardHeight = Math.floor(cardWidth * (DEFAULT_CARD_HEIGHT / DEFAULT_CARD_WIDTH));
+    if (screenWidth >= XLARGE_SCREEN_BREAKPOINT) {
+      numColumns = 5
+    } else if (screenWidth >= LARGE_SCREEN_BREAKPOINT) {
+      numColumns = 4
+    } else if (screenWidth >= MEDIUM_SCREEN_BREAKPOINT) {
+      numColumns = 3
+    }
 
-    return { numColumns, cardWidth, cardHeight, effectiveWidth };
-  };
+    // Calculate container width (accounting for the sidebar on large screens)
+    const effectiveWidth = screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? screenWidth - 240 : screenWidth
+
+    // Calculate available width for grid (minus padding and gap)
+    const availableWidth = effectiveWidth - PADDING * 2 - COLUMN_GAP * (numColumns - 1)
+
+    // Card width is calculated based on available space
+    const cardWidth = Math.max(DEFAULT_CARD_WIDTH, Math.floor(availableWidth / numColumns))
+
+    // Calculate cardHeight proportionally
+    const cardHeight = Math.floor(cardWidth * (DEFAULT_CARD_HEIGHT / DEFAULT_CARD_WIDTH))
+
+    return { numColumns, cardWidth, cardHeight, effectiveWidth }
+  }
 
   const { numColumns, cardWidth, cardHeight } = getResponsiveLayout();
   const [dimensions, setDimensions] = useState({ cardWidth, cardHeight, numColumns });
@@ -248,25 +265,22 @@ export const GearView = () => {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTitleContainer}>
-          <Text preset="h3" accessibilityRole="header">
-            My Gear
-          </Text>
-          <Text style={{ fontSize: 18, color: colors.textSecondary }}>{`(${validGear.length})`}</Text>
-          {!isP1User && !canAddItem && validGear.length >= 2 && (
-            <Text style={styles.limitReachedText}>(Max 2 items)</Text>
-          )}
+          <MaterialCommunityIcons name='tent' size={24} color={colors.primary} />
+          <Text preset='h3'>Gear</Text>
         </View>
         {canAddItem && (
-          <TouchableOpacity
-            onPress={handleAddGear}
-            style={screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? styles.addButtonLarge : styles.addButtonHeaderSmall}
-          >
-            <Ionicons name="add" size={screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? 20 : 24} color={colors.primary} />
-            {screenWidth >= MEDIUM_SCREEN_BREAKPOINT && <Text style={styles.addButtonText}>Add Gear</Text>}
+          <TouchableOpacity style={styles.addButtonHeaderSmall} onPress={handleAddGear}>
+            <Ionicons name="add-circle" size={24} color="#805AD5" />
           </TouchableOpacity>
         )}
       </View>
       {content}
+      {!canAddItem && isP1User && (
+        <Text style={styles.limitReachedText}>
+          You've reached the maximum number of gear items in the free plan.
+          Upgrade to Premium for unlimited gear items.
+        </Text>
+      )}
     </View>
-  );
+  )
 };

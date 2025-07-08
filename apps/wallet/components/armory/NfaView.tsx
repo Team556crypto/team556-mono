@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import {
   View,
+  ScrollView,
   ActivityIndicator,
   StyleSheet,
   TouchableOpacity,
+  Dimensions,
   FlatList,
   useWindowDimensions,
   Alert
@@ -15,18 +17,20 @@ import { useTheme } from '@team556/ui'
 import { NFA } from '@/services/api';
 import { useDrawerStore } from '@/store/drawerStore';
 
-import { NFADetailsDrawerContent } from '@/components/drawers/NFADetailsDrawerContent';
-import { AddNFADrawerContent } from '@/components/drawers/AddNFADrawerContent';
+import { NFADetailsDrawerContent } from '@/components/drawers/NFADetailsDrawerContent'
+import AddNFADrawerContent from '@/components/drawers/AddNFADrawerContent'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useFocusEffect } from '@react-navigation/native'
 
 // Responsive layout constants
-const COLUMN_GAP = 16
-const PADDING = 16
-const SMALL_SCREEN_BREAKPOINT = 480
-const MEDIUM_SCREEN_BREAKPOINT = 768
-const LARGE_SCREEN_BREAKPOINT = 1024
-const XLARGE_SCREEN_BREAKPOINT = 1366
+const SMALL_SCREEN_BREAKPOINT = 576;
+const MEDIUM_SCREEN_BREAKPOINT = 768;
+const LARGE_SCREEN_BREAKPOINT = 1024;
+const XLARGE_SCREEN_BREAKPOINT = 1366;
+
+// Grid layout constants
+const PADDING = 16;
+const COLUMN_GAP = 16;
 
 export const NfaView = () => {
   const { colors } = useTheme()
@@ -216,7 +220,7 @@ export const NfaView = () => {
 
   const renderItem = ({ item }: { item: NFA }) => {
     return (
-      <View style={[styles.gridItem, { width: dimensions.cardWidth }]}> 
+      <View style={[styles.gridItem, { width: dimensions.cardWidth }]}>
         <View style={styles.cardWrapper}>
           <NFACard
             nfa={item}
@@ -279,31 +283,22 @@ export const NfaView = () => {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTitleContainer}>
-          <Text preset='h3' accessibilityRole='header'>
-            My NFA Items
-          </Text>
-          <Text style={{ fontSize: 18, color: colors.textSecondary }}>{`(${nfaItems.length})`}</Text>
-          {!isP1User && !canAddItem && nfaItems.length >= 2 && (
-            <Text style={styles.limitReachedText}>(Max 2 items)</Text>
-          )}
+          <MaterialCommunityIcons name='file-certificate-outline' size={24} color={colors.primary} />
+          <Text preset='h3'>NFA Items</Text>
         </View>
         {canAddItem && (
-          <TouchableOpacity 
-            onPress={handleAddNFA} 
-            style={screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? styles.addButtonLarge : styles.addButtonHeaderSmall} 
-          >
-            <Ionicons 
-              name='add' 
-              size={screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? 20 : 24} 
-              color={colors.primary} 
-            />
-            {screenWidth >= MEDIUM_SCREEN_BREAKPOINT && (
-              <Text style={styles.addButtonText}>Add NFA Item</Text>
-            )}
+          <TouchableOpacity style={styles.addButtonHeaderSmall} onPress={handleAddNFA}>
+            <Ionicons name="add-circle" size={24} color="#805AD5" />
           </TouchableOpacity>
         )}
       </View>
       {content}
+      {!canAddItem && isP1User && (
+        <Text style={styles.limitReachedText}>
+          You've reached the maximum number of NFA items in the free plan.
+          Upgrade to Premium for unlimited NFA items.
+        </Text>
+      )}
     </View>
   )
 }

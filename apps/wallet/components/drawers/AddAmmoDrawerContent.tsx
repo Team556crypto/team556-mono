@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react'
 import {
   View,
   StyleSheet,
@@ -8,190 +8,81 @@ import {
   Platform,
   Modal,
   Dimensions,
-  Animated,
+  Animated, // Ensure this is from 'react-native'
   Easing,
   Image,
-  ActionSheetIOS,
-} from 'react-native';
-import { Text, useTheme, Button } from '@team556/ui';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import * as ImagePicker from 'expo-image-picker';
-import { CreateAmmoPayload } from '@/services/api';
-import { useAmmoStore } from '@/store/ammoStore';
-import { useAuthStore } from '@/store/authStore';
-import { useDrawerStore } from '@/store/drawerStore';
+  Alert,
+  Linking
+} from 'react-native'
+import { Text, useTheme, Button, Select } from '@team556/ui'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker'
+import * as ImagePicker from 'expo-image-picker'
+import { CreateAmmoPayload } from '@/services/api'
+import { useAmmoStore } from '@/store/ammoStore'
+import { useAuthStore } from '@/store/authStore'
+import { useDrawerStore } from '@/store/drawerStore'
+import DatePicker from 'react-datepicker'
+import 'react-datepicker/dist/react-datepicker.css'
 
-const hexToRgb = (hex: string) => {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!result) {
-    return { r: 0, g: 0, b: 0 }; // Fallback to black
-  }
-  return {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16),
-  };
-};
+// Initial state for a new firearm
+const { width: SCREEN_WIDTH } = Dimensions.get('window')
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-const DRAWER_HORIZONTAL_PADDING = 20;
-const HEADER_GRADIENT_HORIZONTAL_PADDING = 20;
-const PROGRESS_CONTAINER_OWN_HORIZONTAL_PADDING = 1;
+// Constants for calculating progress bar width
+const DRAWER_HORIZONTAL_PADDING = 20 // From @team556/ui Drawer component's scrollContent
+const HEADER_GRADIENT_HORIZONTAL_PADDING = 20 // From local styles.headerGradient
+const PROGRESS_CONTAINER_OWN_HORIZONTAL_PADDING = 1 // From local styles.progressContainer
 
 const TOTAL_HORIZONTAL_PADDING_FOR_PROGRESS_BAR =
-  DRAWER_HORIZONTAL_PADDING * 2 + HEADER_GRADIENT_HORIZONTAL_PADDING * 2 + PROGRESS_CONTAINER_OWN_HORIZONTAL_PADDING * 2;
+  DRAWER_HORIZONTAL_PADDING * 2 + HEADER_GRADIENT_HORIZONTAL_PADDING * 2 + PROGRESS_CONTAINER_OWN_HORIZONTAL_PADDING * 2
 
-const PROGRESS_BAR_RENDER_WIDTH = SCREEN_WIDTH - TOTAL_HORIZONTAL_PADDING_FOR_PROGRESS_BAR;
+const PROGRESS_BAR_RENDER_WIDTH = SCREEN_WIDTH - TOTAL_HORIZONTAL_PADDING_FOR_PROGRESS_BAR // SCREEN_WIDTH - 40 - 40 - 2 = SCREEN_WIDTH - 82
 
-// This type handles the form state, which might have strings for number fields initially
-type AmmoFormState = Omit<CreateAmmoPayload, 'quantity' | 'purchasePrice' | 'pictures' | 'purchaseDate'> & {
-  quantity: string;
-  purchasePrice: string;
-  purchaseDate?: string;
-  pictures: string[]; // Array of base64 strings
-};
+// Define a type for the form state that allows Date objects and string inputs
+type AmmoFormState = Omit<CreateAmmoPayload, 'purchaseDate' | 'purchasePrice' | 'quantity'> & {
+  purchaseDate?: Date | string | undefined
+  purchasePrice: string
+  quantity: string
+  pictures_base64?: string[]
+}
 
 const initialAmmoState: AmmoFormState = {
   manufacturer: '',
   caliber: '',
   type: '',
-  quantity: '',
   grainWeight: '',
+  quantity: '0',
   purchaseDate: undefined,
   purchasePrice: '',
   notes: '',
-  pictures: []
-};
+  pictures: undefined,
+  pictures_base64: []
+}
 
-export const AddAmmoDrawerContent = () => {
-  const { colors } = useTheme();
-  const { addAmmo, isLoading, error: storeError } = useAmmoStore();
-  const { token } = useAuthStore();
-  const { closeDrawer } = useDrawerStore();
+type Props = {}
 
-  const [newAmmo, setNewAmmo] = useState<AmmoFormState>(initialAmmoState);
-  const [currentStep, setCurrentStep] = useState(1);
-  const progressAnim = useRef(new Animated.Value(0)).current;
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof AmmoFormState, string>>>({});
+export const AddAmmoDrawerContent: React.FC<Props> = () => {
+  const { colors } = useTheme()
+  const { addAmmo, isLoading } = useAmmoStore()
+  const { token } = useAuthStore()
+  const { closeDrawer } = useDrawerStore()
+
+  const [newAmmo, setNewAmmo] = useState<AmmoFormState>(initialAmmoState)
+  const [currentStep, setCurrentStep] = useState(1)
+  const progressAnim = useRef(new Animated.Value(0)).current
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof AmmoFormState, string>>>({})
 
   const animatedProgressWidth = progressAnim.interpolate({
-    inputRange: [0, 2],
-    outputRange: [0, PROGRESS_BAR_RENDER_WIDTH]
-  });
+    inputRange: [0, 3],
+    outputRange: [0, PROGRESS_BAR_RENDER_WIDTH] // Use calculated numerical width
+  })
 
-  const steps = ['Details', 'Purchase Info', 'Notes & Photos'];
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null)
 
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [datePickerField, setDatePickerField] = useState<keyof AmmoFormState | null>(null);
-  const [currentDateValue, setCurrentDateValue] = useState(new Date());
-
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      marginBottom: 26,
-    },
-    contentContainer: {
-      paddingBottom: 100,
-    },
-    header: {
-      alignItems: 'center',
-      paddingVertical: 20,
-    },
-    title: {
-      fontSize: 24,
-      fontWeight: 'bold',
-      marginTop: 8,
-      color: colors.text,
-    },
-    stepContainer: {
-      paddingHorizontal: 20,
-    },
-    detailRow: {
-      marginBottom: 16,
-    },
-    label: {
-      marginBottom: 8,
-      fontSize: 16,
-      fontWeight: '500',
-      color: colors.text,
-    },
-    inputContainer: {
-      borderWidth: 1,
-      borderRadius: 8,
-      padding: 12,
-      justifyContent: 'center',
-      minHeight: 50,
-      borderColor: colors.backgroundLight,
-    },
-    input: {
-      borderWidth: 1,
-      borderRadius: 8,
-      padding: 12,
-      fontSize: 16,
-      minHeight: 50,
-      color: colors.text,
-      borderColor: colors.backgroundLight,
-    },
-    inputText: {
-      fontSize: 16,
-      color: colors.text,
-    },
-    errorText: {
-      color: 'red',
-      marginTop: 4,
-    },
-    stepButtonContainer: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      paddingHorizontal: 20,
-      marginTop: 20,
-    },
-    buttonHalfWidth: {
-      width: '48%',
-    },
-    modalContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    },
-    datePickerContainer: {
-      borderRadius: 14,
-      padding: 20,
-      width: '90%',
-      maxWidth: 400,
-      backgroundColor: colors.backgroundCard,
-      borderWidth: 1,
-      borderColor: `rgba(${hexToRgb(colors.primary).r}, ${hexToRgb(colors.primary).g}, ${hexToRgb(colors.primary).b}, 0.5)`,
-    },
-    datePickerTitle: {
-      fontSize: 20,
-      fontWeight: 'bold',
-      marginBottom: 20,
-      textAlign: 'center',
-      color: colors.text,
-    },
-    datePickerContent: {
-      marginBottom: 20,
-    },
-    datePickerActions: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-    },
-    imageGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      marginTop: 10,
-    },
-    thumbnail: {
-      width: 80,
-      height: 80,
-      borderRadius: 10,
-      marginRight: 10,
-    },
-  });
+  // State for DateTimePicker
+  const [showDatePicker, setShowDatePicker] = useState(false)
+  const [datePickerField, setDatePickerField] = useState<keyof AmmoFormState | null>(null)
+  const [currentDateValue, setCurrentDateValue] = useState(new Date())
 
   useEffect(() => {
     Animated.timing(progressAnim, {
@@ -199,284 +90,477 @@ export const AddAmmoDrawerContent = () => {
       duration: 300,
       easing: Easing.out(Easing.ease),
       useNativeDriver: false
-    }).start();
-  }, [currentStep]);
+    }).start()
+  }, [currentStep])
 
   const handleInputChange = (field: keyof AmmoFormState, value: any) => {
-    setNewAmmo(prev => ({ ...prev, [field]: value }));
+    setNewAmmo(prev => ({ ...prev, [field]: value }))
     if (fieldErrors[field]) {
-      setFieldErrors(prev => ({ ...prev, [field]: undefined }));
+      setFieldErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[field]
+        return newErrors
+      })
     }
-  };
+  }
 
   const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    const currentDate = selectedDate || currentDateValue;
-    setShowDatePicker(Platform.OS === 'ios');
-    if (event.type === 'set' && datePickerField) {
-      handleInputChange(datePickerField, currentDate.toISOString().split('T')[0]);
-      setShowDatePicker(false);
+    setShowDatePicker(Platform.OS === 'ios')
+    if (selectedDate && datePickerField) {
+      if (event.type === 'set') {
+        // For Android, the date is set and we can hide the picker.
+        // For iOS, the user has to confirm, so we just update the state.
+        handleInputChange(datePickerField, selectedDate)
+        if (Platform.OS !== 'ios') {
+          setShowDatePicker(false)
+        }
+      }
     } else {
-      setShowDatePicker(false);
+      // Handle case where no date is selected or picker is cancelled
+      setShowDatePicker(false)
     }
-  };
+  }
 
   const showMode = (fieldKey: keyof AmmoFormState) => {
-    setDatePickerField(fieldKey);
-    const dateValue = newAmmo[fieldKey];
-    const initialDate = dateValue && typeof dateValue === 'string' ? new Date(dateValue) : new Date();
-    setCurrentDateValue(isNaN(initialDate.getTime()) ? new Date() : initialDate);
-    setShowDatePicker(true);
-  };
-
-  const validateStep = () => {
-    const errors: Partial<Record<keyof AmmoFormState, string>> = {};
-    if (currentStep === 1) {
-      if (!newAmmo.manufacturer) errors.manufacturer = 'Manufacturer is required';
-      if (!newAmmo.caliber) errors.caliber = 'Caliber is required';
-      if (!newAmmo.type) errors.type = 'Type is required';
-      const quantityNum = parseInt(newAmmo.quantity, 10);
-      if (isNaN(quantityNum) || quantityNum <= 0) errors.quantity = 'Must be > 0';
-      if (!newAmmo.grainWeight) errors.grainWeight = 'Grain weight is required';
+    setDatePickerField(fieldKey)
+    const fieldValue = newAmmo[fieldKey]
+    if (fieldValue instanceof Date) {
+      setCurrentDateValue(fieldValue)
+    } else if (typeof fieldValue === 'string' && !isNaN(Date.parse(fieldValue))) {
+      setCurrentDateValue(new Date(fieldValue))
+    } else {
+      setCurrentDateValue(new Date())
     }
-    // Add validation for other steps if needed
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
+    setShowDatePicker(true)
+  }
+
+  // Validation Functions
+  const validateStep1 = () => {
+    const errors: Partial<Record<keyof AmmoFormState, string>> = {}
+    if (!newAmmo.manufacturer) errors.manufacturer = 'Manufacturer is required.'
+    if (!newAmmo.caliber) errors.caliber = 'Caliber is required.'
+    if (!newAmmo.type) errors.type = 'Type is required.'
+    if (!newAmmo.grainWeight) errors.grainWeight = 'Grain weight is required.'
+    if (!newAmmo.quantity || parseInt(newAmmo.quantity, 10) <= 0) {
+      errors.quantity = 'Quantity must be a number greater than 0.'
+    }
+    setFieldErrors(prev => ({ ...prev, ...errors }))
+    return Object.keys(errors).length === 0
+  }
+
+  const validateStep2 = () => {
+    const errors: Partial<Record<keyof AmmoFormState, string>> = {}
+    if (!newAmmo.purchaseDate) errors.purchaseDate = 'Purchase date is required.'
+    if (newAmmo.purchasePrice && parseFloat(newAmmo.purchasePrice) < 0) {
+      errors.purchasePrice = 'Purchase price cannot be negative.'
+    }
+    setFieldErrors(prev => ({ ...prev, ...errors }))
+    return Object.keys(errors).length === 0
+  }
+
+  const validateStep3 = () => {
+    // No validation for notes and pictures, so always return true
+    return true
+  }
 
   const handleNextStep = () => {
-    if (validateStep()) {
-      setCurrentStep(prev => prev + 1);
+    let isValid = false
+    if (currentStep === 1) {
+      isValid = validateStep1()
+    } else if (currentStep === 2) {
+      isValid = validateStep2()
+    } else if (currentStep === 3) {
+      isValid = validateStep3()
     }
-  };
+
+    if (isValid && currentStep < 3) {
+      setCurrentStep(currentStep + 1)
+    }
+  }
+
+  const handleBackStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1)
+    }
+  }
 
   const handleSaveAmmo = async () => {
-    if (!validateStep()) return;
+    setFieldErrors({})
+    const isStep1Valid = validateStep1()
+    const isStep2Valid = validateStep2()
+    const isStep3Valid = validateStep3()
 
-    if (!token) {
-      setFieldErrors({ manufacturer: 'Authentication token is missing.' });
-      return;
+    if (!isStep1Valid || !isStep2Valid || !isStep3Valid) {
+      Alert.alert('Validation Error', 'Please correct the errors on all steps before saving.')
+      if (!isStep1Valid) setCurrentStep(1)
+      else if (!isStep2Valid) setCurrentStep(2)
+      else if (!isStep3Valid) setCurrentStep(3)
+      return
     }
 
-    const payload: CreateAmmoPayload = {
+    const ammoData: CreateAmmoPayload = {
       ...newAmmo,
       quantity: parseInt(newAmmo.quantity, 10),
       purchasePrice: newAmmo.purchasePrice ? parseFloat(newAmmo.purchasePrice) : undefined,
       purchaseDate: newAmmo.purchaseDate ? new Date(newAmmo.purchaseDate).toISOString() : undefined,
-      pictures: JSON.stringify(newAmmo.pictures)
-    };
-
-    const success = await addAmmo(payload, token);
-    if (success) {
-      closeDrawer();
+      pictures: newAmmo.pictures_base64
     }
-  };
+
+    try {
+      await addAmmo(ammoData, token)
+      closeDrawer()
+      setNewAmmo(initialAmmoState) // Reset form
+      setSelectedImageUri(null)
+      setCurrentStep(1)
+      setFieldErrors({})
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred.'
+      setFieldErrors({ formError: `Failed to save ammo: ${errorMessage}` })
+    }
+  }
 
   const requestMediaLibraryPermissions = async () => {
-    const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
-    if (cameraPermission.status !== 'granted') {
-      alert('Sorry, we need camera permissions to make this work!');
-      return false;
-    }
-
-    const mediaLibraryPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (mediaLibraryPermission.status !== 'granted') {
-      alert('Sorry, we need camera roll permissions to make this work!');
-      return false;
-    }
-
-    return true;
-  };
-
-  const pickImage = async () => {
-    const hasPermission = await requestMediaLibraryPermissions();
-    if (!hasPermission) return;
-
-    ActionSheetIOS.showActionSheetWithOptions(
-      {
-        options: ['Cancel', 'Take Photo', 'Choose from Library'],
-        cancelButtonIndex: 0,
-      },
-      (buttonIndex: number) => {
-        if (buttonIndex === 1) {
-          takePhoto();
-        } else if (buttonIndex === 2) {
-          selectFromGallery();
-        }
+    if (Platform.OS !== 'web') {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'We need access to your photo library to let you pick an image. Please enable it in your settings.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Open Settings',
+              onPress: () => Linking.openSettings()
+            }
+          ]
+        )
+        return false
       }
-    );
-  };
-
-  const takePhoto = async () => {
-    let result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      quality: 1,
-      base64: true,
-    });
-
-    if (!result.canceled && result.assets && result.assets[0].base64) {
-      const base64 = `data:image/jpeg;base64,${result.assets[0].base64}`;
-      setNewAmmo(prev => ({ ...prev, pictures: [...prev.pictures, base64] }));
     }
-  };
+    return true
+  }
 
-  const selectFromGallery = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
+  const pickImageAsync = async () => {
+    const hasPermission = await requestMediaLibraryPermissions()
+    if (!hasPermission) return
+
+    const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      quality: 1,
-      base64: true,
-    });
+      quality: 0.5,
+      base64: true
+    })
 
-    if (!result.canceled && result.assets && result.assets[0].base64) {
-      const base64 = `data:image/jpeg;base64,${result.assets[0].base64}`;
-      setNewAmmo(prev => ({ ...prev, pictures: [...prev.pictures, base64] }));
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0]
+      setSelectedImageUri(asset.uri)
+      if (asset.base64) {
+        handleInputChange('pictures_base64', [`data:image/jpeg;base64,${asset.base64}`])
+      }
     }
-  };
+  }
 
-  const renderDetailRow = (
-    label: string,
-    field: keyof AmmoFormState,
-    placeholder: string,
-    inputType: 'text' | 'date' = 'text',
-    keyboardType: 'default' | 'numeric' | 'email-address' = 'default'
-  ) => (
-    <View style={styles.detailRow}>
-      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
-      {inputType === 'date' ? (
-        <TouchableOpacity onPress={() => showMode(field)}>
-          <View style={[styles.inputContainer, { borderColor: colors.backgroundLight }]}>
-            <Text style={[styles.inputText, { color: colors.text }]}>
-              {newAmmo[field] ? new Date(newAmmo[field] as string).toLocaleDateString() : placeholder}
-            </Text>
-          </View>
-        </TouchableOpacity>
-      ) : (
-        <TextInput
-          style={[styles.input, { color: colors.text, borderColor: colors.backgroundLight }]}
-          placeholder={placeholder}
-          placeholderTextColor={colors.textSecondary}
-          value={newAmmo[field] as string}
-          onChangeText={text => handleInputChange(field, text)}
-          keyboardType={keyboardType}
-        />
-      )}
-      {fieldErrors[field] && <Text style={styles.errorText}>{fieldErrors[field]}</Text>}
-    </View>
-  );
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      marginBottom: 26
+    },
+    contentContainer: {
+      paddingBottom: 100
+    },
+    header: {
+      alignItems: 'center',
+      paddingVertical: 20
+    },
+    headerIconContainer: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: colors.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 16,
+      borderWidth: 2,
+      borderColor: colors.primary
+    },
+    title: {
+      fontSize: 26,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginBottom: 8,
+      textAlign: 'center'
+    },
+    subtitle: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: 8,
+      paddingHorizontal: 20
+    },
+    progressContainer: {
+      height: 4,
+      backgroundColor: colors.border,
+      marginHorizontal: 20,
+      borderRadius: 2,
+      overflow: 'hidden'
+    },
+    progressBar: {
+      height: '100%',
+      backgroundColor: colors.primary
+    },
+    sectionWrapper: {
+      paddingHorizontal: 20,
+      marginTop: 20
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 16
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginLeft: 8
+    },
+    inputRow: {
+      marginBottom: 16
+    },
+    label: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginBottom: 8
+    },
+    inputStyle: {
+      backgroundColor: colors.backgroundSecondary,
+      color: colors.text,
+      padding: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    notesInput: {
+      backgroundColor: colors.backgroundSecondary,
+      color: colors.text,
+      padding: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      minHeight: 100,
+      textAlignVertical: 'top'
+    },
+    errorTextBelow: {
+      color: colors.error,
+      fontSize: 12,
+      marginTop: 4
+    },
+    navigationContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      marginTop: 30
+    },
+    imagePicker: {
+      height: 150,
+      backgroundColor: colors.backgroundSecondary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: 8,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    imagePickerText: {
+      color: colors.textSecondary
+    },
+    imagePreview: {
+      width: '100%',
+      height: '100%',
+      borderRadius: 8
+    },
+    dateText: {
+      color: colors.text,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      backgroundColor: colors.backgroundSecondary,
+      textAlign: 'center'
+    },
+    modalContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)'
+    },
+    datePickerContainer: {
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      padding: 20,
+      alignItems: 'center',
+      width: '80%'
+    },
+    datePickerTitle: {
+      marginBottom: 15
+    }
+  })
 
-  return (
-    <React.Fragment>
-      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-        <View style={styles.header}>
-          <MaterialCommunityIcons name='ammunition' size={32} color={colors.primary} />
-          <Text style={[styles.title, { color: colors.text }]}>Add Ammunition</Text>
-        </View>
+  const renderDatePicker = () => {
+    if (!showDatePicker) return null
 
-        {currentStep === 1 && (
-          <View style={styles.stepContainer}>
-            {renderDetailRow('Manufacturer', 'manufacturer', 'e.g., Federal')}
-            {renderDetailRow('Caliber', 'caliber', 'e.g., 9mm')}
-            {renderDetailRow('Type', 'type', 'e.g., FMJ')}
-            {renderDetailRow('Quantity', 'quantity', 'e.g., 50', 'text', 'numeric')}
-            {renderDetailRow('Grain Weight', 'grainWeight', 'e.g., 115gr')}
-          </View>
-        )}
-
-        {currentStep === 2 && (
-          <View style={styles.stepContainer}>
-            {renderDetailRow('Purchase Date', 'purchaseDate', 'Select a date', 'date')}
-            {renderDetailRow('Purchase Price', 'purchasePrice', 'e.g., 19.99', 'text', 'numeric')}
-          </View>
-        )}
-
-        {currentStep === 3 && (
-          <View style={styles.stepContainer}>
-            {renderDetailRow('Notes', 'notes', 'e.g., Range ammo')}
-            <Button title='Add Photos' onPress={pickImage} />
-            <View style={styles.imageGrid}>
-              {newAmmo.pictures.map((uri: string, index: number) => (
-                <Image key={index} source={{ uri }} style={styles.thumbnail} />
-              ))}
-            </View>
-          </View>
-        )}
-
-        <View style={styles.stepButtonContainer}>
-          {currentStep > 1 && (
-            <Button
-              title='Previous'
-              onPress={() => setCurrentStep(currentStep - 1)}
-              variant='outline'
-              style={styles.buttonHalfWidth}
-            />
-          )}
-          {currentStep < steps.length ? (
-            <Button title='Next' onPress={handleNextStep} variant='primary' style={styles.buttonHalfWidth} />
-          ) : (
-            <Button title={isLoading ? 'Saving...' : 'Save Ammo'} onPress={handleSaveAmmo} variant='primary' style={styles.buttonHalfWidth} />
-          )}
-        </View>
-
-        {storeError && <Text style={styles.errorText}>{storeError}</Text>}
-      </ScrollView>
-
-      {showDatePicker && (
+    if (Platform.OS === 'web') {
+      return (
         <Modal
           transparent={true}
           animationType='fade'
           visible={showDatePicker}
-          onRequestClose={() => {
-            setShowDatePicker(false);
-            setDatePickerField(null);
-          }}
+          onRequestClose={() => setShowDatePicker(false)}
         >
-          <TouchableOpacity
-            style={styles.modalContainer}
-            activeOpacity={1}
-            onPress={() => {
-              setShowDatePicker(false);
-              setDatePickerField(null);
-            }}
-          >
+          <TouchableOpacity style={styles.modalContainer} activeOpacity={1} onPress={() => setShowDatePicker(false)}>
             <TouchableOpacity activeOpacity={1} onPress={e => e.stopPropagation()}>
-              <View style={[styles.datePickerContainer, { backgroundColor: colors.backgroundCard }]}>
-                <Text style={[styles.datePickerTitle, { color: colors.text }]}>Select Date</Text>
-                <View style={styles.datePickerContent}>
-                  <DateTimePicker
-                    testID='dateTimePicker'
-                    value={currentDateValue}
-                    mode={'date'}
-                    is24Hour={true}
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={onDateChange}
-                    textColor={colors.text}
-                    accentColor={colors.primary}
-                  />
-                </View>
-
-                <View style={styles.datePickerActions}>
-                  <Button
-                    title='Cancel'
-                    onPress={() => {
-                      setShowDatePicker(false);
-                      setDatePickerField(null);
-                    }}
-                    variant='ghost'
-                    style={{ marginRight: 8 }}
-                  />
-                  <Button
-                    title='Confirm'
-                    onPress={() => onDateChange({ type: 'set' } as DateTimePickerEvent, currentDateValue)}
-                    variant='primary'
-                  />
-                </View>
+              <View style={styles.datePickerContainer}>
+                <Text preset='h4' style={styles.datePickerTitle}>
+                  Select Date
+                </Text>
+                <DatePicker
+                  selected={currentDateValue}
+                  onChange={date => {
+                    if (datePickerField && date) {
+                      handleInputChange(datePickerField, date)
+                    }
+                    setShowDatePicker(false)
+                  }}
+                  inline
+                />
               </View>
             </TouchableOpacity>
           </TouchableOpacity>
         </Modal>
-      )}
-    </React.Fragment>
-  );
-};
+      )
+    }
+    return (
+      <DateTimePicker
+        testID='dateTimePicker'
+        value={currentDateValue}
+        mode={'date'}
+        is24Hour={true}
+        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+        onChange={onDateChange}
+      />
+    )
+  }
 
-export default AddAmmoDrawerContent;
+  const renderInput = (field: keyof AmmoFormState, placeholder: string, keyboardType: 'default' | 'numeric' = 'default') => (
+    <View style={styles.inputRow}>
+      <Text style={styles.label}>{placeholder}</Text>
+      <TextInput
+        style={styles.inputStyle}
+        value={newAmmo[field] as string}
+        onChangeText={text => handleInputChange(field, text)}
+        placeholder={placeholder}
+        placeholderTextColor={colors.textTertiary}
+        keyboardType={keyboardType}
+      />
+      {fieldErrors[field] && <Text style={styles.errorTextBelow}>{fieldErrors[field]}</Text>}
+    </View>
+  )
+
+  const renderSelect = (field: keyof AmmoFormState, label: string, options: { label: string; value: string }[]) => (
+    <View style={styles.inputRow}>
+      <Text style={styles.label}>{label}</Text>
+      <Select
+        options={options}
+        value={newAmmo[field] as string}
+        onValueChange={value => handleInputChange(field, value)}
+        placeholder={{ label: `Select ${label}...`, value: null }}
+      />
+      {fieldErrors[field] && <Text style={styles.errorTextBelow}>{fieldErrors[field]}</Text>}
+    </View>
+  )
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <View style={styles.header}>
+        <View style={styles.headerIconContainer}>
+          <MaterialCommunityIcons name="bullet" size={40} color={colors.primary} />
+        </View>
+        <Text style={styles.title}>Add New Ammunition</Text>
+        <Text style={styles.subtitle}>Create a detailed record of your ammunition</Text>
+      </View>
+
+      <View style={styles.progressContainer}>
+        <Animated.View style={[styles.progressBar, { width: animatedProgressWidth }]} />
+      </View>
+
+      {currentStep === 1 && (
+        <View style={styles.sectionWrapper}>
+          <View style={styles.sectionHeader}>
+            <MaterialCommunityIcons name="target" size={24} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Primary Details</Text>
+          </View>
+          {renderInput('manufacturer', 'Manufacturer')}
+          {renderInput('caliber', 'Caliber')}
+          {renderInput('type', 'Type')}
+          {renderInput('grainWeight', 'Grain Weight', 'numeric')}
+          {renderInput('quantity', 'Quantity', 'numeric')}
+        </View>
+      )}
+
+      {currentStep === 2 && (
+        <View style={styles.sectionWrapper}>
+          <View style={styles.sectionHeader}>
+            <MaterialCommunityIcons name="cash-multiple" size={24} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Purchase Information</Text>
+          </View>
+          <TouchableOpacity onPress={() => showMode('purchaseDate')} style={styles.inputRow}>
+            <Text style={styles.label}>Purchase Date</Text>
+            <View style={styles.inputStyle}>
+              <Text style={styles.dateText}>
+                {newAmmo.purchaseDate ? new Date(newAmmo.purchaseDate).toLocaleDateString() : 'Select a date'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+          {fieldErrors.purchaseDate && <Text style={styles.errorTextBelow}>{fieldErrors.purchaseDate}</Text>}
+          {renderInput('purchasePrice', 'Purchase Price', 'numeric')}
+        </View>
+      )}
+
+      {currentStep === 3 && (
+        <View style={styles.sectionWrapper}>
+          <View style={styles.sectionHeader}>
+            <MaterialCommunityIcons name="image-multiple" size={24} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Photos & Notes</Text>
+          </View>
+          <TouchableOpacity onPress={pickImageAsync} style={styles.imagePicker}>
+            {selectedImageUri ? (
+              <Image source={{ uri: selectedImageUri }} style={styles.imagePreview} />
+            ) : (
+              <Text style={styles.imagePickerText}>Add Photo</Text>
+            )}
+          </TouchableOpacity>
+          <TextInput
+            style={styles.notesInput}
+            value={newAmmo.notes}
+            onChangeText={text => handleInputChange('notes', text)}
+            placeholder="Add notes..."
+            placeholderTextColor={colors.textTertiary}
+            multiline
+          />
+        </View>
+      )}
+
+      <View style={styles.navigationContainer}>
+        {currentStep > 1 && (
+          <Button title="Back" onPress={handleBackStep} variant="secondary" style={{ flex: 1, marginRight: 8 }} />
+        )}
+        {currentStep < 3 ? (
+          <Button title="Next" onPress={handleNextStep} variant="primary" style={{ flex: 1 }} />
+        ) : (
+          <Button title="Save Ammo" onPress={handleSaveAmmo} variant="primary" style={{ flex: 1 }} isLoading={isLoading} />
+        )}
+      </View>
+
+      {renderDatePicker()}
+    </ScrollView>
+  )
+}

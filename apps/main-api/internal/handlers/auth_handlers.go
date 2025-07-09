@@ -83,6 +83,11 @@ type ResetPasswordPayload struct {
 	NewPassword string `json:"new_password" validate:"required,min=8"`
 }
 
+// DeleteAccountRequest defines the input for account deletion
+type DeleteAccountRequest struct {
+	Password string `json:"password" validate:"required"`
+}
+
 // generateVerificationCode creates a random numeric string of the specified length.
 func generateVerificationCode(length int) (string, error) {
 	var builder strings.Builder
@@ -262,7 +267,15 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
-	// 5. *** Check if email is verified ***
+	// 5. *** Check if account has been deleted ***
+	if user.DeletedAt.Valid {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error":   "Account deleted",
+			"message": "This account has been deleted and cannot be accessed.",
+		})
+	}
+
+	// 6. *** Check if email is verified ***
 	if !user.EmailVerified {
 		// Optionally, consider resending the verification email here if needed
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
@@ -671,4 +684,60 @@ func (h *AuthHandler) ResendVerificationEmail(c *fiber.Ctx) error {
 
 	log.Printf("Successfully resent verification email to user %d (%s)", userID, user.Email)
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Verification email resent successfully"})
+}
+
+func (h *AuthHandler) DeleteAccount(c *fiber.Ctx) error {
+	log.Println("[DeleteAccount] Handler reached")
+
+	// 1. Get user ID from JWT token (middleware should have set this)
+	userID, ok := c.Locals("userID").(uint)
+	if !ok {
+		log.Println("[DeleteAccount] Error: Invalid authentication token - could not get userID from context")
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid authentication token"})
+	}
+
+	// 2. Parse request body
+	var req DeleteAccountRequest
+	if err := c.BodyParser(&req); err != nil {
+		log.Printf("[DeleteAccount] Error: Failed to parse request body for user %d: %v", userID, err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	// 3. Validate request body
+	if err := h.Validate.Struct(req); err != nil {
+		errors := err.(validator.ValidationErrors)
+		log.Printf("[DeleteAccount] Error: Validation failed for user %d: %v", userID, err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Validation failed", "details": formatValidationErrors(errors)})
+	}
+
+	// 4. Get user from database
+	var user models.User
+	if err := h.DB.First(&user, userID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Printf("[DeleteAccount] Error: User not found for ID %d", userID)
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+		}
+		log.Printf("[DeleteAccount] Error: Database error for user %d: %v", userID, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Database error", "details": err.Error()})
+	}
+
+	// 5. Verify password
+	log.Printf("[DeleteAccount] User ID: %d, Received Password length: %d", userID, len(req.Password))
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+		log.Printf("[DeleteAccount] Password verification failed for user %d: %v", userID, err)
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid password"})
+	}
+
+	// 6. Set DeletedAt to current time (soft delete)
+	now := time.Now()
+	user.DeletedAt = gorm.DeletedAt{Time: now, Valid: true}
+
+	// 7. Save the user with DeletedAt set
+	if err := h.DB.Save(&user).Error; err != nil {
+		log.Printf("Error marking user %d as deleted: %v", userID, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to delete account"})
+	}
+
+	log.Printf("User %d successfully marked as deleted", userID)
+	return c.SendStatus(fiber.StatusNoContent) // 204 No Content on success
 }

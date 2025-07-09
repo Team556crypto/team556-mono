@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 
 import Text from './Text';
-import Button from './button';
+import Button from './Button';
 import { useTheme } from './ThemeContext';
 
 interface EmptyStateProps {

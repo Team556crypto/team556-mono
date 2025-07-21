@@ -70,7 +70,7 @@ export const AddAmmoDrawerContent: React.FC<Props> = () => {
   const [newAmmo, setNewAmmo] = useState<AmmoFormState>(initialAmmoState)
   const [currentStep, setCurrentStep] = useState(1)
   const progressAnim = useRef(new Animated.Value(0)).current
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof AmmoFormState, string>>>({})
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof AmmoFormState, string>> & { formError?: string }>({})
 
   const animatedProgressWidth = progressAnim.interpolate({
     inputRange: [0, 3],
@@ -203,7 +203,7 @@ export const AddAmmoDrawerContent: React.FC<Props> = () => {
       quantity: parseInt(newAmmo.quantity, 10),
       purchasePrice: newAmmo.purchasePrice ? parseFloat(newAmmo.purchasePrice) : undefined,
       purchaseDate: newAmmo.purchaseDate ? new Date(newAmmo.purchaseDate).toISOString() : undefined,
-      pictures: newAmmo.pictures_base64
+      pictures: newAmmo.pictures_base64 ? newAmmo.pictures_base64[0] : undefined,
     }
 
     try {
@@ -297,25 +297,128 @@ export const AddAmmoDrawerContent: React.FC<Props> = () => {
       marginBottom: 8,
       paddingHorizontal: 20
     },
+    headerContainer: {
+      width: '100%',
+      borderRadius: 16,
+      overflow: 'hidden',
+      marginBottom: 20
+    },
+    headerGradient: {
+      width: '100%',
+      padding: 20
+    },
+    headerTitle: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: colors.text,
+      textAlign: 'center',
+      marginBottom: 4
+    },
+    headerSubtitle: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: 20
+    },
     progressContainer: {
-      height: 4,
-      backgroundColor: colors.border,
-      marginHorizontal: 20,
-      borderRadius: 2,
-      overflow: 'hidden'
+      height: 12,
+      borderRadius: 8,
+      backgroundColor: 'rgba(255,255,255,0.1)',
+      marginVertical: 24,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: colors.backgroundLight,
+      position: 'relative',
+      padding: 1
     },
     progressBar: {
+      height: 10, // Explicit numerical height
+      backgroundColor: colors.primary,
+      borderRadius: 6
+    },
+    progressSteps: {
+      position: 'absolute',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      width: '100%',
       height: '100%',
-      backgroundColor: colors.primary
+      paddingHorizontal: 0,
+      alignItems: 'center',
+      left: 0,
+      top: 0
+    },
+    progressStep: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      opacity: 0.9,
+      zIndex: 10
+    },
+    progressStepActive: {
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.primary
+    },
+    progressStepInactive: {
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      borderWidth: 1,
+      borderColor: colors.backgroundLight
+    },
+    stepsContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      marginBottom: 20,
+      paddingHorizontal: 16
+    },
+    stepButton: {
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.primarySubtle
+    },
+    activeStepButton: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary
+    },
+    stepButtonText: {
+      fontSize: 14,
+      color: colors.textSecondary
+    },
+    activeStepButtonText: {
+      color: colors.background,
+      fontWeight: 'bold'
     },
     sectionWrapper: {
-      paddingHorizontal: 20,
-      marginTop: 20
+      borderRadius: 12,
+      marginBottom: 16,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: colors.primarySubtle,
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 3
     },
     sectionHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 16
+      padding: 16,
+      backgroundColor: colors.background,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.primarySubtle,
+      borderTopLeftRadius: 12,
+      borderTopRightRadius: 12
+    },
+    section: {
+      marginBottom: 20,
+      paddingHorizontal: 16
+    },
+    sectionTitleInfoContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 12
     },
     sectionTitle: {
       fontSize: 18,
@@ -323,36 +426,188 @@ export const AddAmmoDrawerContent: React.FC<Props> = () => {
       color: colors.text,
       marginLeft: 8
     },
+    sectionContent: {
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      padding: 16,
+      borderTopLeftRadius: 0,
+      borderTopRightRadius: 0
+    },
+    detailRowContainer: {
+      marginBottom: 12
+    },
+    detailRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 6
+    },
+    detailRowLast: {
+      // Kept for reference in existing code
+    },
+    detailLabel: {
+      fontSize: 15,
+      color: colors.textSecondary,
+      flex: 1,
+      marginRight: 8,
+      fontWeight: '500'
+    },
+    inputContainer: {
+      flex: 2
+    },
     inputRow: {
-      marginBottom: 16
+      marginBottom: 15
     },
     label: {
       fontSize: 14,
       color: colors.textSecondary,
-      marginBottom: 8
+      marginBottom: 8,
+      fontWeight: '500'
     },
     inputStyle: {
-      backgroundColor: colors.backgroundSecondary,
-      color: colors.text,
-      padding: 12,
-      borderRadius: 8,
       borderWidth: 1,
-      borderColor: colors.border
+      borderColor: colors.primarySubtle,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      fontSize: 15,
+      color: colors.text,
+      backgroundColor: colors.backgroundSubtle,
+      minHeight: 40,
+      fontWeight: '500'
     },
-    notesInput: {
-      backgroundColor: colors.backgroundSecondary,
+    selectInRowStyle: {},
+    dateText: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      fontSize: 15,
       color: colors.text,
+      minHeight: 40,
+      height: 40,
+      textAlignVertical: 'center'
+    },
+    dateContainer: {
+      borderWidth: 1,
+      borderColor: colors.primarySubtle,
+      borderRadius: 8,
+      backgroundColor: colors.backgroundSubtle,
+      height: 40,
+      justifyContent: 'center'
+    },
+    placeholderText: {
+      color: colors.textTertiary
+    },
+    errorContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: `${colors.error}20`,
       padding: 12,
       borderRadius: 8,
-      borderWidth: 1,
-      borderColor: colors.border,
-      minHeight: 100,
-      textAlignVertical: 'top'
+      marginVertical: 16
+    },
+    errorText: {
+      color: colors.error,
+      fontSize: 14,
+      marginLeft: 8,
+      flex: 1
     },
     errorTextBelow: {
-      color: colors.error,
       fontSize: 12,
-      marginTop: 4
+      color: colors.error,
+      marginTop: 4,
+      textAlign: 'left'
+    },
+    stepButtonContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingTop: 10,
+      paddingBottom: Platform.OS === 'ios' ? 30 : 20,
+      gap: 14 // 14px gap between buttons
+    },
+    buttonHalfWidth: {
+      flex: 1 // Use flex instead of fixed width to ensure proper layout
+    },
+    buttonContainer: {
+      marginTop: 24,
+      marginBottom: 24,
+      paddingHorizontal: 16,
+      alignItems: 'center'
+    },
+    modalContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0,0,0,0.7)'
+    },
+    datePickerContainer: {
+      backgroundColor: colors.backgroundCard,
+      borderRadius: 16,
+      padding: 20,
+      alignItems: 'center',
+      elevation: 5,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      width: SCREEN_WIDTH * 0.9,
+      maxWidth: 380,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84
+    },
+    datePickerTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.primary,
+      marginBottom: 16,
+      textAlign: 'center'
+    },
+    datePickerContent: {
+      marginVertical: 8,
+      borderRadius: 8,
+      overflow: 'hidden',
+      width: '100%'
+    },
+    datePickerActions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      marginTop: 16,
+      width: '100%'
+    },
+    imagePreview: {
+      width: '100%',
+      height: 200,
+      borderRadius: 8,
+      marginBottom: 10,
+      backgroundColor: colors.backgroundSubtle, // Changed from colors.backgroundOffset
+      resizeMode: 'contain'
+    },
+    datePickerWeb: {
+      // Add any specific wrapper styles for DatePicker on web if needed
+      // For example, to ensure it aligns with other inputs
+      width: '100%'
+    },
+    imagePicker: {
+      height: 150,
+      backgroundColor: colors.background,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: 8,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: colors.primarySubtle
+    },
+    imagePickerText: {
+      color: colors.textSecondary
+    },
+    notesInput: {
+      backgroundColor: colors.background,
+      color: colors.text,
+      padding: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.primarySubtle,
+      minHeight: 100,
+      textAlignVertical: 'top'
     },
     navigationContainer: {
       flexDirection: 'row',
@@ -360,49 +615,6 @@ export const AddAmmoDrawerContent: React.FC<Props> = () => {
       paddingHorizontal: 20,
       marginTop: 30
     },
-    imagePicker: {
-      height: 150,
-      backgroundColor: colors.backgroundSecondary,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderRadius: 8,
-      marginBottom: 16,
-      borderWidth: 1,
-      borderColor: colors.border
-    },
-    imagePickerText: {
-      color: colors.textSecondary
-    },
-    imagePreview: {
-      width: '100%',
-      height: '100%',
-      borderRadius: 8
-    },
-    dateText: {
-      color: colors.text,
-      padding: 12,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      backgroundColor: colors.backgroundSecondary,
-      textAlign: 'center'
-    },
-    modalContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: 'rgba(0, 0, 0, 0.5)'
-    },
-    datePickerContainer: {
-      backgroundColor: colors.background,
-      borderRadius: 12,
-      padding: 20,
-      alignItems: 'center',
-      width: '80%'
-    },
-    datePickerTitle: {
-      marginBottom: 15
-    }
   })
 
   const renderDatePicker = () => {
@@ -469,10 +681,10 @@ export const AddAmmoDrawerContent: React.FC<Props> = () => {
     <View style={styles.inputRow}>
       <Text style={styles.label}>{label}</Text>
       <Select
-        options={options}
-        value={newAmmo[field] as string}
+        items={options}
+        selectedValue={newAmmo[field] as string}
         onValueChange={value => handleInputChange(field, value)}
-        placeholder={{ label: `Select ${label}...`, value: null }}
+        placeholder={`Select ${label}...`}
       />
       {fieldErrors[field] && <Text style={styles.errorTextBelow}>{fieldErrors[field]}</Text>}
     </View>
@@ -556,7 +768,7 @@ export const AddAmmoDrawerContent: React.FC<Props> = () => {
         {currentStep < 3 ? (
           <Button title="Next" onPress={handleNextStep} variant="primary" style={{ flex: 1 }} />
         ) : (
-          <Button title="Save Ammo" onPress={handleSaveAmmo} variant="primary" style={{ flex: 1 }} isLoading={isLoading} />
+          <Button title="Save Ammo" onPress={handleSaveAmmo} variant="primary" style={{ flex: 1 }} loading={isLoading} />
         )}
       </View>
 

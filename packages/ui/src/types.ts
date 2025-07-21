@@ -88,7 +88,13 @@ export type CreateAmmoPayload = Omit<Ammo, 'id' | 'owner_user_id' | 'created_at'
 /**
  * Represents the payload for updating existing ammunition.
  */
-export type UpdateAmmoPayload = { id: number } & Partial<CreateAmmoPayload>;
+export type UpdateAmmoPayload = {
+  id: number;
+  imageName?: string;
+  imageData?: string;
+  imageType?: string;
+  imageSize?: number;
+} & Partial<CreateAmmoPayload>;
 
 
 /**

@@ -53,7 +53,7 @@ export default function DigitalArmoryScreen() {
       scrollEnabled={!isScrollableView}
     >
       <HorizontalBadgeScroll items={CATEGORIES} initialSelectedItem={selectedCategory} onSelect={setSelectedCategory} />
-      <View style={[styles.container, { backgroundColor: colors.background }]}>{renderSelectedView()}</View>
+      <View style={[styles.container]}>{renderSelectedView()}</View>
     </ScreenLayout>
   );
 }

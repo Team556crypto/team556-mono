@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "exports": {
-    ".": "./index.ts"
+    ".": "./index.ts",
+    "./src/*": "./src/*"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
@@ -14,6 +15,7 @@
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
     "@turbo/gen": "^2.5.0",
+    "@types/minimatch": "^6.0.0",
     "@types/node": "^22.14.0",
     "@types/react": "19.1.0",
     "@types/react-dom": "19.1.1",
@@ -22,7 +24,7 @@
   },
   "dependencies": {
     "expo-image": "^2.1.7",
-    "react": "^19.1.0",
+    "react": "*",
     "react-dom": "^19.1.0"
   },
   "main": "index.ts",

@@ -3,6 +3,6 @@
   "compilerOptions": {
     "outDir": "dist"
   },
-  "include": ["src"],
+  "include": ["src", "../../apps/wallet/components/armory/AmmoCard.tsx", "../../apps/wallet/components/armory/FirearmCard.tsx"],
   "exclude": ["node_modules", "dist"]
 }

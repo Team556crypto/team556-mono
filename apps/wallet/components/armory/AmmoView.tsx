@@ -1,31 +1,28 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import {
   View,
-  ScrollView,
   ActivityIndicator,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
   FlatList,
   useWindowDimensions,
   Alert
 } from 'react-native'
-import { useAmmoStore } from '@/store/ammoStore'
 import { useAuthStore } from '@/store/authStore'
-import { AmmoCard, Text, Button, EmptyState, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui'
+import { Text, Button, EmptyState, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT, AmmoCard } from '@team556/ui'
 import { useTheme } from '@team556/ui'
 import { Ammo } from '@/services/api';
 import { useDrawerStore } from '@/store/drawerStore';
+import { useAmmoStore } from '@/store/ammoStore';
 
-import { AmmoDetailsDrawerContent } from '@/components/drawers/AmmoDetailsDrawerContent'
-import { AddAmmoDrawerContent } from '@/components/drawers/AddAmmoDrawerContent'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useFocusEffect } from '@react-navigation/native'
+import { AmmoDetailsDrawerContent } from '@/components/drawers/AmmoDetailsDrawerContent';
+import { AddAmmoDrawerContent } from '@/components/drawers/AddAmmoDrawerContent';
 
 // Responsive layout constants
 const COLUMN_GAP = 16
 const PADDING = 16
-const SMALL_SCREEN_BREAKPOINT = 480
 const MEDIUM_SCREEN_BREAKPOINT = 768
 const LARGE_SCREEN_BREAKPOINT = 1024
 const XLARGE_SCREEN_BREAKPOINT = 1366
@@ -250,10 +247,10 @@ export const AmmoView = () => {
   } else if (ammos.length === 0) {
     content = (
       <EmptyState
-        icon={<MaterialCommunityIcons name='ammo' size={80} color={colors.primary} />}
-        title='No Ammo Yet'
-        subtitle='Get started by adding your first ammo to your armory.'
-        buttonText='+ Add Ammo'
+        icon={<MaterialCommunityIcons name='pistol' size={80} color={colors.primary} />}
+        title='No Ammunition Yet'
+        subtitle='Get started by adding your first ammunition to your armory.'
+        buttonText='+ Add Ammunition'
         onPress={handleAddAmmo}
       />
     )
@@ -282,7 +279,7 @@ export const AmmoView = () => {
       <View style={styles.header}>
         <View style={styles.headerTitleContainer}>
           <Text preset='h3' accessibilityRole='header'>
-            My Ammo
+            My Ammunition
           </Text>
           <Text style={{ fontSize: 18, color: colors.textSecondary }}>{`(${ammos.length})`}</Text>
           {!isP1User && !canAddItem && ammos.length >= 2 && (
@@ -300,7 +297,7 @@ export const AmmoView = () => {
               color={colors.primary} 
             />
             {screenWidth >= MEDIUM_SCREEN_BREAKPOINT && (
-              <Text style={styles.addButtonText}>Add Ammo</Text>
+              <Text style={styles.addButtonText}>Add Ammunition</Text>
             )}
           </TouchableOpacity>
         )}

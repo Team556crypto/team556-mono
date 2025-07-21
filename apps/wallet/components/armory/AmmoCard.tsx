@@ -1,38 +1,38 @@
 import React from 'react'
 import { View, StyleSheet, Pressable } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { useTheme } from './ThemeContext'
-import Text from './Text'
-import { Firearm } from './types'
+import { useTheme } from '@team556/ui/src/ThemeContext'
+import Text from '@team556/ui/src/Text'
+import { Ammo } from '@team556/ui/src/types'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { Image } from 'expo-image'
-import { DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from './constants'
+import { DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui/src/constants'
 
-interface FirearmCardProps {
-  firearm: Firearm;
+interface AmmoCardProps {
+  ammo: Ammo;
   onPress?: (id: number) => void;
   onDelete?: (id: number) => void;
   width?: number;
   height?: number;
 }
 
-export default function FirearmCard({
-  firearm,
+export default function AmmoCard({
+  ammo,
   onPress,
   onDelete,
   width = DEFAULT_CARD_WIDTH,
   height = DEFAULT_CARD_HEIGHT
-}: FirearmCardProps) {
+}: AmmoCardProps) {
   const { colors } = useTheme()
   const handlePress = () => {
     if (onPress) {
-      onPress(firearm.id);
+      onPress(ammo.id);
     }
   };
 
   const handleDelete = () => {
     if (onDelete) {
-      onDelete(firearm.id);
+      onDelete(ammo.id);
     }
   };
 
@@ -129,43 +129,40 @@ export default function FirearmCard({
     }
   })
 
-  const getFirearmIcon = () => {
-    const type = firearm.type?.toLowerCase() || ''
-    if (type.includes('pistol') || type.includes('handgun')) {
-      return 'target'
-    } else if (type.includes('rifle') || type.includes('shotgun')) {
-      return 'crosshairs'
-    } else if (type.includes('nfa')) {
-      return 'shield'
-    }
-    return 'crosshairs-gps'
+  const getAmmoIcon = (): React.ComponentProps<typeof MaterialCommunityIcons>['name'] => {
+    return 'ammunition'
   }
 
   const renderImage = () => {
-    if (firearm.image) {
-      const imageUri = firearm.image
-
-      return (
-        <>
-          <Image source={{ uri: imageUri }} style={styles.image} contentFit='cover' />
-          <View style={styles.categoryTag}>
-            <Text style={styles.categoryText}>{firearm.type || 'Firearm'}</Text>
-          </View>
-        </>
-      )
-    } else {
-      return (
-        <>
-          <View style={styles.placeholder}>
-            <MaterialCommunityIcons name={getFirearmIcon()} size={36} color={colors.textTertiary} />
-            <Text style={styles.placeholderText}>No Image</Text>
-          </View>
-          <View style={styles.categoryTag}>
-            <Text style={styles.categoryText}>{firearm.type || 'Firearm'}</Text>
-          </View>
-        </>
-      )
+    if (ammo.pictures) {
+        try {
+            const pictures = JSON.parse(ammo.pictures);
+            if (pictures.length > 0) {
+                const imageUri = pictures[0];
+                return (
+                    <>
+                        <Image source={{ uri: imageUri }} style={styles.image} contentFit='cover' />
+                        <View style={styles.categoryTag}>
+                            <Text style={styles.categoryText}>{ammo.type || 'Ammo'}</Text>
+                        </View>
+                    </>
+                )
+            }
+        } catch (e) {
+            console.error("Failed to parse ammo pictures", e);
+        }
     }
+    return (
+        <>
+            <View style={styles.placeholder}>
+                <MaterialCommunityIcons name={getAmmoIcon()} size={36} color={colors.textTertiary} />
+                <Text style={styles.placeholderText}>No Image</Text>
+            </View>
+            <View style={styles.categoryTag}>
+                <Text style={styles.categoryText}>{ammo.type || 'Ammo'}</Text>
+            </View>
+        </>
+    )
   }
 
   return (
@@ -178,14 +175,13 @@ export default function FirearmCard({
           <View style={styles.imageContainer}>{renderImage()}</View>
           <View style={styles.infoContainer}>
             <Text style={styles.name} numberOfLines={2} ellipsizeMode='tail'>
-              {firearm.name}
+              {ammo.manufacturer} {ammo.caliber}
             </Text>
             <Text style={styles.details} numberOfLines={1} ellipsizeMode='tail'>
-              {firearm.manufacturer ? `${firearm.manufacturer} ` : ''}
-              {firearm.model_name || ''}
+              {ammo.grainWeight}gr {ammo.type}
             </Text>
             <Text style={styles.details} numberOfLines={1} ellipsizeMode='tail'>
-              {firearm.caliber || ''}
+              {`Quantity: ${ammo.quantity}`}
             </Text>
           </View>
         </LinearGradient>

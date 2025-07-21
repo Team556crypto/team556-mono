@@ -70,7 +70,6 @@ const AllItemsView: React.FC<AllItemsViewProps> = ({ onCategorySelect }) => {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      padding: 16,
     },
     centerMessage: {
       flex: 1,

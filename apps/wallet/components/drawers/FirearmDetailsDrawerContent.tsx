@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Modal, Dimensions } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { LinearGradient } from 'expo-linear-gradient'
 import { Text, Button, Input, useTheme, Select } from '@team556/ui'
 import { Image } from 'expo-image'
 import * as ImagePicker from 'expo-image-picker'
@@ -28,7 +27,6 @@ function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
   return debounced as (...args: Parameters<F>) => void
 }
 
-const SCREEN_HEIGHT = Dimensions.get('window').height
 const windowWidth = Dimensions.get('window').width
 
 const FIREARM_TYPES = [
@@ -50,38 +48,6 @@ type EditableFirearm = Firearm & {
 }
 
 type FirearmDateFieldKey = 'acquisition_date' | 'last_fired' | 'last_cleaned'
-
-// Helper function for formatting date to YYYY-MM-DD for web input
-const formatDateForWebInput = (dateValue: Date | string | undefined): string => {
-  if (!dateValue) return ''
-  let date: Date
-  if (typeof dateValue === 'string') {
-    const d = new Date(dateValue)
-    if (!isNaN(d.getTime())) {
-      date = d
-    } else {
-      const parts = dateValue.split('-')
-      if (
-        parts.length === 3 &&
-        parts[0].length === 4 &&
-        parts[1].length === 2 &&
-        parts[2].length === 2 &&
-        !isNaN(parseInt(parts[0])) &&
-        !isNaN(parseInt(parts[1])) &&
-        !isNaN(parseInt(parts[2]))
-      ) {
-        return dateValue
-      }
-      return ''
-    }
-  } else {
-    date = dateValue
-  }
-  const year = date.getFullYear()
-  const month = (date.getMonth() + 1).toString().padStart(2, '0')
-  const day = date.getDate().toString().padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
 
 // Helper function to get a Date object for react-datepicker
 const getDateForPicker = (value: string | Date | undefined): Date | null => {
@@ -133,7 +99,7 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
       }
       try {
         // We don't want to show loading indicators for auto-save
-        await updateFirearmAction(token, firearm.id, payload)
+        await updateFirearmAction(firearm.id, { ...payload, id: firearm.id }, token)
       } catch (error) {
         console.error('Auto-save failed:', error)
       }
@@ -398,7 +364,6 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
       overflow: 'hidden' // Ensures image respects border radius
     },
     editImageButton: {
-      // Style for the edit image button/overlay
       position: 'absolute',
       top: 12,
       right: 12,
@@ -413,7 +378,6 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
       elevation: 5 // For Android
     },
     removeImageButton: {
-      // Style for removing a newly selected image
       position: 'absolute',
       top: 12,
       right: 56, // Position to the left of the edit button
@@ -430,7 +394,6 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
     image: {
       width: '100%',
       height: '100%'
-      // resizeMode: 'contain' // contentFit on component takes precedence for expo-image
     },
     placeholder: {
       alignItems: 'center',
@@ -477,13 +440,7 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
       fontWeight: 'bold'
     },
     detailRow: {
-      // flexDirection: 'row',
-      // justifyContent: 'flex-start', // Changed from 'space-between'
-      // alignItems: 'center',
-      // paddingVertical: 10,
       gap: 8,
-      // borderBottomWidth: 1,
-      // borderBottomColor: colors.primarySubtle,
       marginBottom: 10
     },
     detailRowLast: {
@@ -549,7 +506,6 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
       flex: 1
     },
     datePickerIcon: {
-      // marginRight: 8, // Added margin to the text instead
     },
     actionsContainer: {
       flexDirection: 'row',
@@ -563,7 +519,6 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
     loadingIndicator: {
       marginTop: 20
     },
-    // Copied from AddFirearmDrawerContent.tsx and adapted for colors from useTheme()
     modalContainer: {
       flex: 1,
       justifyContent: 'center',
@@ -624,12 +579,6 @@ export const FirearmDetailsDrawerContent: React.FC<FirearmDetailsDrawerContentPr
         </Text>
       </View>
     )
-  }
-
-  const getInitialDate = (dateString?: string | Date | null) => {
-    if (!dateString) return undefined
-    const date = new Date(dateString)
-    return isNaN(date.getTime()) ? undefined : date
   }
 
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof UpdateFirearmPayload, string>>>({})

@@ -1,43 +1,39 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import {
   View,
-  ScrollView,
   ActivityIndicator,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
   FlatList,
   useWindowDimensions,
   Alert
 } from 'react-native'
-import { useGearStore } from '@/store/gearStore'
 import { useAuthStore } from '@/store/authStore'
-import { GearCard, Text, Button, EmptyState, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui'
+import { Text, Button, EmptyState, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui'
 import { useTheme } from '@team556/ui'
-import { Gear } from '@/services/api'
-import { useDrawerStore } from '@/store/drawerStore'
+import { Gear } from '@/services/api';
+import { useDrawerStore } from '@/store/drawerStore';
+import { useGearStore } from '@/store/gearStore';
 
-import GearDetailsDrawerContent from '@/components/drawers/GearDetailsDrawerContent'
-import AddGearDrawerContent from '@/components/drawers/AddGearDrawerContent'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useFocusEffect } from '@react-navigation/native'
+import { GearDetailsDrawerContent } from '@/components/drawers/GearDetailsDrawerContent';
+import { AddGearDrawerContent } from '@/components/drawers/AddGearDrawerContent';
+import GearCard from './GearCard';
 
 // Responsive layout constants
-const SMALL_SCREEN_BREAKPOINT = 576;
-const MEDIUM_SCREEN_BREAKPOINT = 768;
-const LARGE_SCREEN_BREAKPOINT = 992;
-const XLARGE_SCREEN_BREAKPOINT = 1200;
-
-// Grid layout constants
-const PADDING = 16;
-const COLUMN_GAP = 16;
+const COLUMN_GAP = 16
+const PADDING = 16
+const MEDIUM_SCREEN_BREAKPOINT = 768
+const LARGE_SCREEN_BREAKPOINT = 1024
+const XLARGE_SCREEN_BREAKPOINT = 1366
 
 export const GearView = () => {
-  const { colors } = useTheme();
-  const token = useAuthStore(state => state.token);
-  const canAddItem = useAuthStore(state => state.canAddItem('gear'));
-  const isP1User = useAuthStore(state => state.isP1PresaleUser());
-  const { width: screenWidth } = useWindowDimensions();
+  const { colors } = useTheme()
+  const token = useAuthStore(state => state.token)
+  const canAddItem = useAuthStore(state => state.canAddItem('gear'))
+  const isP1User = useAuthStore(state => state.isP1PresaleUser())
+  const { width: screenWidth } = useWindowDimensions()
 
   // Responsive sizing based on screen width
   const getResponsiveLayout = () => {
@@ -66,47 +62,46 @@ export const GearView = () => {
     return { numColumns, cardWidth, cardHeight, effectiveWidth }
   }
 
-  const { numColumns, cardWidth, cardHeight } = getResponsiveLayout();
-  const [dimensions, setDimensions] = useState({ cardWidth, cardHeight, numColumns });
+  const { numColumns, cardWidth, cardHeight } = getResponsiveLayout()
+
+  // Listen for screen dimension changes
+  const [dimensions, setDimensions] = useState({ cardWidth, cardHeight, numColumns })
 
   useFocusEffect(
     useCallback(() => {
-      const { cardWidth, cardHeight, numColumns } = getResponsiveLayout();
-      setDimensions({ cardWidth, cardHeight, numColumns });
+      const { cardWidth, cardHeight, numColumns } = getResponsiveLayout()
+      setDimensions({ cardWidth, cardHeight, numColumns })
     }, [screenWidth])
-  );
+  )
 
-  const gear = useGearStore(state => state.gear);
-  const validGear = Array.isArray(gear) ? gear.filter(item => item && item.id) : [];
-  const isLoading = useGearStore(state => state.isLoading);
-  const gearStoreError = useGearStore(state => state.error);
-  const fetchInitialGear = useGearStore(state => state.fetchInitialGear);
-  const deleteGear = useGearStore(state => state.deleteGear);
-  const hasAttemptedInitialFetch = useGearStore(
-    state => state.hasAttemptedInitialFetch,
-  );
+  const gears = useGearStore(state => state.gear)
+  const isLoading = useGearStore(state => state.isLoading)
+  const gearStoreError = useGearStore(state => state.error)
+  const fetchInitialGears = useGearStore(state => state.fetchInitialGear)
+  const deleteGear = useGearStore(state => state.deleteGear)
+  const hasAttemptedInitialFetch = useGearStore(state => state.hasAttemptedInitialFetch)
   const clearGearError = useGearStore(state => state.setError);
-  const { openDrawer, closeDrawer } = useDrawerStore();
-
+  const { openDrawer } = useDrawerStore();
+  
 
   useEffect(() => {
     if (token && !hasAttemptedInitialFetch && !isLoading) {
-      fetchInitialGear(token);
+      fetchInitialGears(token)
     }
-  }, [token, hasAttemptedInitialFetch, isLoading, fetchInitialGear]);
+  }, [token, hasAttemptedInitialFetch, isLoading, fetchInitialGears])
 
   const handleGearPress = (gear: Gear) => {
-    openDrawer(<GearDetailsDrawerContent gearId={gear.id} closeDrawer={closeDrawer} openDrawer={openDrawer} />, { maxHeight: '90%' });
-  };
+    openDrawer(<GearDetailsDrawerContent gear={gear} />, { maxHeight: '90%' });
+  }
 
   const handleAddGear = () => {
-    openDrawer(<AddGearDrawerContent closeDrawer={closeDrawer} />);
-  };
+    openDrawer(<AddGearDrawerContent />);
+  }
 
   const handleDelete = (gearId: number) => {
     Alert.alert(
       'Delete Gear',
-      'Are you sure you want to delete this item? This action cannot be undone.',
+      'Are you sure you want to delete this gear? This action cannot be undone.',
       [
         {
           text: 'Cancel',
@@ -116,17 +111,18 @@ export const GearView = () => {
           text: 'Delete',
           onPress: async () => {
             try {
-              await deleteGear(gearId, token);
+              await deleteGear(gearId, token)
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete gear item.');
+              // Error is already handled in the store, but you could add specific UI feedback here if needed
+              Alert.alert('Error', 'Failed to delete gear.');
             }
           },
           style: 'destructive',
         },
       ],
-      { cancelable: false },
-    );
-  };
+      { cancelable: false }
+    )
+  }
 
   const styles = StyleSheet.create({
     container: {
@@ -183,7 +179,19 @@ export const GearView = () => {
       marginVertical: 8,
       paddingHorizontal: 16
     },
-
+    emptyMessage: {
+      flex: 1,
+      width: '100%',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: 12,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: colors.backgroundLight,
+      backgroundColor: 'rgba(0,0,0,0.2)',
+      gap: 12,
+      paddingVertical: 48
+    },
     addButton: {
       borderRadius: 8
     },
@@ -204,83 +212,306 @@ export const GearView = () => {
       color: '#805AD5',
       fontWeight: '600'
     }
-  });
+  })
 
-  const renderItem = ({ item }: { item: Gear }) => (
-    <View style={[styles.gridItem, { width: dimensions.cardWidth }]}>
-      <View style={styles.cardWrapper}>
-        <GearCard
-          gear={item}
-          onPress={() => handleGearPress(item)}
-          onDelete={() => handleDelete(item.id)}
-          width={dimensions.cardWidth}
-          height={dimensions.cardHeight}
-        />
+  const renderItem = ({ item }: { item: Gear }) => {
+    return (
+      <View style={[styles.gridItem, { width: dimensions.cardWidth }]}>
+        <View style={styles.cardWrapper}>
+          <GearCard
+            gear={item}
+            onPress={() => handleGearPress(item)}
+            onDelete={() => handleDelete(item.id)}
+            width={dimensions.cardWidth}
+            height={dimensions.cardHeight}
+          />
+        </View>
       </View>
-    </View>
-  );
+    )
+  }
 
-  let content = null;
+  let content = null
 
-  if (isLoading && validGear.length === 0) {
+  if (isLoading && gears.length === 0) {
     content = (
       <View style={styles.centerMessage}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size='large' color={colors.primary} />
       </View>
-    );
+    )
   } else if (gearStoreError) {
     content = (
       <View style={styles.centerMessage}>
         <Text style={styles.errorText}>{gearStoreError}</Text>
-        <Button variant="outline" title="Dismiss" onPress={() => clearGearError(null)} style={{ marginTop: 16 }} />
+        <Button variant='outline' title='Dismiss' onPress={() => clearGearError(null)} style={{ marginTop: 16 }} />
       </View>
-    );
-  } else if (validGear.length === 0) {
+    )
+  } else if (gears.length === 0) {
     content = (
       <EmptyState
-        icon={<MaterialCommunityIcons name='tent' size={80} color={colors.primary} />}
-        title='No Gear Yet'
-        subtitle='Get started by adding your first piece of gear to your armory.'
-        buttonText='+ Add Gear'
+        icon={<MaterialCommunityIcons name='pistol' size={80} color={colors.primary} />}
+        title='No Ammunition Yet'
+        subtitle='Get started by adding your first ammunition to your armory.'
+        buttonText='+ Add Ammunition'
         onPress={handleAddGear}
       />
-    );
+    )
   } else {
     content = (
       <FlatList
         key={dimensions.numColumns}
-        data={validGear}
+        data={gears}
         renderItem={renderItem}
         keyExtractor={item => item.id.toString()}
         numColumns={dimensions.numColumns}
         style={styles.flatListContainer}
         contentContainerStyle={styles.gridContent}
         columnWrapperStyle={dimensions.numColumns > 1 ? styles.columnWrapper : undefined}
-        ListHeaderComponent={isLoading && validGear.length > 0 ? <ActivityIndicator style={{ marginVertical: 20 }} size="large" color={colors.primary} /> : null}
+        ListHeaderComponent={
+          isLoading && gears.length > 0 ? (
+            <ActivityIndicator style={{ marginVertical: 20 }} size='large' color={colors.primary} />
+          ) : null
+        }
       />
-    );
+    )
   }
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTitleContainer}>
-          <MaterialCommunityIcons name='tent' size={24} color={colors.primary} />
-          <Text preset='h3'>Gear</Text>
+          <Text preset='h3' accessibilityRole='header'>
+            My Ammunition
+          </Text>
+          <Text style={{ fontSize: 18, color: colors.textSecondary }}>{`(${gears.length})`}</Text>
+          {!isP1User && !canAddItem && gears.length >= 2 && (
+            <Text style={styles.limitReachedText}>(Max 2 items)</Text>
+          )}
         </View>
         {canAddItem && (
-          <TouchableOpacity style={styles.addButtonHeaderSmall} onPress={handleAddGear}>
-            <Ionicons name="add-circle" size={24} color="#805AD5" />
+          <TouchableOpacity 
+            onPress={handleAddGear} 
+            style={screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? styles.addButtonLarge : styles.addButtonHeaderSmall} 
+          >
+            <Ionicons 
+              name='add' 
+              size={screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? 20 : 24} 
+              color={colors.primary} 
+            />
+            {screenWidth >= MEDIUM_SCREEN_BREAKPOINT && (
+              <Text style={styles.addButtonText}>Add Ammunition</Text>
+            )}
           </TouchableOpacity>
         )}
       </View>
       {content}
-      {!canAddItem && isP1User && (
-        <Text style={styles.limitReachedText}>
-          You've reached the maximum number of gear items in the free plan.
-          Upgrade to Premium for unlimited gear items.
-        </Text>
-      )}
     </View>
   )
-};
+}
+
+
+
+// import React, { useEffect, useState, useCallback } from 'react';
+// import {
+//   View,
+//   ActivityIndicator,
+//   StyleSheet,
+//   TouchableOpacity,
+//   FlatList,
+//   useWindowDimensions,
+//   Alert
+// } from 'react-native';
+// import { useAuthStore } from '@/store/authStore';
+// import { Text, Button, EmptyState, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui';
+// import GearCard from './GearCard';
+// import { useTheme } from '@team556/ui';
+// import { Gear } from '@/services/api';
+// import { useDrawerStore } from '@/store/drawerStore';
+// import { useGearStore } from '@/store/gearStore';
+
+// import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+// import { useFocusEffect } from '@react-navigation/native';
+// import { GearDetailsDrawerContent } from '@/components/drawers/GearDetailsDrawerContent';
+// import { AddGearDrawerContent } from '@/components/drawers/AddGearDrawerContent';
+
+// // Responsive layout constants
+// const COLUMN_GAP = 16;
+// const PADDING = 16;
+// const MEDIUM_SCREEN_BREAKPOINT = 768;
+// const LARGE_SCREEN_BREAKPOINT = 1024;
+// const XLARGE_SCREEN_BREAKPOINT = 1366;
+
+// export const GearView = () => {
+//   const { colors } = useTheme();
+//   const token = useAuthStore(state => state.token);
+//   const canAddItem = useAuthStore(state => state.canAddItem('gear'));
+//   const { width: screenWidth } = useWindowDimensions();
+
+//   // Responsive sizing based on screen width
+//   const getResponsiveLayout = () => {
+//     let numColumns = 2; // Default for small screens
+
+//     if (screenWidth >= XLARGE_SCREEN_BREAKPOINT) {
+//       numColumns = 5;
+//     } else if (screenWidth >= LARGE_SCREEN_BREAKPOINT) {
+//       numColumns = 4;
+//     } else if (screenWidth >= MEDIUM_SCREEN_BREAKPOINT) {
+//       numColumns = 3;
+//     }
+
+//     const effectiveWidth = screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? screenWidth - 240 : screenWidth;
+//     const availableWidth = effectiveWidth - PADDING * 2 - COLUMN_GAP * (numColumns - 1);
+//     const cardWidth = Math.max(DEFAULT_CARD_WIDTH, Math.floor(availableWidth / numColumns));
+//     const cardHeight = Math.floor(cardWidth * (DEFAULT_CARD_HEIGHT / DEFAULT_CARD_WIDTH));
+
+//     return { numColumns, cardWidth, cardHeight, effectiveWidth };
+//   };
+
+//   const { numColumns, cardWidth, cardHeight } = getResponsiveLayout();
+
+//   const [dimensions, setDimensions] = useState({ cardWidth, cardHeight, numColumns });
+
+//   useFocusEffect(
+//     useCallback(() => {
+//       const { cardWidth, cardHeight, numColumns } = getResponsiveLayout();
+//       setDimensions({ cardWidth, cardHeight, numColumns });
+//     }, [screenWidth])
+//   );
+
+//   const gears = useGearStore(state => state.gear);
+//   const isLoading = useGearStore(state => state.isLoading);
+//   const gearStoreError = useGearStore(state => state.error);
+//   const fetchInitialGear = useGearStore(state => state.fetchInitialGear);
+//   const deleteGear = useGearStore(state => state.deleteGear);
+//   const hasAttemptedInitialFetch = useGearStore(state => state.hasAttemptedInitialFetch);
+//   const clearGearError = useGearStore(state => state.setError);
+//   const { openDrawer } = useDrawerStore();
+
+//   useEffect(() => {
+//     if (token && !hasAttemptedInitialFetch && !isLoading) {
+//       fetchInitialGear(token);
+//     }
+//   }, [token, hasAttemptedInitialFetch, isLoading, fetchInitialGear]);
+
+//   const handleGearPress = (gear: Gear) => {
+//     openDrawer(<GearDetailsDrawerContent gear={gear} />, { maxHeight: '90%' });
+//   };
+
+//   const handleAddGear = () => {
+//     openDrawer(<AddGearDrawerContent />);
+//   };
+
+//   const handleDelete = (gearId: number) => {
+//     Alert.alert(
+//       'Delete Gear',
+//       'Are you sure you want to delete this gear?',
+//       [
+//         { text: 'Cancel', style: 'cancel' },
+//         { text: 'Delete', style: 'destructive', onPress: () => token && deleteGear(gearId, token) }
+//       ]
+//     );
+//   };
+
+//   const handleRetry = () => {
+//     clearGearError(null);
+//     if (token) {
+//       fetchInitialGear(token);
+//     }
+//   };
+
+//   if (isLoading && !hasAttemptedInitialFetch) {
+//     return (
+//       <View style={styles.centeredContainer}>
+//         <ActivityIndicator size="large" color={colors.primary} />
+//         <Text style={{ marginTop: 10 }}>Loading Gear...</Text>
+//       </View>
+//     );
+//   }
+
+//   if (gearStoreError) {
+//     return (
+//       <View style={styles.centeredContainer}>
+//         <EmptyState
+//           icon={<MaterialCommunityIcons name="alert-circle-outline" size={48} color={colors.error} />}
+//           title="Error Loading Gear"
+//           subtitle={gearStoreError}
+//           buttonText="Retry"
+//           onPress={handleRetry}
+//         />
+//       </View>
+//     );
+//   }
+
+//   if (gears.length === 0 && !isLoading) {
+//     return (
+//       <View style={styles.centeredContainer}>
+//         <EmptyState
+//           icon={<MaterialCommunityIcons name="toolbox-outline" size={48} color={colors.textSecondary} />}
+//           title="No Gear Found"
+//           subtitle="You haven't added any gear yet."
+//           buttonText="Add Gear"
+//           onPress={handleAddGear}
+//         />
+//       </View>
+//     );
+//   }
+
+//   return (
+//     <View style={styles.container}>
+//       <FlatList
+//         data={gears}
+//         key={dimensions.numColumns} // Re-render on column change
+//         numColumns={dimensions.numColumns}
+//         contentContainerStyle={styles.listContentContainer}
+//         columnWrapperStyle={{ gap: COLUMN_GAP }}
+//         renderItem={({ item }) => (
+//           <View style={{ width: dimensions.cardWidth, marginBottom: COLUMN_GAP }}>
+//             <GearCard
+//               gear={item}
+//               onPress={() => handleGearPress(item)}
+//               onDelete={() => handleDelete(item.id)}
+//               width={dimensions.cardWidth}
+//               height={dimensions.cardHeight}
+//             />
+//           </View>
+//         )}
+//         keyExtractor={item => item.id.toString()}
+//         ListHeaderComponent={
+//           <View style={styles.header}>
+//             <Text style={{ fontSize: 24, fontWeight: 'bold' }}>Gear</Text>
+//             {canAddItem && (
+//               <TouchableOpacity onPress={handleAddGear} style={[styles.addButton, { backgroundColor: colors.primary }]}>
+//                 <Ionicons name="add" size={24} color={colors.background} />
+//               </TouchableOpacity>
+//             )}
+//           </View>
+//         }
+//       />
+//     </View>
+//   );
+// };
+
+// const styles = StyleSheet.create({
+//   container: {
+//     flex: 1,
+//     backgroundColor: 'transparent'
+//   },
+//   centeredContainer: {
+//     flex: 1,
+//     justifyContent: 'center',
+//     alignItems: 'center',
+//     padding: PADDING
+//   },
+//   listContentContainer: {
+//     padding: PADDING
+//   },
+//   header: {
+//     flexDirection: 'row',
+//     justifyContent: 'space-between',
+//     alignItems: 'center',
+//     marginBottom: 16
+//   },
+//   addButton: {
+//     padding: 8,
+//     borderRadius: 50
+//   }
+// });

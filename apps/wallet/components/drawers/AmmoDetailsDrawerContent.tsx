@@ -1,203 +1,341 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Modal, Dimensions } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Text, Button, Input, useTheme } from '@team556/ui';
-import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
-import type { Ammo, UpdateAmmoPayload } from '@team556/ui';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { useAmmoStore } from '@/store/ammoStore';
-import { useAuthStore } from '@/store/authStore';
+import React, { useState, useEffect } from 'react'
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Modal, Dimensions } from 'react-native'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { Text, Button, Input, useTheme } from '@team556/ui'
+import { Image } from 'expo-image'
+import * as ImagePicker from 'expo-image-picker'
+import type { Ammo, UpdateAmmoPayload } from '@team556/ui'
+import { useAmmoStore } from '@/store/ammoStore'
+import { useAuthStore } from '@/store/authStore'
+import * as FileSystem from 'expo-file-system'
 
-const SCREEN_HEIGHT = Dimensions.get('window').height;
+const windowWidth = Dimensions.get('window').width
 
 interface AmmoDetailsDrawerContentProps {
-  ammo: Ammo;
+  ammo: Ammo
 }
 
 type EditableAmmo = Ammo & {
-  newImagePreviewUris?: string[];
-};
-
-type AmmoDateFieldKey = 'purchaseDate';
+  newImagePreviewUri?: string
+  newImageFile?: ImagePicker.ImagePickerAsset
+}
 
 export const AmmoDetailsDrawerContent: React.FC<AmmoDetailsDrawerContentProps> = ({ ammo }) => {
-  const { colors } = useTheme();
-  const { updateAmmo, isLoading: isStoreLoading, error: storeError } = useAmmoStore();
-  const { token } = useAuthStore();
+  const { colors } = useTheme()
+  const { updateAmmo: updateAmmoAction, isLoading: isStoreLoading, error: storeError } = useAmmoStore()
+  const { token } = useAuthStore()
 
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(false)
   const [editableAmmo, setEditableAmmo] = useState<EditableAmmo>(() => ({
     ...ammo,
-    newImagePreviewUris: [],
-  }));
+    newImagePreviewUri: undefined,
+    newImageFile: undefined
+  }))
 
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [datePickerField, setDatePickerField] = useState<AmmoDateFieldKey | null>(null);
-  const [currentDateValue, setCurrentDateValue] = useState(new Date());
+  useEffect(() => {
+    setEditableAmmo({ ...ammo })
+  }, [ammo])
+
+  useEffect(() => {
+    if (isEditing) {
+      setEditableAmmo({ ...ammo })
+    }
+  }, [isEditing])
+
+  if (!ammo) {
+    return null
+  }
 
   const handleInputChange = (field: keyof UpdateAmmoPayload, value: any) => {
-    setEditableAmmo(prev => ({ ...prev, [field]: value }));
-  };
-
-  const onDateChangeInModal = (event: DateTimePickerEvent, selectedDate?: Date | null) => {
-    if (Platform.OS === 'android') {
-        setShowDatePicker(false);
-    }
-    if (selectedDate && datePickerField) {
-        handleInputChange(datePickerField, selectedDate.toISOString().split('T')[0]);
-    }
-  };
-
-  const showDatepickerForField = (fieldKey: AmmoDateFieldKey) => {
-    const dateValue = editableAmmo[fieldKey];
-    setCurrentDateValue(dateValue ? new Date(dateValue) : new Date());
-    setDatePickerField(fieldKey);
-    setShowDatePicker(true);
-  };
+    setEditableAmmo((prev: EditableAmmo) => {
+      let processedValue = value
+      const numericFields: (keyof UpdateAmmoPayload)[] = ['grainWeight', 'quantity', 'purchasePrice']
+      if (numericFields.includes(field)) {
+        const numValue = parseFloat(value)
+        processedValue = isNaN(numValue) ? null : numValue
+      }
+      const updatedAmmo = { ...prev, [field]: processedValue }
+      return updatedAmmo
+    })
+  }
 
   const handleSave = async () => {
-    const { id, newImagePreviewUris, ...rest } = editableAmmo;
-    const payload: UpdateAmmoPayload = {
-        ...rest,
-        pictures: JSON.stringify(editableAmmo.pictures),
-    };
-    await updateAmmo(id, payload, token || '');
-    if (!storeError) {
-      setIsEditing(false);
+    if (!token || !editableAmmo || typeof ammo.id !== 'number') {
+      Alert.alert('Error', 'Cannot save ammo. Authentication token or original ammo ID is missing.')
+      return
     }
-  };
+
+    setIsEditing(true)
+
+    const tempEditableAmmo = { ...editableAmmo }
+    delete tempEditableAmmo.newImagePreviewUri
+    delete tempEditableAmmo.newImageFile
+
+    const { id, owner_user_id, created_at, updated_at, ...payloadFromState } = tempEditableAmmo as Omit<
+      EditableAmmo,
+      'newImagePreviewUri' | 'newImageFile'
+    >
+
+    const updatePayload: UpdateAmmoPayload = {
+      id: ammo.id,
+      ...(payloadFromState as Partial<Omit<Ammo, 'id' | 'owner_user_id' | 'created_at' | 'updated_at'>>)
+    }
+
+    if (editableAmmo.newImageFile) {
+      if (Platform.OS === 'web' && editableAmmo.newImageFile.base64) {
+        updatePayload.imageData = editableAmmo.newImageFile.base64
+        updatePayload.imageName = editableAmmo.newImageFile.fileName || `ammo_${ammo.id}_new_image`
+        updatePayload.imageType = editableAmmo.newImageFile.mimeType || 'image/jpeg'
+        updatePayload.imageSize = editableAmmo.newImageFile.fileSize
+      } else if (Platform.OS !== 'web') {
+        try {
+          const base64ImageData = await FileSystem.readAsStringAsync(editableAmmo.newImageFile.uri, {
+            encoding: FileSystem.EncodingType.Base64
+          })
+          updatePayload.imageData = base64ImageData
+          updatePayload.imageName = editableAmmo.newImageFile.fileName || `ammo_${ammo.id}_new_image`
+          updatePayload.imageType = editableAmmo.newImageFile.mimeType || 'image/jpeg'
+          updatePayload.imageSize = editableAmmo.newImageFile.fileSize
+        } catch (error: any) {
+          console.error('Error reading image file for upload:', error)
+          Alert.alert('Error', error.message || 'Could not prepare image for upload.')
+          setIsEditing(false)
+          return
+        }
+      } else {
+        Alert.alert('Warning', 'Could not get image data for web. Please try a smaller image.')
+        setIsEditing(false)
+        return
+      }
+    } else if (editableAmmo.newImagePreviewUri === null && ammo.pictures && !editableAmmo.newImageFile) {
+      updatePayload.pictures = ''
+    }
+
+    try {
+      await updateAmmoAction(ammo.id, updatePayload, token)
+      setIsEditing(false)
+    } catch (error: any) {
+      console.error('Failed to update ammo:', error)
+      Alert.alert('Error', storeError || error.message || 'Could not update ammo.')
+      setIsEditing(false)
+    }
+  }
 
   const handleCancel = () => {
-    setEditableAmmo({ ...ammo, newImagePreviewUris: [] });
-    setIsEditing(false);
-  };
-
-  const formatDateForDisplay = (dateString?: string | number | null) => {
-    if (!dateString) return 'N/A';
-    try {
-      return new Date(dateString).toLocaleDateString();
-    } catch (e) {
-      return 'Invalid Date';
-    }
-  };
+    setEditableAmmo({ ...ammo })
+    setIsEditing(false)
+  }
 
   const handleChooseImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission required', 'Please grant permission to access photos.');
-      return;
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (permissionResult.granted === false) {
+      Alert.alert('Permission Denied', 'Permission to access camera roll is required!')
+      return
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
+    const pickerResult = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      quality: 1,
-      allowsMultipleSelection: true,
-    });
+      aspect: [16, 10],
+      quality: 0.4,
+      base64: Platform.OS === 'web'
+    })
 
-    if (!result.canceled) {
-        const uris = result.assets.map(asset => asset.uri);
-        setEditableAmmo(prev => ({
-            ...prev,
-            pictures: JSON.stringify([...(JSON.parse(prev.pictures || '[]')), ...uris])
-        }));
+    if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
+      const selectedAsset = pickerResult.assets[0]
+      setEditableAmmo(prev => ({
+        ...prev,
+        newImagePreviewUri: selectedAsset.uri,
+        newImageFile: selectedAsset
+      }))
     }
-  };
-  
-  const renderDetailRow = (label: string, value?: string | number | null, isLast = false) => (
-    <View style={[styles.detailRow, !isLast && styles.detailRowBorder]}>
-        <Text style={styles.detailLabel}>{label}</Text>
-        <Text style={styles.detailValue}>{value || 'N/A'}</Text>
-    </View>
-  );
+  }
 
-  const pictures = JSON.parse(editableAmmo.pictures || '[]');
+  const clearNewImage = () => {
+    setEditableAmmo(prev => ({
+      ...prev,
+      newImagePreviewUri: undefined,
+      newImageFile: undefined
+    }))
+  }
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1
+    },
+    header: {
+      paddingBottom: 16
+    },
+    imageContainer: {
+      width: windowWidth * 0.9,
+      maxWidth: 500,
+      aspectRatio: 16 / 10,
+      alignSelf: 'center',
+      backgroundColor: colors.backgroundDark,
+      borderRadius: 10,
+      marginBottom: 20,
+      borderWidth: 1,
+      borderColor: colors.primarySubtle,
+      justifyContent: 'center',
+      alignItems: 'center',
+      overflow: 'hidden'
+    },
+    editImageButton: {
+      position: 'absolute',
+      top: 12,
+      right: 12,
+      backgroundColor: 'rgba(0,0,0,0.7)',
+      padding: 8,
+      borderRadius: 20,
+      zIndex: 2
+    },
+    removeImageButton: {
+      position: 'absolute',
+      top: 12,
+      right: 56,
+      backgroundColor: 'rgba(200,0,0,0.7)',
+      padding: 8,
+      borderRadius: 20,
+      zIndex: 2
+    },
+    image: {
+      width: '100%',
+      height: '100%'
+    },
+    placeholder: {
+      alignItems: 'center',
+      justifyContent: 'center'
+    },
+    contentContainer: {
+      paddingHorizontal: 20
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      marginBottom: 8
+    },
+    detailRow: {
+      gap: 8,
+      marginBottom: 10
+    },
+    detailText: {
+      fontSize: 16
+    },
+    actionsContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      marginTop: 20,
+      paddingBottom: 20
+    }
+  })
+
+  const currentImageUri = editableAmmo.newImagePreviewUri ?? ammo.pictures
 
   return (
     <ScrollView style={styles.container}>
-      <LinearGradient colors={[colors.background, colors.backgroundCard]} style={styles.header}>
-        <Image source={{ uri: pictures[0] }} style={styles.headerImage} contentFit="cover">
-            <LinearGradient colors={['rgba(0,0,0,0.6)', 'transparent']} style={styles.imageOverlay} />
-        </Image>
-        <View style={styles.headerContent}>
-            <MaterialCommunityIcons name="ammunition" size={48} color={colors.primary} />
-            <Text style={styles.headerTitle}>{`${editableAmmo.manufacturer} ${editableAmmo.caliber}`}</Text>
-            <Text style={styles.headerSubtitle}>{`${editableAmmo.grainWeight}gr ${editableAmmo.type}`}</Text>
+      <View style={styles.header}>
+        <View style={styles.imageContainer}>
+          {isEditing && (
+            <TouchableOpacity style={styles.editImageButton} onPress={handleChooseImage}>
+              <MaterialCommunityIcons name="pencil" size={20} color="#FFF" />
+            </TouchableOpacity>
+          )}
+          {isEditing && editableAmmo.newImagePreviewUri && (
+            <TouchableOpacity style={styles.removeImageButton} onPress={clearNewImage}>
+              <MaterialCommunityIcons name="close" size={20} color="#FFF" />
+            </TouchableOpacity>
+          )}
+          {currentImageUri ? (
+            <Image source={{ uri: currentImageUri }} style={styles.image} contentFit="cover" />
+          ) : (
+            <View style={styles.placeholder}>
+              <MaterialCommunityIcons name="camera-off" size={48} color={colors.text} />
+              <Text>No Image</Text>
+            </View>
+          )}
         </View>
-      </LinearGradient>
-
-      <View style={styles.actionsContainer}>
-        {!isEditing && <Button title="Edit Details" onPress={() => setIsEditing(true)} variant="primary" />}
       </View>
 
-      {isEditing ? (
-        <View style={styles.detailsContainer}>
-            <Input label="Manufacturer" value={editableAmmo.manufacturer} onChangeText={text => handleInputChange('manufacturer', text)} />
-            <Input label="Caliber" value={editableAmmo.caliber} onChangeText={text => handleInputChange('caliber', text)} />
-            <Input label="Type" value={editableAmmo.type} onChangeText={text => handleInputChange('type', text)} />
-            <Input label="Quantity" value={String(editableAmmo.quantity)} onChangeText={text => handleInputChange('quantity', Number(text))} keyboardType="numeric" />
-            <Input label="Grain Weight" value={editableAmmo.grainWeight} onChangeText={text => handleInputChange('grainWeight', text)} />
-            <TouchableOpacity onPress={() => showDatepickerForField('purchaseDate')} style={styles.dateTouchable}>
-                <Text>{editableAmmo.purchaseDate ? formatDateForDisplay(editableAmmo.purchaseDate) : 'Select Purchase Date'}</Text>
-            </TouchableOpacity>
-            <Input label="Purchase Price" value={String(editableAmmo.purchasePrice)} onChangeText={text => handleInputChange('purchasePrice', text)} keyboardType="numeric" />
-            <Input label="Notes" value={editableAmmo.notes || ''} onChangeText={text => handleInputChange('notes', text)} multiline />
-            <Button title="Add Photos" onPress={handleChooseImage} />
-        </View>
-      ) : (
-        <View style={styles.detailsContainer}>
-            {renderDetailRow('Manufacturer', editableAmmo.manufacturer)}
-            {renderDetailRow('Caliber', editableAmmo.caliber)}
-            {renderDetailRow('Type', editableAmmo.type)}
-            {renderDetailRow('Quantity', editableAmmo.quantity)}
-            {renderDetailRow('Grain Weight', editableAmmo.grainWeight)}
-            {renderDetailRow('Purchase Date', formatDateForDisplay(editableAmmo.purchaseDate))}
-            {renderDetailRow('Purchase Price', `$${editableAmmo.purchasePrice}`)}
-            {renderDetailRow('Notes', editableAmmo.notes, true)}
-        </View>
-      )}
+      <View style={styles.contentContainer}>
+        <Text style={styles.title}>{`${editableAmmo.manufacturer} ${editableAmmo.caliber}`}</Text>
 
-      {showDatePicker && (
-        <Modal transparent={true} visible={showDatePicker} onRequestClose={() => setShowDatePicker(false)}>
-            <View style={styles.modalContainer}>
-                <View style={styles.datePickerContainer}>
-                    <DateTimePicker value={currentDateValue} mode="date" display="default" onChange={onDateChangeInModal} />
-                </View>
+        {isEditing ? (
+          <View>
+            <View style={styles.detailRow}>
+              <Input
+                label="Manufacturer"
+                value={editableAmmo.manufacturer || ''}
+                onChangeText={text => handleInputChange('manufacturer', text)}
+              />
             </View>
-        </Modal>
-      )}
+            <View style={styles.detailRow}>
+              <Input
+                label="Caliber"
+                value={editableAmmo.caliber || ''}
+                onChangeText={text => handleInputChange('caliber', text)}
+              />
+            </View>
+            <View style={styles.detailRow}>
+              <Input
+                label="Type"
+                value={editableAmmo.type || ''}
+                onChangeText={text => handleInputChange('type', text)}
+              />
+            </View>
+            <View style={styles.detailRow}>
+              <Input
+                label="Grain Weight"
+                value={String(editableAmmo.grainWeight || '')}
+                onChangeText={text => handleInputChange('grainWeight', text)}
+                keyboardType="numeric"
+              />
+            </View>
+            <View style={styles.detailRow}>
+              <Input
+                label="Quantity"
+                value={String(editableAmmo.quantity || '')}
+                onChangeText={text => handleInputChange('quantity', text)}
+                keyboardType="numeric"
+              />
+            </View>
+            <View style={styles.detailRow}>
+              <Input
+                label="Purchase Price"
+                value={String(editableAmmo.purchasePrice || '')}
+                onChangeText={text => handleInputChange('purchasePrice', text)}
+                keyboardType="numeric"
+              />
+            </View>
+            <View style={styles.detailRow}>
+              <Input
+                label="Notes"
+                value={editableAmmo.notes || ''}
+                onChangeText={text => handleInputChange('notes', text)}
+                multiline
+              />
+            </View>
+          </View>
+        ) : (
+          <View>
+            <Text style={styles.detailText}>Type: {ammo.type}</Text>
+            <Text style={styles.detailText}>Grain Weight: {`${ammo.grainWeight}gr`}</Text>
+            <Text style={styles.detailText}>Quantity: {String(ammo.quantity)}</Text>
+            <Text style={styles.detailText}>Purchase Price: ${ammo.purchasePrice ? ammo.purchasePrice.toFixed(2) : 'N/A'}</Text>
+            <Text style={styles.detailText}>Notes: {ammo.notes || 'N/A'}</Text>
+          </View>
+        )}
 
-      {isEditing && (
-        <View style={styles.editActionsContainer}>
-          <Button title="Cancel" onPress={handleCancel} variant="outline" style={styles.buttonStyle} disabled={isStoreLoading} />
-          <Button title="Save Changes" onPress={handleSave} variant="primary" style={styles.buttonStyle} loading={isStoreLoading} disabled={isStoreLoading} />
+        <View style={styles.actionsContainer}>
+          {isEditing ? (
+            <>
+              <Button title="Save" onPress={handleSave} loading={isStoreLoading} />
+              <Button title="Cancel" onPress={handleCancel} variant="secondary" />
+            </>
+          ) : (
+            <Button title="Edit" onPress={() => setIsEditing(true)} />
+          )}
         </View>
-      )}
+      </View>
     </ScrollView>
-  );
-};
-
-const styles = StyleSheet.create({
-    container: { flex: 1 },
-    header: { height: SCREEN_HEIGHT * 0.3, justifyContent: 'center', alignItems: 'center' },
-    headerImage: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
-    imageOverlay: { flex: 1 },
-    headerContent: { alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 16, borderRadius: 8 },
-    headerTitle: { fontSize: 24, fontWeight: 'bold', color: 'white', marginTop: 8 },
-    headerSubtitle: { fontSize: 16, color: 'white' },
-    actionsContainer: { padding: 16 },
-    detailsContainer: { padding: 16 },
-    detailRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12 },
-    detailRowBorder: { borderBottomWidth: 1, borderBottomColor: '#333' },
-    detailLabel: { fontSize: 16, fontWeight: '500' },
-    detailValue: { fontSize: 16 },
-    dateTouchable: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginVertical: 8 },
-    modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
-    datePickerContainer: { backgroundColor: 'white', borderRadius: 10, padding: 20 },
-    editActionsContainer: { flexDirection: 'row', justifyContent: 'space-around', padding: 16 },
-    buttonStyle: { flex: 1, marginHorizontal: 8 },
-});
-
-export default AmmoDetailsDrawerContent;
+  )
+}

@@ -22,6 +22,9 @@ config.resolver = {
   ...config.resolver, // Keep existing resolver config
   assetExts: config.resolver.assetExts.filter((ext) => ext !== 'svg'), // Remove svg from assetExts
   sourceExts: [...config.resolver.sourceExts, 'svg'], // Add svg to sourceExts
+  // 4. Ignore the shared node_modules to prevent duplicate module instances.
+  blockList: [/\/packages\/ui\/node_modules\/.*/],
+
   extraNodeModules: nodeCoreModules.reduce((acc, moduleName) => {
     // Map core modules to their browser/react-native equivalents
     if (moduleName === 'buffer') {

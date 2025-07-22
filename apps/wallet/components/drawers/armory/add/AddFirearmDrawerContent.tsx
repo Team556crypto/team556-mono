@@ -24,7 +24,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useDrawerStore } from '@/store/drawerStore'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
-import { armoryStyles } from '../styles'
+import { armoryStyles } from './styles'
 
 // Initial state for a new firearm
 const { width: SCREEN_WIDTH } = Dimensions.get('window')

@@ -19,11 +19,11 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useFocusEffect } from '@react-navigation/native'
 import { AmmoDetailsDrawerContent } from '@/components/drawers/armory/details/AmmoDetailsDrawerContent';
 import { AddAmmoDrawerContent } from '@/components/drawers/armory/add/AddAmmoDrawerContent';
-import AmmoCard from './AmmoCard';
+import AmmoCard from '../cards/AmmoCard';
+import { viewStyles } from './styles';
 
 // Responsive layout constants
 const COLUMN_GAP = 16
-const PADDING = 16
 const MEDIUM_SCREEN_BREAKPOINT = 768
 const LARGE_SCREEN_BREAKPOINT = 1024
 const XLARGE_SCREEN_BREAKPOINT = 1366
@@ -34,6 +34,7 @@ export const AmmoView = () => {
   const canAddItem = useAuthStore(state => state.canAddItem('ammo'))
   const isP1User = useAuthStore(state => state.isP1PresaleUser())
   const { width: screenWidth } = useWindowDimensions()
+  const styles = viewStyles(colors, COLUMN_GAP)
 
   const getResponsiveLayout = () => {
     if (screenWidth >= XLARGE_SCREEN_BREAKPOINT) return 5;
@@ -93,97 +94,6 @@ export const AmmoView = () => {
       { cancelable: false }
     )
   }
-
-  const styles = StyleSheet.create({
-    container: {
-      height: '100%',
-      backgroundColor: colors.backgroundDarker
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 18,
-      zIndex: 1,
-    },
-    headerTitleContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8
-    },
-    flatListContainer: {
-      flex: 1,
-      overflow: 'visible'
-    },
-    gridContent: {
-      paddingBottom: 40
-    },
-    columnWrapper: {
-      gap: COLUMN_GAP,
-      justifyContent: 'flex-start',
-      marginBottom: COLUMN_GAP * 1.5
-    },
-    gridItem: {
-      margin: COLUMN_GAP / 2,
-      alignItems: 'center',
-    },
-    cardWrapper: {
-      width: '100%',
-      alignItems: 'center',
-      justifyContent: 'center'
-    },
-    centerMessage: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 20
-    },
-    errorText: {
-      color: colors.error,
-      textAlign: 'center',
-      marginTop: 8
-    },
-    limitReachedText: {
-      fontSize: 14,
-      color: colors.textSecondary,
-      textAlign: 'center',
-      marginVertical: 8,
-      paddingHorizontal: 16
-    },
-    emptyMessage: {
-      flex: 1,
-      width: '100%',
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderRadius: 12,
-      borderWidth: 1,
-      borderStyle: 'dashed',
-      borderColor: colors.backgroundLight,
-      backgroundColor: 'rgba(0,0,0,0.2)',
-      gap: 12,
-      paddingVertical: 48
-    },
-    addButton: {
-      borderRadius: 8
-    },
-    addButtonHeaderSmall: {
-      padding: 8,
-      borderRadius: 8
-    },
-    addButtonLarge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: 'rgba(128, 90, 213, 0.1)',
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-      borderRadius: 8,
-      gap: 8
-    },
-    addButtonText: {
-      color: '#805AD5',
-      fontWeight: '600'
-    }
-  })
 
   const renderItem = ({ item }: { item: Ammo }) => (
     <View style={{ flex: 1, margin: COLUMN_GAP / 2 }}>

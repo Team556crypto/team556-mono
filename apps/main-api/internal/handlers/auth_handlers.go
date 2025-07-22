@@ -290,6 +290,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		"user_id": user.ID,
 		"email":   user.Email,
 		"exp":     time.Now().Add(time.Hour * 72).Unix(), // Token expires in 72 hours
+		"iat":     time.Now().Unix(),                      // Issued at
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(h.JWTSecret)

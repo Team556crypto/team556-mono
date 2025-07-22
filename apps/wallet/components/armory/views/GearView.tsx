@@ -17,13 +17,13 @@ import { useGearStore } from '@/store/gearStore';
 
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useFocusEffect } from '@react-navigation/native'
-import { GearDetailsDrawerContent } from '@/components/drawers/armory/details/GearDetailsDrawerContent';
-import { AddGearDrawerContent } from '@/components/drawers/armory/add/AddGearDrawerContent';
-import GearCard from './GearCard';
+// import { GearDetailsDrawerContent } from '@/components/drawers/armory/details/GearDetailsDrawerContent';
+// import { AddGearDrawerContent } from '@/components/drawers/armory/add/AddGearDrawerContent';
+import GearCard from '../cards/GearCard';
+import { viewStyles } from './styles';
 
 // Responsive layout constants
 const COLUMN_GAP = 16
-const PADDING = 16
 const MEDIUM_SCREEN_BREAKPOINT = 768
 const LARGE_SCREEN_BREAKPOINT = 1024
 const XLARGE_SCREEN_BREAKPOINT = 1366
@@ -34,6 +34,7 @@ export const GearView = () => {
   const canAddItem = useAuthStore(state => state.canAddItem('gear'))
   const isP1User = useAuthStore(state => state.isP1PresaleUser())
   const { width: screenWidth } = useWindowDimensions()
+  const styles = viewStyles(colors, COLUMN_GAP)
 
   const getResponsiveLayout = () => {
     if (screenWidth >= XLARGE_SCREEN_BREAKPOINT) return 5;
@@ -61,11 +62,11 @@ export const GearView = () => {
   }, [token, hasAttemptedInitialFetch, isLoading, fetchInitialGears])
 
   const handleGearPress = (gear: Gear) => {
-    openDrawer(<GearDetailsDrawerContent gear={gear} />, { maxHeight: '90%' });
+    // openDrawer(<GearDetailsDrawerContent gear={gear} />, { maxHeight: '90%' });
   }
 
   const handleAddGear = () => {
-    openDrawer(<AddGearDrawerContent />);
+    // openDrawer(<AddGearDrawerContent />);
   }
 
   const handleDelete = (gearId: number) => {
@@ -94,97 +95,6 @@ export const GearView = () => {
     )
   }
 
-  const styles = StyleSheet.create({
-    container: {
-      height: '100%',
-      backgroundColor: colors.backgroundDarker
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 18,
-      zIndex: 1,
-    },
-    headerTitleContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8
-    },
-    flatListContainer: {
-      flex: 1,
-      overflow: 'visible'
-    },
-    gridContent: {
-      paddingBottom: 40
-    },
-    columnWrapper: {
-      gap: COLUMN_GAP,
-      justifyContent: 'flex-start',
-      marginBottom: COLUMN_GAP * 1.5
-    },
-    gridItem: {
-      margin: COLUMN_GAP / 2,
-      alignItems: 'center',
-    },
-    cardWrapper: {
-      width: '100%',
-      alignItems: 'center',
-      justifyContent: 'center'
-    },
-    centerMessage: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 20
-    },
-    errorText: {
-      color: colors.error,
-      textAlign: 'center',
-      marginTop: 8
-    },
-    limitReachedText: {
-      fontSize: 14,
-      color: colors.textSecondary,
-      textAlign: 'center',
-      marginVertical: 8,
-      paddingHorizontal: 16
-    },
-    emptyMessage: {
-      flex: 1,
-      width: '100%',
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderRadius: 12,
-      borderWidth: 1,
-      borderStyle: 'dashed',
-      borderColor: colors.backgroundLight,
-      backgroundColor: 'rgba(0,0,0,0.2)',
-      gap: 12,
-      paddingVertical: 48
-    },
-    addButton: {
-      borderRadius: 8
-    },
-    addButtonHeaderSmall: {
-      padding: 8,
-      borderRadius: 8
-    },
-    addButtonLarge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: 'rgba(128, 90, 213, 0.1)',
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-      borderRadius: 8,
-      gap: 8
-    },
-    addButtonText: {
-      color: '#805AD5',
-      fontWeight: '600'
-    }
-  })
-
   const renderItem = ({ item }: { item: Gear }) => (
     <View style={{ flex: 1, margin: COLUMN_GAP / 2 }}>
       <GearCard
@@ -212,31 +122,45 @@ export const GearView = () => {
     )
   } else if (gears.length === 0) {
     content = (
+      // <EmptyState
+      //   icon={<MaterialCommunityIcons name='tent' size={80} color={colors.primary} />}
+      //   title='No Ammunition Yet'
+      //   subtitle='Get started by adding your first ammunition to your armory.'
+      //   buttonText='+ Add Ammunition'
+      //   onPress={handleAddGear}
+      // /> 
       <EmptyState
         icon={<MaterialCommunityIcons name='tent' size={80} color={colors.primary} />}
-        title='No Ammunition Yet'
-        subtitle='Get started by adding your first ammunition to your armory.'
-        buttonText='+ Add Ammunition'
+        title='Coming Soon!'
+        subtitle='Gear is currently in development and will be available soon.'
+        buttonText='+ Add Gear'
         onPress={handleAddGear}
       />
     )
   } else {
     content = (
-      <FlatList
-        key={numColumns}
-        data={gears}
-        renderItem={renderItem}
-        keyExtractor={item => item.id.toString()}
-        numColumns={numColumns}
-        style={styles.flatListContainer}
-        contentContainerStyle={styles.gridContent}
-        columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
-        ListHeaderComponent={
-          isLoading && gears.length > 0 ? (
-            <ActivityIndicator style={{ marginVertical: 20 }} size='large' color={colors.primary} />
-          ) : null
-        }
+      <EmptyState
+        icon={<MaterialCommunityIcons name='tent' size={80} color={colors.primary} />}
+        title='Coming Soon!'
+        subtitle='Gear is currently in development and will be available soon.'
+        buttonText='+ Add Gear'
+        onPress={handleAddGear}
       />
+      // <FlatList
+      //   key={numColumns}
+      //   data={gears}
+      //   renderItem={renderItem}
+      //   keyExtractor={item => item.id.toString()}
+      //   numColumns={numColumns}
+      //   style={styles.flatListContainer}
+      //   contentContainerStyle={styles.gridContent}
+      //   columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
+      //   ListHeaderComponent={
+      //     isLoading && gears.length > 0 ? (
+      //       <ActivityIndicator style={{ marginVertical: 20 }} size='large' color={colors.primary} />
+      //     ) : null
+      //   }
+      // />
     )
   }
 

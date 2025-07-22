@@ -14,11 +14,12 @@ import { Text, Button, EmptyState } from '@team556/ui'
 import { useTheme } from '@team556/ui'
 import { Firearm } from '@/services/api';
 import { useDrawerStore } from '@/store/drawerStore';
-import FirearmCard from './FirearmCard';
+import FirearmCard from '../cards/FirearmCard';
 
 import { FirearmDetailsDrawerContent } from '@/components/drawers/armory/details/FirearmDetailsDrawerContent'
 import { AddFirearmDrawerContent } from '@/components/drawers/armory/add/AddFirearmDrawerContent'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
+import { viewStyles } from './styles';
 
 // Responsive layout constants
 const COLUMN_GAP = 12
@@ -32,6 +33,7 @@ export const FirearmsView = () => {
   const canAddItem = useAuthStore(state => state.canAddItem('firearm'))
   const isP1User = useAuthStore(state => state.isP1PresaleUser())
   const { width: screenWidth } = useWindowDimensions()
+  const styles = viewStyles(colors, COLUMN_GAP)
 
   const getResponsiveLayout = () => {
     if (screenWidth >= XLARGE_SCREEN_BREAKPOINT) return 5
@@ -91,95 +93,6 @@ export const FirearmsView = () => {
       { cancelable: false }
     )
   }
-
-  const styles = StyleSheet.create({
-    container: {
-      height: '100%',
-      backgroundColor: colors.backgroundDarker
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 18,
-      zIndex: 1,
-    },
-    headerTitleContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8
-    },
-    flatListContainer: {
-      height: '100%',
-    },
-    gridContent: {
-      paddingBottom: 40
-    },
-    columnWrapper: {
-      gap: COLUMN_GAP,
-      justifyContent: 'flex-start'
-    },
-    gridItem: {
-      marginBottom: COLUMN_GAP,
-      alignItems: 'center'
-    },
-    cardWrapper: {
-      width: '100%',
-      alignItems: 'center',
-      justifyContent: 'center'
-    },
-    centerMessage: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 20
-    },
-    errorText: {
-      color: colors.error,
-      textAlign: 'center',
-      marginTop: 8
-    },
-    limitReachedText: {
-      fontSize: 14,
-      color: colors.textSecondary,
-      textAlign: 'center',
-      marginVertical: 8,
-      paddingHorizontal: 16
-    },
-    emptyMessage: {
-      flex: 1,
-      width: '100%',
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderRadius: 12,
-      borderWidth: 1,
-      borderStyle: 'dashed',
-      borderColor: colors.backgroundLight,
-      backgroundColor: 'rgba(0,0,0,0.2)',
-      gap: 12,
-      paddingVertical: 48
-    },
-    addButton: {
-      borderRadius: 8
-    },
-    addButtonHeaderSmall: {
-      padding: 8,
-      borderRadius: 8
-    },
-    addButtonLarge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: 'rgba(128, 90, 213, 0.1)',
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-      borderRadius: 8,
-      gap: 8
-    },
-    addButtonText: {
-      color: '#805AD5',
-      fontWeight: '600'
-    }
-  })
 
   const renderItem = ({ item }: { item: Firearm }) => (
     <View style={{ flex: 1, margin: COLUMN_GAP / 2 }}>

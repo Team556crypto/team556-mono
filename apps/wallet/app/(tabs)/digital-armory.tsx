@@ -5,12 +5,12 @@ import { ScreenLayout } from '@/components/layout/ScreenLayout';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { HorizontalBadgeScroll, BadgeItem } from '@team556/ui';
 
-import { FirearmsView } from '@/components/armory/FirearmsView';
-import { AmmoView } from '@/components/armory/AmmoView';
-import { GearView } from '@/components/armory/GearView';
-import { DocumentsView } from '@/components/armory/DocumentsView';
-import { NFAView } from '@/components/armory/NFAView';
-import AllItemsView from '@/components/armory/AllItemsView';
+import { FirearmsView } from '@/components/armory/views/FirearmsView';
+import { AmmoView } from '@/components/armory/views/AmmoView';
+import { GearView } from '@/components/armory/views/GearView';
+import { DocumentsView } from '@/components/armory/views/DocumentsView';
+import { NFAView } from '@/components/armory/views/NfaView';
+import AllItemsView from '@/components/armory/views/AllItemsView';
 
 export default function DigitalArmoryScreen() {
   const { colors } = useTheme();

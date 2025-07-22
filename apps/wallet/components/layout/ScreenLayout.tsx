@@ -71,7 +71,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'android' ? 6 : 16
+    paddingTop: Platform.OS === 'android' ? 6 : 16,
+    marginBottom: 20
   },
   containerTablet: {
     marginLeft: 240, // Standard sidebar width adjustment for tablet

@@ -1,36 +1,36 @@
 import React from 'react';
 import Card from '@team556/ui/src/Card';
-import { Ammo } from '@team556/ui/src/types'
+import { Document } from '@team556/ui/src/types'
 
-interface AmmoCardProps {
-  ammo: Ammo;
+interface DocumentCardProps {
+  document: Document;
   onPress?: (id: number) => void;
   onDelete?: (id: number) => void;
   width?: number;
   height?: number;
 }
 
-export default function AmmoCard({
-  ammo,
+export default function DocumentCard({
+  document,
   onPress,
   onDelete,
   width,
   height
-}: AmmoCardProps) {
+}: DocumentCardProps) {
   const handlePress = () => {
     if (onPress) {
-      onPress(ammo.id);
+      onPress(document.id);
     }
   };
 
   const handleDelete = () => {
     if (onDelete) {
-      onDelete(ammo.id);
+      onDelete(document.id);
     }
   };
 
   const getFirearmIcon = () => {
-    const type = ammo.type?.toLowerCase() || '';
+    const type = document.type?.toLowerCase() || '';
     if (type.includes('pistol') || type.includes('handgun')) {
       return 'target';
     } else if (type.includes('rifle') || type.includes('shotgun')) {
@@ -47,13 +47,13 @@ export default function AmmoCard({
       height={height}
       onPress={handlePress}
       onDelete={handleDelete}
-      imageUri={ammo.pictures}
+      imageUri={document.attachments}
       iconName={getFirearmIcon()}
-      category={ammo.type || 'Firearm'}
-      title={ammo.manufacturer}
+      category={document.type || 'Firearm'}
+      title={document.name}
       details={[
-        `${ammo.manufacturer || ''} ${ammo.caliber || ''}`.trim(),
-        ammo.caliber
+        `${document.name || ''} ${document.type || ''}`.trim(),
+        document.expiration_date
       ]}
     />
   );

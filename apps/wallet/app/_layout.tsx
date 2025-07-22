@@ -190,7 +190,6 @@ const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: Colors.backgroundDarkest // Use app's background color
   },
   container: {

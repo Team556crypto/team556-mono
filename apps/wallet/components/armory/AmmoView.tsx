@@ -9,7 +9,7 @@ import {
   Alert
 } from 'react-native'
 import { useAuthStore } from '@/store/authStore'
-import { Text, Button, EmptyState, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT, AmmoCard } from '@team556/ui'
+import { Text, Button, EmptyState, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui'
 import { useTheme } from '@team556/ui'
 import { Ammo } from '@/services/api';
 import { useDrawerStore } from '@/store/drawerStore';
@@ -19,6 +19,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useFocusEffect } from '@react-navigation/native'
 import { AmmoDetailsDrawerContent } from '@/components/drawers/AmmoDetailsDrawerContent';
 import { AddAmmoDrawerContent } from '@/components/drawers/AddAmmoDrawerContent';
+import AmmoCard from './AmmoCard';
 
 // Responsive layout constants
 const COLUMN_GAP = 16
@@ -34,44 +35,14 @@ export const AmmoView = () => {
   const isP1User = useAuthStore(state => state.isP1PresaleUser())
   const { width: screenWidth } = useWindowDimensions()
 
-  // Responsive sizing based on screen width
   const getResponsiveLayout = () => {
-    let numColumns = 2 // Default for small screens
+    if (screenWidth >= XLARGE_SCREEN_BREAKPOINT) return 5;
+    if (screenWidth >= LARGE_SCREEN_BREAKPOINT) return 4;
+    if (screenWidth >= MEDIUM_SCREEN_BREAKPOINT) return 3;
+    return 2; // Default for small screens
+  };
 
-    if (screenWidth >= XLARGE_SCREEN_BREAKPOINT) {
-      numColumns = 5
-    } else if (screenWidth >= LARGE_SCREEN_BREAKPOINT) {
-      numColumns = 4
-    } else if (screenWidth >= MEDIUM_SCREEN_BREAKPOINT) {
-      numColumns = 3
-    }
-
-    // Calculate container width (accounting for the sidebar on large screens)
-    const effectiveWidth = screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? screenWidth - 240 : screenWidth
-
-    // Calculate available width for grid (minus padding and gap)
-    const availableWidth = effectiveWidth - PADDING * 2 - COLUMN_GAP * (numColumns - 1)
-
-    // Card width is calculated based on available space
-    const cardWidth = Math.max(DEFAULT_CARD_WIDTH, Math.floor(availableWidth / numColumns))
-
-    // Calculate cardHeight proportionally
-    const cardHeight = Math.floor(cardWidth * (DEFAULT_CARD_HEIGHT / DEFAULT_CARD_WIDTH))
-
-    return { numColumns, cardWidth, cardHeight, effectiveWidth }
-  }
-
-  const { numColumns, cardWidth, cardHeight } = getResponsiveLayout()
-
-  // Listen for screen dimension changes
-  const [dimensions, setDimensions] = useState({ cardWidth, cardHeight, numColumns })
-
-  useFocusEffect(
-    useCallback(() => {
-      const { cardWidth, cardHeight, numColumns } = getResponsiveLayout()
-      setDimensions({ cardWidth, cardHeight, numColumns })
-    }, [screenWidth])
-  )
+  const numColumns = getResponsiveLayout();
 
   const ammos = useAmmoStore(state => state.ammos)
   const isLoading = useAmmoStore(state => state.isLoading)
@@ -125,14 +96,15 @@ export const AmmoView = () => {
 
   const styles = StyleSheet.create({
     container: {
-      flex: 1
+      height: '100%',
+      backgroundColor: colors.backgroundDarker
     },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       marginBottom: 18,
-      paddingHorizontal: PADDING
+      zIndex: 1,
     },
     headerTitleContainer: {
       flexDirection: 'row',
@@ -213,21 +185,15 @@ export const AmmoView = () => {
     }
   })
 
-  const renderItem = ({ item }: { item: Ammo }) => {
-    return (
-      <View style={[styles.gridItem, { width: dimensions.cardWidth }]}>
-        <View style={styles.cardWrapper}>
-          <AmmoCard
-            ammo={item}
-            onPress={() => handleAmmoPress(item)}
-            onDelete={() => handleDelete(item.id)}
-            width={dimensions.cardWidth}
-            height={dimensions.cardHeight}
-          />
-        </View>
-      </View>
-    )
-  }
+  const renderItem = ({ item }: { item: Ammo }) => (
+    <View style={{ flex: 1, margin: COLUMN_GAP / 2 }}>
+      <AmmoCard
+        ammo={item}
+        onPress={() => handleAmmoPress(item)}
+        onDelete={() => handleDelete(item.id)}
+      />
+    </View>
+  );
 
   let content = null
 
@@ -247,7 +213,7 @@ export const AmmoView = () => {
   } else if (ammos.length === 0) {
     content = (
       <EmptyState
-        icon={<MaterialCommunityIcons name='pistol' size={80} color={colors.primary} />}
+        icon={<MaterialCommunityIcons name='ammunition' size={80} color={colors.primary} />}
         title='No Ammunition Yet'
         subtitle='Get started by adding your first ammunition to your armory.'
         buttonText='+ Add Ammunition'
@@ -257,14 +223,14 @@ export const AmmoView = () => {
   } else {
     content = (
       <FlatList
-        key={dimensions.numColumns}
+        key={numColumns}
         data={ammos}
         renderItem={renderItem}
         keyExtractor={item => item.id.toString()}
-        numColumns={dimensions.numColumns}
+        numColumns={numColumns}
         style={styles.flatListContainer}
         contentContainerStyle={styles.gridContent}
-        columnWrapperStyle={dimensions.numColumns > 1 ? styles.columnWrapper : undefined}
+        columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
         ListHeaderComponent={
           isLoading && ammos.length > 0 ? (
             <ActivityIndicator style={{ marginVertical: 20 }} size='large' color={colors.primary} />

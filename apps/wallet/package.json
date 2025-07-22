@@ -74,7 +74,8 @@
     "readable-stream": "^1.0.33",
     "stream-browserify": "^1.0.0",
     "vm-browserify": "^0.0.4",
-    "zustand": "^5.0.3"
+    "zustand": "^5.0.3",
+    "react-datepicker": "^7.3.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
@@ -89,7 +90,8 @@
     "react-native-svg-transformer": "^1.5.0",
     "react-test-renderer": "18.2.0",
     "rn-nodeify": "^10.3.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "@types/react-datepicker": "^6.2.0"
   },
   "private": true,
   "expo": {

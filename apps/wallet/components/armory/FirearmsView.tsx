@@ -12,10 +12,11 @@ import {
 } from 'react-native'
 import { useFirearmStore } from '@/store/firearmStore'
 import { useAuthStore } from '@/store/authStore'
-import { FirearmCard, Text, Button, EmptyState, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui'
+import { Text, Button, EmptyState, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui'
 import { useTheme } from '@team556/ui'
 import { Firearm } from '@/services/api';
 import { useDrawerStore } from '@/store/drawerStore';
+import FirearmCard from './FirearmCard';
 
 import { FirearmDetailsDrawerContent } from '@/components/drawers/FirearmDetailsDrawerContent'
 import { AddFirearmDrawerContent } from '@/components/drawers/AddFirearmDrawerContent'
@@ -23,8 +24,8 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useFocusEffect } from '@react-navigation/native'
 
 // Responsive layout constants
-const COLUMN_GAP = 16
-const PADDING = 16
+const COLUMN_GAP = 12
+const PADDING = 12
 const SMALL_SCREEN_BREAKPOINT = 480
 const MEDIUM_SCREEN_BREAKPOINT = 768
 const LARGE_SCREEN_BREAKPOINT = 1024
@@ -37,44 +38,14 @@ export const FirearmsView = () => {
   const isP1User = useAuthStore(state => state.isP1PresaleUser())
   const { width: screenWidth } = useWindowDimensions()
 
-  // Responsive sizing based on screen width
   const getResponsiveLayout = () => {
-    let numColumns = 2 // Default for small screens
-
-    if (screenWidth >= XLARGE_SCREEN_BREAKPOINT) {
-      numColumns = 5
-    } else if (screenWidth >= LARGE_SCREEN_BREAKPOINT) {
-      numColumns = 4
-    } else if (screenWidth >= MEDIUM_SCREEN_BREAKPOINT) {
-      numColumns = 3
-    }
-
-    // Calculate container width (accounting for the sidebar on large screens)
-    const effectiveWidth = screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? screenWidth - 240 : screenWidth
-
-    // Calculate available width for grid (minus padding and gap)
-    const availableWidth = effectiveWidth - PADDING * 2 - COLUMN_GAP * (numColumns - 1)
-
-    // Card width is calculated based on available space
-    const cardWidth = Math.max(DEFAULT_CARD_WIDTH, Math.floor(availableWidth / numColumns))
-
-    // Calculate cardHeight proportionally
-    const cardHeight = Math.floor(cardWidth * (DEFAULT_CARD_HEIGHT / DEFAULT_CARD_WIDTH))
-
-    return { numColumns, cardWidth, cardHeight, effectiveWidth }
+    if (screenWidth >= XLARGE_SCREEN_BREAKPOINT) return 5
+    if (screenWidth >= LARGE_SCREEN_BREAKPOINT) return 4
+    if (screenWidth >= MEDIUM_SCREEN_BREAKPOINT) return 3
+    return 2 // Default for small screens
   }
 
-  const { numColumns, cardWidth, cardHeight } = getResponsiveLayout()
-
-  // Listen for screen dimension changes
-  const [dimensions, setDimensions] = useState({ cardWidth, cardHeight, numColumns })
-
-  useFocusEffect(
-    useCallback(() => {
-      const { cardWidth, cardHeight, numColumns } = getResponsiveLayout()
-      setDimensions({ cardWidth, cardHeight, numColumns })
-    }, [screenWidth])
-  )
+  const numColumns = getResponsiveLayout()
 
   const firearms = useFirearmStore(state => state.firearms)
   const isLoading = useFirearmStore(state => state.isLoading)
@@ -128,14 +99,15 @@ export const FirearmsView = () => {
 
   const styles = StyleSheet.create({
     container: {
-      flex: 1
+      height: '100%',
+      backgroundColor: colors.backgroundDarker
     },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       marginBottom: 18,
-      paddingHorizontal: PADDING
+      zIndex: 1,
     },
     headerTitleContainer: {
       flexDirection: 'row',
@@ -143,20 +115,18 @@ export const FirearmsView = () => {
       gap: 8
     },
     flatListContainer: {
-      flex: 1,
-      overflow: 'visible'
+      height: '100%',
     },
     gridContent: {
       paddingBottom: 40
     },
     columnWrapper: {
       gap: COLUMN_GAP,
-      justifyContent: 'flex-start',
-      marginBottom: COLUMN_GAP * 1.5
+      justifyContent: 'flex-start'
     },
     gridItem: {
-      margin: COLUMN_GAP / 2,
-      alignItems: 'center',
+      marginBottom: COLUMN_GAP,
+      alignItems: 'center'
     },
     cardWrapper: {
       width: '100%',
@@ -216,21 +186,15 @@ export const FirearmsView = () => {
     }
   })
 
-  const renderItem = ({ item }: { item: Firearm }) => {
-    return (
-      <View style={[styles.gridItem, { width: dimensions.cardWidth }]}>
-        <View style={styles.cardWrapper}>
-          <FirearmCard
-            firearm={item}
-            onPress={() => handleFirearmPress(item)}
-            onDelete={() => handleDelete(item.id)}
-            width={dimensions.cardWidth}
-            height={dimensions.cardHeight}
-          />
-        </View>
-      </View>
-    )
-  }
+  const renderItem = ({ item }: { item: Firearm }) => (
+    <View style={{ flex: 1, margin: COLUMN_GAP / 2 }}>
+      <FirearmCard
+        firearm={item}
+        onPress={() => handleFirearmPress(item)}
+        onDelete={() => handleDelete(item.id)}
+      />
+    </View>
+  )
 
   let content = null
 
@@ -260,14 +224,14 @@ export const FirearmsView = () => {
   } else {
     content = (
       <FlatList
-        key={dimensions.numColumns}
+        key={numColumns}
         data={firearms}
         renderItem={renderItem}
         keyExtractor={item => item.id.toString()}
-        numColumns={dimensions.numColumns}
+        numColumns={numColumns}
         style={styles.flatListContainer}
         contentContainerStyle={styles.gridContent}
-        columnWrapperStyle={dimensions.numColumns > 1 ? styles.columnWrapper : undefined}
+        columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
         ListHeaderComponent={
           isLoading && firearms.length > 0 ? (
             <ActivityIndicator style={{ marginVertical: 20 }} size='large' color={colors.primary} />

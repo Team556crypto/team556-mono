@@ -9,23 +9,22 @@ import { FirearmsView } from '@/components/armory/FirearmsView';
 import { AmmoView } from '@/components/armory/AmmoView';
 import { GearView } from '@/components/armory/GearView';
 import { DocumentsView } from '@/components/armory/DocumentsView';
-import { NfaView } from '@/components/armory/NfaView';
+import { NFAView } from '@/components/armory/NFAView';
 import AllItemsView from '@/components/armory/AllItemsView';
 
 export default function DigitalArmoryScreen() {
   const { colors } = useTheme();
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
   const CATEGORIES: BadgeItem[] = [
-    { label: 'All', icon: <Ionicons name='grid' size={16} color={colors.primary} /> },
-    { label: 'Firearms', icon: <MaterialCommunityIcons name='pistol' size={16} color={colors.primary} /> },
-    { label: 'Ammo', icon: <MaterialCommunityIcons name='ammunition' size={16} color={colors.primary} /> },
-    { label: 'Gear', icon: <MaterialCommunityIcons name='tent' size={16} color={colors.primary} /> },
-    { label: 'NFA', icon: <MaterialCommunityIcons name='file-certificate-outline' size={16} color={colors.primary} /> },
-    { label: 'Documents', icon: <Ionicons name='document-text' size={16} color={colors.primary} /> },
+    { label: 'All', icon: <Ionicons name='grid' size={16} color={selectedCategory === 'All' ? colors.background : colors.primary} /> },
+    { label: 'Firearms', icon: <MaterialCommunityIcons name='pistol' size={16} color={selectedCategory === 'Firearms' ? colors.background : colors.primary} /> },
+    { label: 'Ammo', icon: <MaterialCommunityIcons name='ammunition' size={16} color={selectedCategory === 'Ammo' ? colors.background : colors.primary} /> },
+    { label: 'Gear', icon: <MaterialCommunityIcons name='tent' size={16} color={selectedCategory === 'Gear' ? colors.background : colors.primary} /> },
+    { label: 'NFA', icon: <MaterialCommunityIcons name='file-certificate-outline' size={16} color={selectedCategory === 'NFA' ? colors.background : colors.primary} /> },
+    { label: 'Documents', icon: <Ionicons name='document-text' size={16} color={selectedCategory === 'Documents' ? colors.background : colors.primary} /> },
   ];
-
-  const [selectedCategory, setSelectedCategory] = useState<string>(CATEGORIES[0].label);
-
+  
   const renderSelectedView = () => {
     switch (selectedCategory) {
       case 'Firearms':
@@ -37,7 +36,7 @@ export default function DigitalArmoryScreen() {
       case 'Documents':
         return <DocumentsView />;
       case 'NFA':
-        return <NfaView />;
+        return <NFAView />;
       case 'All':
       default:
         return <AllItemsView onCategorySelect={setSelectedCategory} />;

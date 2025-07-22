@@ -55,5 +55,11 @@
   "dependencies": {
     "@solana/spl-token": "^0.3.8",
     "expo-linear-gradient": "^14.1.4"
+  },
+  "resolutions": {
+    "metro": "0.81.0",
+    "metro-resolver": "0.81.0",
+    "metro-config": "0.81.0",
+    "metro-transform-worker": "0.81.0"
   }
 }

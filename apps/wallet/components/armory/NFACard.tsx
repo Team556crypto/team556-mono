@@ -1,36 +1,36 @@
 import React from 'react';
 import Card from '@team556/ui/src/Card';
-import { Ammo } from '@team556/ui/src/types'
+import { NFA } from '@team556/ui/src/types'
 
-interface AmmoCardProps {
-  ammo: Ammo;
+interface NFACardProps {
+  nfa: NFA;
   onPress?: (id: number) => void;
   onDelete?: (id: number) => void;
   width?: number;
   height?: number;
 }
 
-export default function AmmoCard({
-  ammo,
+export default function NFACard({
+  nfa,
   onPress,
   onDelete,
   width,
   height
-}: AmmoCardProps) {
+}: NFACardProps) {
   const handlePress = () => {
     if (onPress) {
-      onPress(ammo.id);
+      onPress(nfa.id);
     }
   };
 
   const handleDelete = () => {
     if (onDelete) {
-      onDelete(ammo.id);
+      onDelete(nfa.id);
     }
   };
 
   const getFirearmIcon = () => {
-    const type = ammo.type?.toLowerCase() || '';
+    const type = nfa.type?.toLowerCase() || '';
     if (type.includes('pistol') || type.includes('handgun')) {
       return 'target';
     } else if (type.includes('rifle') || type.includes('shotgun')) {
@@ -47,13 +47,13 @@ export default function AmmoCard({
       height={height}
       onPress={handlePress}
       onDelete={handleDelete}
-      imageUri={ammo.pictures}
+      imageUri={nfa.picture}
       iconName={getFirearmIcon()}
-      category={ammo.type || 'Firearm'}
-      title={ammo.manufacturer}
+      category={nfa.type || 'Firearm'}
+      title={nfa.manufacturer}
       details={[
-        `${ammo.manufacturer || ''} ${ammo.caliber || ''}`.trim(),
-        ammo.caliber
+        `${nfa.manufacturer || ''} ${nfa.model_name || ''}`.trim(),
+        nfa.caliber
       ]}
     />
   );

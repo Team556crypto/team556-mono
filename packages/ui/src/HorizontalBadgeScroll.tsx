@@ -2,12 +2,17 @@ import React, { useState, useCallback } from 'react'
 import { ScrollView, StyleSheet, StyleProp, ViewStyle } from 'react-native'
 import { Badge } from './Badge'
 
+export interface BadgeItem {
+  label: string;
+  icon?: React.ReactNode;
+}
+
 export interface HorizontalBadgeScrollProps {
-  items: string[]
-  initialSelectedItem?: string
-  onSelect?: (item: string) => void
-  style?: StyleProp<ViewStyle>
-  contentContainerStyle?: StyleProp<ViewStyle>
+  items: BadgeItem[];
+  initialSelectedItem?: string;
+  onSelect?: (item: string) => void;
+  style?: StyleProp<ViewStyle>;
+  contentContainerStyle?: StyleProp<ViewStyle>;
 }
 
 export const HorizontalBadgeScroll = ({
@@ -20,10 +25,10 @@ export const HorizontalBadgeScroll = ({
   const [selectedItem, setSelectedItem] = useState<string | undefined>(initialSelectedItem)
 
   const handlePress = useCallback(
-    (item: string) => {
-      setSelectedItem(item)
+    (item: BadgeItem) => {
+      setSelectedItem(item.label);
       if (onSelect) {
-        onSelect(item)
+        onSelect(item.label);
       }
     },
     [onSelect]
@@ -37,7 +42,13 @@ export const HorizontalBadgeScroll = ({
       contentContainerStyle={contentContainerStyle}
     >
       {items.map(item => (
-        <Badge key={item} label={item} isActive={selectedItem === item} onPress={() => handlePress(item)} />
+        <Badge
+          key={item.label}
+          label={item.label}
+          icon={item.icon}
+          isActive={selectedItem === item.label}
+          onPress={() => handlePress(item)}
+        />
       ))}
     </ScrollView>
   )

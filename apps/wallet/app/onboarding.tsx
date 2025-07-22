@@ -42,11 +42,9 @@ export default function OnboardingScreen() {
   const [resendSuccessMessage, setResendSuccessMessage] = useState<string | null>(null)
   const [resendCooldown, setResendCooldown] = useState(0)
 
-  // Add state for password input during wallet creation
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-
   const token = useAuthStore(state => state.token)
+  const password = useAuthStore(state => state.password)
+  const clearPassword = useAuthStore(state => state.clearPassword)
   const fetchAndUpdateUser = useAuthStore(state => state.fetchAndUpdateUser)
 
   // Timer effect for cooldown
@@ -116,20 +114,16 @@ export default function OnboardingScreen() {
   }, [token])
 
   const handleCreateWallet = useCallback(async () => {
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.')
-      Alert.alert('Error', 'Passwords do not match.')
-      return
-    }
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters long.`)
-      Alert.alert('Error', `Password must be at least ${MIN_PASSWORD_LENGTH} characters long.`)
+    if (!password) {
+      setError('Password not found. Please try signing up again.')
+      Alert.alert('Error', 'An error occurred. Please try signing up again.')
+      // Optionally, navigate back to signup
+      // router.replace('/signup');
       return
     }
 
     setIsLoading(true)
     setError(null)
-    const token = useAuthStore.getState().token
 
     if (!token) {
       setError('Authentication required. Please login again.')
@@ -140,6 +134,7 @@ export default function OnboardingScreen() {
     try {
       const response = await createWallet(token, password)
       setMnemonic(response.mnemonic)
+      clearPassword() // Clear password from store after use
       setCurrentStep(prev => prev + 1)
     } catch (err: any) {
       console.error('Failed to create wallet:', err)
@@ -148,7 +143,7 @@ export default function OnboardingScreen() {
     } finally {
       setIsLoading(false)
     }
-  }, [password, confirmPassword, token])
+  }, [password, token, clearPassword])
 
   const handleCopyToClipboard = useCallback(async () => {
     if (mnemonic) {
@@ -229,25 +224,12 @@ export default function OnboardingScreen() {
             Let's set up your secure Solana wallet. You'll receive a unique recovery phrase.
           </Text>
           <Text style={[styles.description, styles.warning]}>
+            Your wallet will be encrypted with the password you provided during signup.
+          </Text>
+          <Text style={[styles.description, styles.warning]}>
             IMPORTANT: Write this phrase down and store it somewhere safe. It's the ONLY way to recover your wallet if
             you lose access. Do NOT share it with anyone.
           </Text>
-          <Input
-            placeholder='Enter Password'
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            style={styles.input}
-            autoCapitalize='none'
-          />
-          <Input
-            placeholder='Confirm Password'
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-            style={styles.input}
-            autoCapitalize='none'
-          />
           {isLoading && <ActivityIndicator size='large' color={Colors.tint} style={styles.loader} />}
           {error && !isLoading && <Text style={styles.errorText}>{error}</Text>}
         </View>

@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "~14.0.4",
+    "@gorhom/bottom-sheet": "^5.1.6",
     "@react-native-async-storage/async-storage": "1.23.1",
     "@react-native-community/datetimepicker": "8.2.0",
     "@react-native-segmented-control/segmented-control": "2.5.4",
@@ -44,6 +45,7 @@
     "expo-font": "~13.0.4",
     "expo-haptics": "~14.0.1",
     "expo-image": "~2.0.7",
+    "expo-image-manipulator": "~13.0.6",
     "expo-image-picker": "~16.0.6",
     "expo-linear-gradient": "~14.0.2",
     "expo-linking": "~7.0.5",
@@ -57,7 +59,7 @@
     "fastestsmallesttextencoderdecoder": "^1.0.22",
     "process": "^0.11.10",
     "react": "18.3.1",
-    "react-datepicker": "^8.3.0",
+
     "react-dom": "18.3.1",
     "react-native": "0.76.9",
     "react-native-gesture-handler": "~2.20.2",
@@ -72,7 +74,8 @@
     "readable-stream": "^1.0.33",
     "stream-browserify": "^1.0.0",
     "vm-browserify": "^0.0.4",
-    "zustand": "^5.0.3"
+    "zustand": "^5.0.3",
+    "react-datepicker": "^7.3.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
@@ -87,7 +90,8 @@
     "react-native-svg-transformer": "^1.5.0",
     "react-test-renderer": "18.2.0",
     "rn-nodeify": "^10.3.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "@types/react-datepicker": "^6.2.0"
   },
   "private": true,
   "expo": {

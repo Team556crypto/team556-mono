@@ -37,6 +37,8 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	wallet := api.Group("/wallet")
 	swap := api.Group("/swap", middleware.AuthMiddleware(cfg.JWTSecret))
 	firearms := api.Group("/firearms", middleware.AuthMiddleware(cfg.JWTSecret))
+	ammos := api.Group("/ammos", middleware.AuthMiddleware(cfg.JWTSecret))
+	gear := api.Group("/gear", middleware.AuthMiddleware(cfg.JWTSecret))
 	presale := api.Group("/presale", middleware.AuthMiddleware(cfg.JWTSecret))
 	v1 := api.Group("/v1")
 
@@ -64,6 +66,7 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	auth.Get("/me", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.GetMe)
 	auth.Post("/verify-email", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.VerifyEmail)
 	auth.Post("/resend-verification", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.ResendVerificationEmail)
+	auth.Post("/delete-account", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.DeleteAccount)
 	// Password Reset Routes
 	auth.Post("/request-password-reset", authHandler.RequestPasswordReset)
 	auth.Post("/reset-password", authHandler.ResetPassword)
@@ -93,10 +96,41 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	firearms.Patch("/:id", handlers.UpdateFirearmHandler(db, cfg))
 	firearms.Delete("/:id", handlers.DeleteFirearmHandler(db, cfg))
 
+	// --- Ammo Routes ---
+	ammos.Post("/", handlers.CreateAmmoHandler(db, cfg))
+	ammos.Get("/", handlers.GetAmmosHandler(db, cfg))
+	ammos.Get("/:id", handlers.GetAmmoByIDHandler(db, cfg))
+	ammos.Patch("/:id", handlers.UpdateAmmoHandler(db, cfg))
+	ammos.Delete("/:id", handlers.DeleteAmmoHandler(db, cfg))
+
+	// --- Gear Routes ---
+	gear.Post("/", handlers.CreateGearHandler(db, cfg))
+	gear.Get("/", handlers.GetGearsHandler(db, cfg))
+	gear.Get("/:id", handlers.GetGearByIDHandler(db, cfg))
+	gear.Put("/:id", handlers.UpdateGearHandler(db, cfg))
+	gear.Delete("/:id", handlers.DeleteGearHandler(db, cfg))
+
+	// --- Documents Routes ---
+	documents := api.Group("/documents", middleware.AuthMiddleware(cfg.JWTSecret))
+	documents.Post("/", handlers.CreateDocumentHandler(db, cfg))
+	documents.Get("/", handlers.GetDocumentsHandler(db, cfg))
+	documents.Get("/:id", handlers.GetDocumentByIDHandler(db, cfg))
+	documents.Put("/:id", handlers.UpdateDocumentHandler(db, cfg))
+	documents.Delete("/:id", handlers.DeleteDocumentHandler(db, cfg))
+
+	// --- NFA Routes ---
+	nfa := api.Group("/nfa", middleware.AuthMiddleware(cfg.JWTSecret))
+	nfa.Post("/", handlers.CreateNFAHandler(db, cfg))
+	nfa.Get("/", handlers.GetNFAItemsHandler(db, cfg))
+	nfa.Get("/:id", handlers.GetNFAByIDHandler(db, cfg))
+	nfa.Put("/:id", handlers.UpdateNFAHandler(db, cfg))
+	nfa.Delete("/:id", handlers.DeleteNFAHandler(db, cfg))
+
 	// --- Presale Routes ---
 	presale.Get("/claim-status", presaleHandler.GetPresaleClaimStatus)
 	presale.Post("/claim/p1p1", presaleHandler.ClaimPresaleP1P1)
 	presale.Post("/claim/p1p2", presaleHandler.ClaimPresaleP1P2)
+	presale.Post("/claim/p2", presaleHandler.ClaimPresaleP2)
 
 	// --- Solana RPC proxy ---
 	v1.Post("/solana/rpc", handlers.SolanaRpcProxy)

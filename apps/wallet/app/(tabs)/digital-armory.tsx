@@ -1,46 +1,60 @@
-import React, { useState } from 'react'
-import { StyleSheet, View, Dimensions } from 'react-native'
-import { ScreenLayout } from '@/components/layout/ScreenLayout'
-import { Colors } from '@/constants/Colors'
-import { Ionicons } from '@expo/vector-icons'
-import { HorizontalBadgeScroll } from '@team556/ui'
+import React, { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { useTheme } from '@team556/ui';
+import { ScreenLayout } from '@/components/layout/ScreenLayout';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { HorizontalBadgeScroll, BadgeItem } from '@team556/ui';
 
-import { FirearmsView } from '@/components/armory/FirearmsView'
-import { AmmoView } from '@/components/armory/AmmoView'
-import { DocumentsView } from '@/components/armory/DocumentsView'
-import { NfaView } from '@/components/armory/NfaView'
-import AllItemsView from '@/components/armory/AllItemsView'
-
-const CATEGORIES = ['All', 'Firearms', 'Ammo', 'Documents', 'NFA']
+import { FirearmsView } from '@/components/armory/views/FirearmsView';
+import { AmmoView } from '@/components/armory/views/AmmoView';
+import { GearView } from '@/components/armory/views/GearView';
+import { DocumentsView } from '@/components/armory/views/DocumentsView';
+import { NFAView } from '@/components/armory/views/NfaView';
+import AllItemsView from '@/components/armory/views/AllItemsView';
 
 export default function DigitalArmoryScreen() {
-  const [selectedCategory, setSelectedCategory] = useState<string>(CATEGORIES[0])
+  const { colors } = useTheme();
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
+  const CATEGORIES: BadgeItem[] = [
+    { label: 'All', icon: <Ionicons name='grid' size={16} color={selectedCategory === 'All' ? colors.background : colors.primary} /> },
+    { label: 'Firearms', icon: <MaterialCommunityIcons name='pistol' size={16} color={selectedCategory === 'Firearms' ? colors.background : colors.primary} /> },
+    { label: 'Ammo', icon: <MaterialCommunityIcons name='ammunition' size={16} color={selectedCategory === 'Ammo' ? colors.background : colors.primary} /> },
+    { label: 'Gear', icon: <MaterialCommunityIcons name='tent' size={16} color={selectedCategory === 'Gear' ? colors.background : colors.primary} /> },
+    { label: 'NFA', icon: <MaterialCommunityIcons name='file-certificate-outline' size={16} color={selectedCategory === 'NFA' ? colors.background : colors.primary} /> },
+    { label: 'Documents', icon: <Ionicons name='document-text' size={16} color={selectedCategory === 'Documents' ? colors.background : colors.primary} /> },
+  ];
+  
   const renderSelectedView = () => {
     switch (selectedCategory) {
       case 'Firearms':
-        return <FirearmsView />
+        return <FirearmsView />;
       case 'Ammo':
-        return <AmmoView />
+        return <AmmoView />;
+      case 'Gear':
+        return <GearView />;
       case 'Documents':
-        return <DocumentsView />
+        return <DocumentsView />;
       case 'NFA':
-        return <NfaView />
+        return <NFAView />;
       case 'All':
       default:
-        return <AllItemsView />
+        return <AllItemsView onCategorySelect={setSelectedCategory} />;
     }
-  }
+  };
+
+  const isScrollableView = ['All', 'Firearms', 'Ammo', 'Gear', 'NFA', 'Documents'].includes(selectedCategory);
 
   return (
     <ScreenLayout
       title='Digital Armory'
-      headerIcon={<Ionicons name='shield-checkmark' size={24} color={Colors.primary} />}
+      headerIcon={<Ionicons name='shield-checkmark' size={24} color={colors.primary} />}
+      scrollEnabled={!isScrollableView}
     >
       <HorizontalBadgeScroll items={CATEGORIES} initialSelectedItem={selectedCategory} onSelect={setSelectedCategory} />
-      <View style={styles.container}>{renderSelectedView()}</View>
+      <View style={[styles.container]}>{renderSelectedView()}</View>
     </ScreenLayout>
-  )
+  );
 }
 
 const styles = StyleSheet.create({

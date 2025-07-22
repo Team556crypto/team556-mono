@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { View, StyleSheet, SafeAreaView, Platform, TouchableOpacity, ScrollView, Switch, Animated } from 'react-native'
-import { Button, Input, Text } from '@repo/ui'
+import { Button, Input, Text } from '@team556/ui'
 import { useRouter, Link } from 'expo-router'
 import Head from 'expo-router/head'
 import { genericStyles } from '@/constants/GenericStyles'
@@ -74,33 +74,37 @@ const SignInScreen = () => {
   }, [fadeAnim, translateAnim])
 
   const handleSignIn = async () => {
-    setAuthError(null)
+    setAuthError(null);
+    if (!email || !password) {
+      setAuthError('Please enter both email and password.');
+      return;
+    }
     try {
-      await login({ email, password })
-      // Navigation handled by root layout
+      await login({ email, password });
 
       // Save or clear remember me preference
       if (rememberMe) {
         if (Platform.OS === 'web') {
-          localStorage.setItem('rememberedEmail', email)
-          localStorage.setItem('rememberMe', 'true')
+          localStorage.setItem('rememberedEmail', email);
+          localStorage.setItem('rememberMe', 'true');
         } else {
-          await AsyncStorage.setItem('rememberedEmail', email)
-          await AsyncStorage.setItem('rememberMe', 'true')
+          await AsyncStorage.setItem('rememberedEmail', email);
+          await AsyncStorage.setItem('rememberMe', 'true');
         }
       } else {
         if (Platform.OS === 'web') {
-          localStorage.removeItem('rememberedEmail')
-          localStorage.removeItem('rememberMe')
+          localStorage.removeItem('rememberedEmail');
+          localStorage.removeItem('rememberMe');
         } else {
-          await AsyncStorage.removeItem('rememberedEmail')
-          await AsyncStorage.removeItem('rememberMe')
+          await AsyncStorage.removeItem('rememberedEmail');
+          await AsyncStorage.removeItem('rememberMe');
         }
       }
     } catch (err) {
-      console.error('Sign in failed:', err)
+      console.error('Sign in failed:', err);
+      // The authStore already sets the error message, so no need to set it here unless you want to override it.
     }
-  }
+  };
 
   const renderInfoSide = () => (
     <View style={styles.infoSide}>

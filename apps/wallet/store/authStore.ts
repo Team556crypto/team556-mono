@@ -1,29 +1,37 @@
 import { create } from 'zustand'
 import { saveToken, getToken, deleteToken } from '@/utils/secureStore'
-import { loginUser, signupUser, getUserProfile, UserCredentials, User } from '@/services/api' // Assuming api service exports these
-import { useFirearmStore } from './firearmStore' // Import firearmStore
+import { loginUser, signupUser, getUserProfile, deleteAccount as deleteAccountAPI, UserCredentials, User } from '@/services/api' // Assuming api service exports these
+import { useFirearmStore } from './firearmStore'
+import { useGearStore } from './gearStore'
+import { useDocumentStore } from './documentStore'
+import { useAmmoStore } from './ammoStore'
+import { useNFAStore } from './nfaStore'
 import { router } from 'expo-router'; // Added for navigation
 
 interface AuthState {
   token: string | null
   user: User | null // Use the User type from api service
+  password: string | null // To hold password during signup -> wallet creation
   isAuthenticated: boolean
   isLoading: boolean
   error: string | null
   initializeAuth: () => Promise<void>
   login: (credentials: UserCredentials) => Promise<void>
-  signup: (credentials: UserCredentials) => Promise<void> // Revert signature
+  signup: (credentials: UserCredentials) => Promise<void>
   logout: () => Promise<void>
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
   fetchAndUpdateUser: () => Promise<void>
+  deleteAccount: (password: string) => Promise<void>
   isP1PresaleUser: () => boolean // New selector
-  canAddItem: () => boolean // New selector
+  canAddItem: (itemType: 'firearm' | 'gear' | 'document' | 'ammo' | 'nfa') => boolean // New selector
+  clearPassword: () => void
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   token: null,
   user: null,
+  password: null,
   isAuthenticated: false,
   isLoading: true, // Start as loading until initialization is done
   error: null,
@@ -116,7 +124,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Navigation is now handled in _layout.tsx based on auth state and user wallets
       // ================================
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || error.message || 'Login failed'
+      // Handle detailed error messages, especially for account deletion
+      const errorData = error.response?.data
+      let errorMessage = error.response?.data?.error || error.message || 'Login failed'
+      
+      // If there's a detailed message (like for account deletion), include it
+      if (errorData?.message) {
+        errorMessage = `${errorMessage}: ${errorData.message}`
+      }
+      
       set({ token: null, user: null, isAuthenticated: false, isLoading: false, error: errorMessage })
       await deleteToken() // Clear any potentially invalid token
       // Re-throw the error if you want calling components to handle it further
@@ -124,53 +140,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  signup: async credentials => {
+  signup: async ({ email, password }) => {
     set({ isLoading: true, error: null })
     try {
-      // Call the signupUser function from the API service
-      const responseData = await signupUser(credentials)
-
-      // Now destructure
+      const responseData = await signupUser({ email, password })
       const { token, user } = responseData
 
-      // Check if token or user are undefined/null before proceeding
       if (!token || !user) {
-        set({
-          token: null,
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-          error: 'Signup failed: Invalid response from server.'
-        })
-        await deleteToken()
         throw new Error('Signup failed: Invalid response from server.')
       }
 
-      // Automatically log in the user after successful signup
       await saveToken(token)
 
-      set({ token, user, isAuthenticated: true, isLoading: false, error: null })
-
-      // === REMOVED Navigation Logic ===
-      // Navigation is now handled in _layout.tsx based on auth state and user wallets
-      // ================================
+      // Store password temporarily for wallet creation
+      set({ token, user, password, isAuthenticated: true, isLoading: false, error: null })
     } catch (error: any) {
-      // Check if the error was already handled by the token/user check above
-      if (!get().error) {
-        // Check for specific 409 Conflict error
-        if (error.response?.status === 409) {
-          set({ error: 'Email already registered. Please sign in.', isLoading: false })
-        } else {
-          // Handle other errors
-          const errorMessage = error.response?.data?.error || error.message || 'Signup failed'
-          set({ token: null, user: null, isAuthenticated: false, isLoading: false, error: errorMessage })
-          await deleteToken()
-        }
-      }
-      // Re-throw error to be caught by the component
+      const errorMessage = error.response?.data?.error || error.message || 'Signup failed'
+      set({ token: null, user: null, isAuthenticated: false, isLoading: false, error: errorMessage })
+      await deleteToken()
       throw error
     }
   },
+
+  clearPassword: () => set({ password: null }),
 
   logout: async () => {
     set({ isLoading: true })
@@ -189,18 +181,64 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } 
   },
 
+  deleteAccount: async (password: string) => {
+    set({ isLoading: true, error: null })
+    try {
+      const token = get().token
+      if (!token) {
+        throw new Error('No authentication token found')
+      }
+
+      // Call the API to delete the account
+      await deleteAccountAPI(password, token)
+      
+      // Clear all user data and logout
+      await deleteToken()
+      set({ 
+        token: null, 
+        user: null, 
+        isAuthenticated: false, 
+        error: null, 
+        isLoading: false 
+      })
+      
+      // Redirect to login page
+      router.replace('/signin')
+    } catch (error: any) {
+      console.error('[AuthStore] deleteAccount: Failed to delete account:', error)
+      set({ 
+        error: error.message || 'Failed to delete account', 
+        isLoading: false 
+      })
+      throw error // Re-throw so the UI can handle it
+    }
+  },
+
   isP1PresaleUser: () => {
     const user = get().user;
     return !!user && user.presale_type === 1;
   },
 
-  canAddItem: () => {
+    canAddItem: (itemType: 'firearm' | 'gear' | 'document' | 'ammo' | 'nfa') => {
     if (get().isP1PresaleUser()) {
       return true; // P1 users can always add items
     }
-    // For non-P1 users, check the firearm count from firearmStore
-    const firearmCount = useFirearmStore.getState().firearms.length;
-    return firearmCount < 2;
+
+    // For non-P1 users, check the count from the relevant store
+    switch (itemType) {
+      case 'firearm':
+        return useFirearmStore.getState().firearms.length < 2;
+      case 'gear':
+        return useGearStore.getState().gear.length < 2;
+      case 'document':
+        return useDocumentStore.getState().documents.length < 2;
+      case 'ammo':
+        return useAmmoStore.getState().ammos.length < 2;
+      case 'nfa':
+        return useNFAStore.getState().nfaItems.length < 2;
+      default:
+        return false;
+    }
   }
 }))
 

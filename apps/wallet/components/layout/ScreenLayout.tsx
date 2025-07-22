@@ -15,6 +15,8 @@ interface ScreenLayoutProps {
   headerRightElement?: React.ReactNode
   /** Optional styles for the ScrollView content container */
   contentContainerStyle?: ViewStyle
+  /** Determines if the content should be scrollable. Defaults to true. */
+  scrollEnabled?: boolean
 }
 
 export const ScreenLayout: React.FC<ScreenLayoutProps> = ({
@@ -23,31 +25,40 @@ export const ScreenLayout: React.FC<ScreenLayoutProps> = ({
   headerIcon,
   titleColor,
   headerRightElement,
-  contentContainerStyle
+  contentContainerStyle,
+  scrollEnabled = true
 }) => {
   const { isTabletOrLarger } = useBreakpoint()
 
+  const Header = (
+    <View style={[styles.headerRow, Platform.OS === 'android' && { paddingTop: 50 }]}>
+      <View style={styles.titleContainer}>
+        {headerIcon && <View style={styles.iconContainer}>{headerIcon}</View>}
+        <Text preset='h4' color={titleColor}>
+          {title}
+        </Text>
+      </View>
+      {headerRightElement}
+    </View>
+  )
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        style={[styles.container, isTabletOrLarger && styles.containerTablet]}
-        contentContainerStyle={contentContainerStyle}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header Row */}
-        <View style={[styles.headerRow, Platform.OS === 'android' && { paddingTop: 50 }]}>
-          <View style={styles.titleContainer}>
-            {headerIcon && <View style={styles.iconContainer}>{headerIcon}</View>}
-            <Text preset='h4' color={titleColor}>
-              {title}
-            </Text>
-          </View>
-          {headerRightElement}
+      {scrollEnabled ? (
+        <ScrollView
+          style={[styles.container, isTabletOrLarger && styles.containerTablet]}
+          contentContainerStyle={contentContainerStyle}
+          showsVerticalScrollIndicator={false}
+        >
+          {Header}
+          {children}
+        </ScrollView>
+      ) : (
+        <View style={[styles.container, isTabletOrLarger && styles.containerTablet]}>
+          {Header}
+          <View style={{ flex: 1 }}>{children}</View>
         </View>
-
-        {/* Screen Content */}
-        {children}
-      </ScrollView>
+      )}
     </SafeAreaView>
   )
 }
@@ -60,7 +71,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'android' ? 6 : 16
+    paddingTop: Platform.OS === 'android' ? 6 : 16,
+    marginBottom: 20
   },
   containerTablet: {
     marginLeft: 240, // Standard sidebar width adjustment for tablet

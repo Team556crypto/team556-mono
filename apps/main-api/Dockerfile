@@ -4,12 +4,12 @@ FROM golang:1.23-alpine AS builder
 WORKDIR /app
 
 # Copy go.mod and go.sum first to leverage Docker cache
-# Paths are relative to the build context (monorepo root)
+# The build context is the monorepo root, so we need to specify the full path
 COPY apps/main-api/go.mod apps/main-api/go.sum ./
 RUN go mod download
 
-# Copy the rest of the application source code from the main-api directory
-COPY apps/main-api/. .
+# Copy the rest of the application source code
+COPY apps/main-api/ .
 
 # Build the application binary
 # CGO_ENABLED=0 disables Cgo, needed for static linking often useful in containers

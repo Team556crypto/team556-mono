@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import type { Firearm, UpdateFirearmPayload, CreateFirearmPayload } from './types'
+import type { Firearm, UpdateFirearmPayload, CreateFirearmPayload } from '@team556/ui';
 
 /**
  * Fetches the list of firearms for the authenticated user.
@@ -65,3 +65,21 @@ export const createFirearm = async (payload: CreateFirearmPayload, token: string
     body: payload
   })
 }
+
+/**
+ * Deletes a firearm.
+ * @param firearmId - The ID of the firearm to delete.
+ * @param token - The authentication token.
+ * @returns A promise that resolves when the firearm is deleted.
+ * @throws An ApiClientError if the request fails.
+ */
+export const deleteFirearm = async (firearmId: number, token: string | null): Promise<void> => {
+  if (!token) {
+    return Promise.reject(new Error('Authentication token not provided.'));
+  }
+  return apiClient<void>({
+    method: 'DELETE',
+    endpoint: `/firearms/${firearmId}`,
+    token,
+  });
+};

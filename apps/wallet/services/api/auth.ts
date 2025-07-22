@@ -107,3 +107,22 @@ export const resetPassword = async (
     body: data,
   });
 };
+
+/**
+ * Makes a POST request to delete the user's account.
+ * @param password - The user's password for confirmation.
+ * @param token - The authentication token.
+ * @returns A promise that resolves with a success message.
+ * @throws An ApiClientError if the request fails.
+ */
+export const deleteAccount = async (
+  password: string,
+  token: string | null
+): Promise<GenericMessageResponse> => {
+  return apiClient<GenericMessageResponse>({
+    method: 'POST',
+    endpoint: '/auth/delete-account',
+    body: { password },
+    token,
+  });
+};

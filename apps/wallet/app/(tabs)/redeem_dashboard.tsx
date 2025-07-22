@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { StyleSheet, View, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native'
 import { useRouter } from 'expo-router'
-import { Button, Text } from '@repo/ui'
+import { Button, Text } from '@team556/ui'
 import { Ionicons } from '@expo/vector-icons'
 import { ScreenLayout } from '@/components/layout/ScreenLayout'
 import { Colors } from '@/constants/Colors'
@@ -233,6 +233,35 @@ export default function RedeemDashboard() {
     }
   }
 
+  const handleClaimP2 = async () => {
+    if (!token) {
+      showToast('Authentication token not found.', 'error')
+      return
+    }
+
+    // Wallet validation
+    const walletAddress = user?.wallets?.[0]?.address
+    if (!walletAddress) {
+      showToast('Wallet address not found. Please ensure your wallet is set up.', 'error')
+      return
+    }
+    if (!isValidSolanaAddress(walletAddress)) {
+      showToast('Invalid wallet address format. Please check your wallet.', 'error')
+      return
+    }
+
+    setClaimProcessingLoading(true)
+    try {
+      const response = await apiClient.post('/presale/claim/p2', {}, token)
+      showToast(response.message || 'Tokens claimed successfully!', 'success')
+      fetchClaimStatus()
+    } catch (error: any) {
+      showToast(error.message || 'Failed to claim tokens.', 'error')
+    } finally {
+      setClaimProcessingLoading(false)
+    }
+  }
+
   // Header element (close button)
   const headerElement = (
     <TouchableOpacity onPress={() => router.back()}>
@@ -296,14 +325,13 @@ export default function RedeemDashboard() {
             vestedDate={p2ClaimStartTime} // Use specific claim start time
             tokenAmount={500000}
             isEnabled={
-              false
-              // (claimStatus?.hasPresaleCode ?? false) &&
-              // presaleType === 2 &&
-              // !(claimStatus?.tokensClaimedP2 ?? false) &&
-              // new Date() >= p2ClaimStartTime // Explicit check for claim time
+              (claimStatus?.hasPresaleCode ?? false) &&
+              presaleType === 2 &&
+              !(claimStatus?.tokensClaimedP2 ?? false) &&
+              new Date() >= p2ClaimStartTime // Explicit check for claim time
             }
-            onClaim={() => showToast('P2 Claim not yet implemented.', 'info')}
-            isLoading={claimStatusLoading}
+            onClaim={handleClaimP2}
+            isLoading={claimProcessingLoading || claimStatusLoading}
             isClaimed={claimStatus?.tokensClaimedP2 ?? false}
           />
         ) : claimStatusLoading ? (

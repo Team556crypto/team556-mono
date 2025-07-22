@@ -13,9 +13,10 @@ import { useDrawerStore } from '@/store/drawerStore'
 import { Alert } from 'react-native'
 
 // Import moved drawer components
-import ComingSoonDrawerContent from '@/components/drawers/ComingSoonDrawerContent'
-import RedeemPresaleDrawerContent from '@/components/drawers/RedeemPresaleDrawerContent'
-import ViewRecoveryPhraseDrawerContent from '@/components/drawers/ViewRecoveryPhraseDrawerContent'
+import ComingSoonDrawerContent from '@/components/drawers/account/ComingSoonDrawerContent'
+import RedeemPresaleDrawerContent from '@/components/drawers/account/RedeemPresaleDrawerContent'
+import ViewRecoveryPhraseDrawerContent from '@/components/drawers/account/ViewRecoveryPhraseDrawerContent'
+import DeleteUserDrawerContent from '@/components/drawers/account/DeleteUserDrawerContent'
 
 export default function SettingsScreen() {
   const router = useRouter()
@@ -80,6 +81,10 @@ export default function SettingsScreen() {
 
   const handleHelpPress = () => {
     openDrawer(<ComingSoonDrawerContent onClose={closeDrawer} />)
+  }
+
+  const handleDeleteUser = () => {
+    openDrawer(<DeleteUserDrawerContent onClose={closeDrawer} />)
   }
 
   return (
@@ -232,6 +237,25 @@ export default function SettingsScreen() {
                 <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
               </TouchableOpacity>
             )}
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text preset='h4'>Danger</Text>
+          </View>
+
+          <View style={styles.cardContent}>
+            <TouchableOpacity style={styles.menuItem} onPress={handleDeleteUser}>
+              <View style={styles.menuItemIcon}>
+                <Ionicons name='ticket-outline' size={22} color={Colors.primary} />
+              </View>
+              <View style={styles.menuItemContent}>
+                <Text preset='label' color={Colors.error}>Delete User</Text>
+                <Text preset='caption'>Delete your account</Text>
+              </View>
+              <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
+            </TouchableOpacity>
           </View>
         </View>
 

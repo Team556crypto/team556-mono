@@ -15,8 +15,8 @@ import { signTransaction, sendTransaction, sendWebhook } from '@/services/api';
 import { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, createTransferInstruction, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { parseURL, TransferRequestURL } from '@solana/pay';
 import { Buffer } from 'buffer'; // Add missing Buffer import
-import { PaymentReceiptDrawerContent } from '@/components/drawers/PaymentReceiptDrawerContent';
-import ConfirmPaymentDrawerContent from '@/components/drawers/ConfirmPaymentDrawerContent';
+import { PaymentReceiptDrawerContent } from '@/components/drawers/payments/PaymentReceiptDrawerContent';
+import ConfirmPaymentDrawerContent from '@/components/drawers/payments/ConfirmPaymentDrawerContent';
 
 const TEAM556_MINT_ADDRESS = new PublicKey('AMNfeXpjD6kXyyTDB4LMKzNWypqNHwtgJUACHUmuKLD5');
 

@@ -13,10 +13,10 @@ import { useDrawerStore } from '@/store/drawerStore'
 import { Alert } from 'react-native'
 
 // Import moved drawer components
-import ComingSoonDrawerContent from '@/components/drawers/ComingSoonDrawerContent'
-import RedeemPresaleDrawerContent from '@/components/drawers/RedeemPresaleDrawerContent'
-import ViewRecoveryPhraseDrawerContent from '@/components/drawers/ViewRecoveryPhraseDrawerContent'
-import DeleteUserDrawerContent from '@/components/drawers/DeleteUserDrawerContent'
+import ComingSoonDrawerContent from '@/components/drawers/account/ComingSoonDrawerContent'
+import RedeemPresaleDrawerContent from '@/components/drawers/account/RedeemPresaleDrawerContent'
+import ViewRecoveryPhraseDrawerContent from '@/components/drawers/account/ViewRecoveryPhraseDrawerContent'
+import DeleteUserDrawerContent from '@/components/drawers/account/DeleteUserDrawerContent'
 
 export default function SettingsScreen() {
   const router = useRouter()

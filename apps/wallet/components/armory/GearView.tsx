@@ -17,8 +17,8 @@ import { useGearStore } from '@/store/gearStore';
 
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useFocusEffect } from '@react-navigation/native'
-import { GearDetailsDrawerContent } from '@/components/drawers/GearDetailsDrawerContent';
-import { AddGearDrawerContent } from '@/components/drawers/AddGearDrawerContent';
+import { GearDetailsDrawerContent } from '@/components/drawers/armory/details/GearDetailsDrawerContent';
+import { AddGearDrawerContent } from '@/components/drawers/armory/add/AddGearDrawerContent';
 import GearCard from './GearCard';
 
 // Responsive layout constants

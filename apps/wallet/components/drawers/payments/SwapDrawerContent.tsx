@@ -9,7 +9,7 @@ import { genericStyles } from '@/constants/GenericStyles'
 import { LAMPORTS_PER_SOL } from '@solana/web3.js'
 import { debounce } from 'lodash'
 import { getSwapQuote, executeSwap, submitTokenAccountTransaction, signTransaction } from '@/services/api'
-import DexScreenerChart from './DexScreenerChart'
+import DexScreenerChart from '../../DexScreenerChart'
 
 // Basic type for Jupiter V6 Quote Response (expand as needed)
 // Consider moving to a shared types package

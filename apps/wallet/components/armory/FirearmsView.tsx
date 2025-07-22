@@ -1,32 +1,27 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect } from 'react'
 import {
   View,
-  ScrollView,
   ActivityIndicator,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
   FlatList,
   useWindowDimensions,
   Alert
 } from 'react-native'
 import { useFirearmStore } from '@/store/firearmStore'
 import { useAuthStore } from '@/store/authStore'
-import { Text, Button, EmptyState, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui'
+import { Text, Button, EmptyState } from '@team556/ui'
 import { useTheme } from '@team556/ui'
 import { Firearm } from '@/services/api';
 import { useDrawerStore } from '@/store/drawerStore';
 import FirearmCard from './FirearmCard';
 
-import { FirearmDetailsDrawerContent } from '@/components/drawers/FirearmDetailsDrawerContent'
-import { AddFirearmDrawerContent } from '@/components/drawers/AddFirearmDrawerContent'
+import { FirearmDetailsDrawerContent } from '@/components/drawers/armory/details/FirearmDetailsDrawerContent'
+import { AddFirearmDrawerContent } from '@/components/drawers/armory/add/AddFirearmDrawerContent'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
-import { useFocusEffect } from '@react-navigation/native'
 
 // Responsive layout constants
 const COLUMN_GAP = 12
-const PADDING = 12
-const SMALL_SCREEN_BREAKPOINT = 480
 const MEDIUM_SCREEN_BREAKPOINT = 768
 const LARGE_SCREEN_BREAKPOINT = 1024
 const XLARGE_SCREEN_BREAKPOINT = 1366

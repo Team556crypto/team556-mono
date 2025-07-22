@@ -8,7 +8,7 @@ import {
   Platform,
   Modal,
   Dimensions,
-  Animated, // Ensure this is from 'react-native'
+  Animated,
   Easing,
   Image,
   Alert,
@@ -18,14 +18,14 @@ import { Text, useTheme, Button, Select } from '@team556/ui'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker'
 import * as ImagePicker from 'expo-image-picker'
-import { Firearm, CreateFirearmPayload } from '@/services/api'
+import { CreateFirearmPayload } from '@/services/api'
 import { useFirearmStore } from '@/store/firearmStore'
 import { useAuthStore } from '@/store/authStore'
 import { useDrawerStore } from '@/store/drawerStore'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
+import { armoryStyles } from '../styles'
 
-// Initial state for a new firearm
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 
 // Constants for calculating progress bar width
@@ -38,8 +38,6 @@ const TOTAL_HORIZONTAL_PADDING_FOR_PROGRESS_BAR =
 
 const PROGRESS_BAR_RENDER_WIDTH = SCREEN_WIDTH - TOTAL_HORIZONTAL_PADDING_FOR_PROGRESS_BAR // SCREEN_WIDTH - 40 - 40 - 2 = SCREEN_WIDTH - 82
 
-// Define a type for the form state that allows Date objects for date fields
-// before they are converted to ISO strings for the API payload.
 type FirearmFormState = Omit<
   CreateFirearmPayload,
   'acquisition_date' | 'last_fired' | 'last_cleaned' | 'purchase_price' | 'round_count' | 'value'
@@ -77,353 +75,25 @@ export const AddFirearmDrawerContent = () => {
   const { token } = useAuthStore()
   const { closeDrawer } = useDrawerStore()
 
+  const progressAnim = useRef(new Animated.Value(0)).current
+
   const [newFirearm, setNewFirearm] = useState<FirearmFormState>(initialFirearmState)
   const [currentStep, setCurrentStep] = useState(1)
-  const progressAnim = useRef(new Animated.Value(0)).current
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof FirearmFormState, string>>>({})
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null)
+  const [selectedImageBase64, setSelectedImageBase64] = useState<string | null>(null)
+  const [showDatePicker, setShowDatePicker] = useState(false)
+  const [datePickerField, setDatePickerField] = useState<keyof FirearmFormState | null>(null)
+  const [currentDateValue, setCurrentDateValue] = useState(new Date())
 
   const animatedProgressWidth = progressAnim.interpolate({
     inputRange: [0, 3],
     outputRange: [0, PROGRESS_BAR_RENDER_WIDTH] // Use calculated numerical width
   })
 
-  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null)
-  const [selectedImageBase64, setSelectedImageBase64] = useState<string | null>(null)
-
   const steps = ['Primary Details', 'Acquisition & Value', 'Usage & Maintenance', 'Additional Info']
 
-  // State for DateTimePicker
-  const [showDatePicker, setShowDatePicker] = useState(false)
-  const [datePickerField, setDatePickerField] = useState<keyof FirearmFormState | null>(null)
-  const [currentDateValue, setCurrentDateValue] = useState(new Date())
-
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      marginBottom: 26
-    },
-    contentContainer: {
-      paddingBottom: 100
-    },
-    header: {
-      alignItems: 'center',
-      paddingVertical: 20
-    },
-    headerIconContainer: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      backgroundColor: colors.background,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: 16,
-      borderWidth: 2,
-      borderColor: colors.primary
-    },
-    title: {
-      fontSize: 26,
-      fontWeight: 'bold',
-      color: colors.text,
-      marginBottom: 8,
-      textAlign: 'center'
-    },
-    subtitle: {
-      fontSize: 14,
-      color: colors.textSecondary,
-      textAlign: 'center',
-      marginBottom: 8,
-      paddingHorizontal: 20
-    },
-    headerContainer: {
-      width: '100%',
-      borderRadius: 16,
-      overflow: 'hidden',
-      marginBottom: 20
-    },
-    headerGradient: {
-      width: '100%',
-      padding: 20
-    },
-    headerTitle: {
-      fontSize: 28,
-      fontWeight: 'bold',
-      color: colors.text,
-      textAlign: 'center',
-      marginBottom: 4
-    },
-    headerSubtitle: {
-      fontSize: 16,
-      color: colors.textSecondary,
-      textAlign: 'center',
-      marginBottom: 20
-    },
-    progressContainer: {
-      height: 12,
-      borderRadius: 8,
-      backgroundColor: 'rgba(255,255,255,0.1)',
-      marginVertical: 24,
-      overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: colors.backgroundLight,
-      position: 'relative',
-      padding: 1
-    },
-    progressBar: {
-      height: 10, // Explicit numerical height
-      backgroundColor: colors.primary,
-      borderRadius: 6
-    },
-    progressSteps: {
-      position: 'absolute',
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      width: '100%',
-      height: '100%',
-      paddingHorizontal: 0,
-      alignItems: 'center',
-      left: 0,
-      top: 0
-    },
-    progressStep: {
-      width: 10,
-      height: 10,
-      borderRadius: 5,
-      opacity: 0.9,
-      zIndex: 10
-    },
-    progressStepActive: {
-      backgroundColor: colors.background,
-      borderWidth: 1,
-      borderColor: colors.primary
-    },
-    progressStepInactive: {
-      backgroundColor: 'rgba(255,255,255,0.2)',
-      borderWidth: 1,
-      borderColor: colors.backgroundLight
-    },
-    stepsContainer: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      marginBottom: 20,
-      paddingHorizontal: 16
-    },
-    stepButton: {
-      paddingVertical: 8,
-      paddingHorizontal: 12,
-      borderRadius: 20,
-      borderWidth: 1,
-      borderColor: colors.primarySubtle
-    },
-    activeStepButton: {
-      backgroundColor: colors.primary,
-      borderColor: colors.primary
-    },
-    stepButtonText: {
-      fontSize: 14,
-      color: colors.textSecondary
-    },
-    activeStepButtonText: {
-      color: colors.background,
-      fontWeight: 'bold'
-    },
-    sectionWrapper: {
-      borderRadius: 12,
-      marginBottom: 16,
-      overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: colors.primarySubtle,
-      elevation: 2,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 3
-    },
-    sectionHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 16,
-      backgroundColor: colors.background,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.primarySubtle,
-      borderTopLeftRadius: 12,
-      borderTopRightRadius: 12
-    },
-    section: {
-      marginBottom: 20,
-      paddingHorizontal: 16
-    },
-    sectionTitleInfoContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 12
-    },
-    sectionTitle: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: colors.text,
-      marginLeft: 8
-    },
-    sectionContent: {
-      backgroundColor: colors.background,
-      borderRadius: 12,
-      padding: 16,
-      borderTopLeftRadius: 0,
-      borderTopRightRadius: 0
-    },
-    detailRowContainer: {
-      marginBottom: 12
-    },
-    detailRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingVertical: 6
-    },
-    detailRowLast: {
-      // Kept for reference in existing code
-    },
-    detailLabel: {
-      fontSize: 15,
-      color: colors.textSecondary,
-      flex: 1,
-      marginRight: 8,
-      fontWeight: '500'
-    },
-    inputContainer: {
-      flex: 2
-    },
-    inputRow: {
-      marginBottom: 15
-    },
-    label: {
-      fontSize: 14,
-      color: colors.textSecondary,
-      marginBottom: 8,
-      fontWeight: '500'
-    },
-    inputStyle: {
-      borderWidth: 1,
-      borderColor: colors.primarySubtle,
-      borderRadius: 8,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      fontSize: 15,
-      color: colors.text,
-      backgroundColor: colors.backgroundSubtle,
-      minHeight: 40,
-      fontWeight: '500'
-    },
-    selectInRowStyle: {},
-    dateText: {
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      fontSize: 15,
-      color: colors.text,
-      minHeight: 40,
-      height: 40,
-      textAlignVertical: 'center'
-    },
-    dateContainer: {
-      borderWidth: 1,
-      borderColor: colors.primarySubtle,
-      borderRadius: 8,
-      backgroundColor: colors.backgroundSubtle,
-      height: 40,
-      justifyContent: 'center'
-    },
-    placeholderText: {
-      color: colors.textTertiary
-    },
-    errorContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: `${colors.error}20`,
-      padding: 12,
-      borderRadius: 8,
-      marginVertical: 16
-    },
-    errorText: {
-      color: colors.error,
-      fontSize: 14,
-      marginLeft: 8,
-      flex: 1
-    },
-    errorTextBelow: {
-      fontSize: 12,
-      color: colors.error,
-      marginTop: 4,
-      textAlign: 'left'
-    },
-    stepButtonContainer: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      paddingTop: 10,
-      paddingBottom: Platform.OS === 'ios' ? 30 : 20,
-      gap: 14 // 14px gap between buttons
-    },
-    buttonHalfWidth: {
-      flex: 1 // Use flex instead of fixed width to ensure proper layout
-    },
-    buttonContainer: {
-      marginTop: 24,
-      marginBottom: 24,
-      paddingHorizontal: 16,
-      alignItems: 'center'
-    },
-    modalContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: 'rgba(0,0,0,0.7)'
-    },
-    datePickerContainer: {
-      backgroundColor: colors.backgroundCard,
-      borderRadius: 16,
-      padding: 20,
-      alignItems: 'center',
-      elevation: 5,
-      borderWidth: 1,
-      borderColor: colors.primary,
-      width: SCREEN_WIDTH * 0.9,
-      maxWidth: 380,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.25,
-      shadowRadius: 3.84
-    },
-    datePickerTitle: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: colors.primary,
-      marginBottom: 16,
-      textAlign: 'center'
-    },
-    datePickerContent: {
-      marginVertical: 8,
-      borderRadius: 8,
-      overflow: 'hidden',
-      width: '100%'
-    },
-    datePickerActions: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      marginTop: 16,
-      width: '100%'
-    },
-    imagePreview: {
-      width: '100%',
-      height: 200,
-      borderRadius: 8,
-      marginBottom: 10,
-      backgroundColor: colors.backgroundSubtle, // Changed from colors.backgroundOffset
-      resizeMode: 'contain'
-    },
-    datePickerWeb: {
-      // Add any specific wrapper styles for DatePicker on web if needed
-      // For example, to ensure it aligns with other inputs
-      width: '100%'
-    }
-  })
+  const styles = armoryStyles(colors, SCREEN_WIDTH)
 
   const handleInputChange = (field: keyof FirearmFormState, value: any) => {
     setNewFirearm((prev: FirearmFormState) => ({ ...prev, [field]: value }))
@@ -433,7 +103,6 @@ export const AddFirearmDrawerContent = () => {
     }))
   }
 
-  // Specific handler for date changes from the picker
   const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     console.log('AddFirearmDrawerContent: onDateChange event:', event.type, 'selectedDate:', selectedDate)
     setShowDatePicker(false) // Hide picker on any action
@@ -617,7 +286,6 @@ export const AddFirearmDrawerContent = () => {
     }
   }
 
-  // Helper function to determine if a field is the last in its section for styling
   const isLastRowInSection = (field: keyof FirearmFormState): boolean => {
     const primaryDetailsLastFields = ['caliber']
     const acquisitionLastFields = ['value']
@@ -637,13 +305,8 @@ export const AddFirearmDrawerContent = () => {
       return value
     }
     if (typeof value === 'string') {
-      // Attempt to parse common date string formats, including YYYY-MM-DD
       const d = new Date(value)
-      if (!isNaN(d.getTime())) {
-        // If the string was just a year like "2023", new Date("2023") might interpret it as Jan 1st, 2023 UTC.
-        // For YYYY-MM-DD, it's generally fine. For robustness, ensure the input string matches expected format if needed.
-        return d
-      }
+      if (!isNaN(d.getTime())) return d
     }
     return null
   }
@@ -772,7 +435,6 @@ export const AddFirearmDrawerContent = () => {
     )
   }
 
-  // Image Picker Logic
   const requestMediaLibraryPermissions = async () => {
     if (Platform.OS !== 'web') {
       const { status, canAskAgain } = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -824,7 +486,6 @@ export const AddFirearmDrawerContent = () => {
     }
   }
 
-  // Constants for Select components
   const FIREARM_TYPES = [
     { label: 'Pistol', value: 'Pistol' },
     { label: 'Revolver', value: 'Revolver' },
@@ -834,7 +495,6 @@ export const AddFirearmDrawerContent = () => {
     { label: 'Other', value: 'Other' }
   ]
 
-  // Animate progress bar when step changes
   useEffect(() => {
     // Calculate the actual step position - steps are 1-indexed, but we need fractional progress
     // For example: Step 1 of 4 should be 25% progress (actually slightly less to ensure dot visibility)

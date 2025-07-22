@@ -17,8 +17,8 @@ import { useAmmoStore } from '@/store/ammoStore';
 
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useFocusEffect } from '@react-navigation/native'
-import { AmmoDetailsDrawerContent } from '@/components/drawers/AmmoDetailsDrawerContent';
-import { AddAmmoDrawerContent } from '@/components/drawers/AddAmmoDrawerContent';
+import { AmmoDetailsDrawerContent } from '@/components/drawers/armory/details/AmmoDetailsDrawerContent';
+import { AddAmmoDrawerContent } from '@/components/drawers/armory/add/AddAmmoDrawerContent';
 import AmmoCard from './AmmoCard';
 
 // Responsive layout constants

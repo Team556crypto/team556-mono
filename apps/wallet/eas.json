@@ -4,6 +4,7 @@
   },
   "build": {
     "development": {
+      "channel": "development",
       "developmentClient": true,
       "distribution": "internal",
       "env": {},
@@ -15,6 +16,7 @@
       }
     },
     "preview": {
+      "channel": "preview",
       "distribution": "internal",
       "android": {
         "buildType": "apk"
@@ -30,6 +32,7 @@
       }
     },
     "production": {
+      "channel": "production",
       "distribution": "store",
       "env": {
         "EXPO_PUBLIC_GLOBAL__MAIN_API_URL": "https://team556-main-api.fly.dev/api",

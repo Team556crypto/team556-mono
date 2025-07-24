@@ -1,6 +1,6 @@
 import React from 'react'
 import { SafeAreaView, ScrollView, StyleSheet, View, type ViewStyle, Platform } from 'react-native'
-import { Text } from '@repo/ui' // Assuming Text comes from shared UI
+import { Text } from '@team556/ui' // Assuming Text comes from shared UI
 import { Colors } from '@/constants/Colors'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'android' ? 6 : 16,
-    marginBottom: 20
+    // marginBottom: 20
   },
   containerTablet: {
     marginLeft: 240, // Standard sidebar width adjustment for tablet

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Platform, Dimensions } from 'react-native';
-import { Text } from '@repo/ui';
+import { Text } from '@team556/ui';
 import { Colors } from '@/constants/Colors';
 
 const StatsSection: React.FC = () => {

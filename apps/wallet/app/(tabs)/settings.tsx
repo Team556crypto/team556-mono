@@ -1,7 +1,7 @@
 import React from 'react'
 import { StyleSheet, View, TouchableOpacity, Pressable } from 'react-native'
 import { useRouter } from 'expo-router'
-import { Button, Text } from '@repo/ui'
+import { Button, Text } from '@team556/ui'
 import { Ionicons } from '@expo/vector-icons'
 import { formatWalletAddress } from '@/utils/formatters'
 import { useWalletClipboard } from '@/hooks/useWalletClipboard'

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Platform, Image } from 'react-native';
-import { Text } from '@repo/ui';
+import { Text } from '@team556/ui';
 import { Colors } from '@/constants/Colors';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import LogoSvg from '@/assets/images/logo.svg';

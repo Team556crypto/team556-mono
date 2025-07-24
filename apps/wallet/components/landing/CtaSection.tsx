@@ -1,7 +1,7 @@
 import React, { useRef } from 'react'
 import { View, StyleSheet, Platform, Animated, Pressable } from 'react-native'
 import { useRouter } from 'expo-router'
-import { Button, Text } from '@repo/ui'
+import { Text } from '@team556/ui'
 import { Colors } from '@/constants/Colors'
 import { Feather, Ionicons } from '@expo/vector-icons'
 import { useBreakpoint } from '../../hooks/useBreakpoint'

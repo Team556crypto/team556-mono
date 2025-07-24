@@ -1,6 +1,6 @@
 import React from 'react'
 import { View, StyleSheet, Pressable, Platform } from 'react-native'
-import { Text } from '@repo/ui'
+import { Text } from '@team556/ui'
 import { Ionicons, Feather } from '@expo/vector-icons'
 import { Colors } from '@/constants/Colors'
 import { useBreakpoint } from '../../hooks/useBreakpoint'

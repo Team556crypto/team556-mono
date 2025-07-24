@@ -1,5 +1,5 @@
 import React from 'react'
-import { StyleSheet, ScrollView, Text, View } from 'react-native'
+import { StyleSheet, ScrollView, Text } from 'react-native'
 import { useRouter } from 'expo-router'
 import Head from 'expo-router/head'
 import { Colors } from '@/constants/Colors'

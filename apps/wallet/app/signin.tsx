@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { View, StyleSheet, SafeAreaView, Platform, TouchableOpacity, ScrollView, Switch, Animated } from 'react-native'
-import { Button, Input, Text } from '@team556/ui'
+import { Input, Text } from '@team556/ui'
 import { useRouter, Link } from 'expo-router'
 import Head from 'expo-router/head'
 import { genericStyles } from '@/constants/GenericStyles'

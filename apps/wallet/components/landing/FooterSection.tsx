@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { View, StyleSheet, Platform, Pressable, Image, Linking, TouchableOpacity } from 'react-native'
-import { Text } from '@repo/ui'
+import { Text } from '@team556/ui'
 import { Colors } from '@/constants/Colors'
 import { Feather, FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useTheme } from '@react-navigation/native'

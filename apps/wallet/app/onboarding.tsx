@@ -6,8 +6,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
-  ScrollView
+  Pressable
 } from 'react-native'
 import { Text, StepForm, Input } from '@team556/ui'
 import { createWallet, verifyEmail, resendVerificationEmail } from '@/services/api'
@@ -19,8 +18,6 @@ import { useAuthStore } from '@/store/authStore'
 import { Colors } from '@/constants/Colors'
 import { genericStyles } from '@/constants/GenericStyles'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
-
-const MIN_PASSWORD_LENGTH = 8
 
 export default function OnboardingScreen() {
   const { isTabletOrLarger } = useBreakpoint()

@@ -1,6 +1,5 @@
 import React from 'react'
-import { View, TouchableOpacity, StyleSheet, Platform, Animated } from 'react-native'
-import { Text } from '@team556/ui'
+import { View } from 'react-native'
 import { Colors } from '@/constants/Colors'
 import AssetDetailsHeader from '../../assets/AssetDetailsHeader'
 import AssetInfoDisplay from '../../assets/AssetInfoDisplay'

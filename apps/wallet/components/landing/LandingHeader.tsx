@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { View, StyleSheet, Pressable, ScrollView, Platform } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Feather } from '@expo/vector-icons' // Import Feather
-import { Button, Text } from '@repo/ui'
+import { Button, Text } from '@team556/ui'
 import { Colors } from '@/constants/Colors'
 import LogoSvg from '@/assets/images/logo.svg'
 import { useBreakpoint } from '@/hooks/useBreakpoint'

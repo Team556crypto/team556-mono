@@ -1,22 +1,20 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect } from 'react'
 import {
   View,
   ActivityIndicator,
-  StyleSheet,
   TouchableOpacity,
   FlatList,
   useWindowDimensions,
   Alert
 } from 'react-native'
 import { useAuthStore } from '@/store/authStore'
-import { Text, Button, EmptyState, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui'
+import { Text, Button, EmptyState } from '@team556/ui'
 import { useTheme } from '@team556/ui'
 import { Ammo } from '@/services/api';
 import { useDrawerStore } from '@/store/drawerStore';
 import { useAmmoStore } from '@/store/ammoStore';
 
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
-import { useFocusEffect } from '@react-navigation/native'
 import { AmmoDetailsDrawerContent } from '@/components/drawers/armory/details/AmmoDetailsDrawerContent';
 import { AddAmmoDrawerContent } from '@/components/drawers/armory/add/AddAmmoDrawerContent';
 import AmmoCard from '../cards/AmmoCard';

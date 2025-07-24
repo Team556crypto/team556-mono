@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Button, Input, Text } from '@repo/ui';
+import { Button, Input, Text } from '@team556/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
 import { checkPresaleCode, redeemPresaleCode } from '@/services/api';

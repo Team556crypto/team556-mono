@@ -1,6 +1,6 @@
 import React from 'react'
 import { View, StyleSheet } from 'react-native'
-import { Button, Text } from '@repo/ui'
+import { Button, Text } from '@team556/ui'
 
 interface ComingSoonDrawerContentProps {
   onClose: () => void

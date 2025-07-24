@@ -1,22 +1,19 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect } from 'react'
 import {
   View,
   ActivityIndicator,
-  StyleSheet,
   TouchableOpacity,
-  FlatList,
   useWindowDimensions,
   Alert
 } from 'react-native'
 import { useAuthStore } from '@/store/authStore'
-import { Text, Button, EmptyState, DEFAULT_CARD_WIDTH, DEFAULT_CARD_HEIGHT } from '@team556/ui'
+import { Text, Button, EmptyState } from '@team556/ui'
 import { useTheme } from '@team556/ui'
 import { Document } from '@/services/api';
 import { useDrawerStore } from '@/store/drawerStore';
 import { useDocumentStore } from '@/store/documentStore';
 
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
-import { useFocusEffect } from '@react-navigation/native'
+import { Ionicons } from '@expo/vector-icons'
 // import { DocumentDetailsDrawerContent } from '@/components/drawers/DocumentDetailsDrawerContent';
 // import { AddDocumentDrawerContent } from '@/components/drawers/AddDocumentDrawerContent';
 import DocumentCard from '../cards/DocumentCard';

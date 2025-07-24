@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Platform, Dimensions, Pressable } from 'react-native';
-import { Text } from '@repo/ui';
+import { Text } from '@team556/ui';
 import { Feather } from '@expo/vector-icons'; // Import Feather
 import { Colors } from '@/constants/Colors';
 

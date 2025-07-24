@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { View, StyleSheet, Dimensions, Animated, Easing, TouchableOpacity, Platform, Linking } from 'react-native'
-import { Button, Text } from '@repo/ui'
+import { Button, Text } from '@team556/ui'
 import { Colors } from '@/constants/Colors'
 import { useRouter } from 'expo-router'
 import { useBreakpoint } from '@/hooks/useBreakpoint' // Import useBreakpoint

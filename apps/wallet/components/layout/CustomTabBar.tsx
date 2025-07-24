@@ -12,7 +12,7 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
   const { isTabletOrLarger } = useBreakpoint()
 
   const tabBarHeight = 60
-  const bottomInset = Platform.OS === 'ios' ? (insets.bottom > 8 ? insets.bottom - 4 : insets.bottom) : insets.bottom
+  const bottomInset = Platform.OS === 'ios' ? (insets.bottom > 8 ? insets.bottom : insets.bottom) : insets.bottom
 
   // Add horizontal padding on web platform to prevent edge touch issues
   const horizontalPadding = Platform.OS === 'web' ? 30 : 0

@@ -7,6 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
+    "owner": "120356aa",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
@@ -23,6 +24,12 @@
       "bundler": "metro",
       "output": "static",
       "favicon": "./assets/images/favicon.png"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/a1be1306-5e66-4470-8c17-3b8e6faedb59"
+    },
+    "runtimeVersion": {
+      "policy": "sdkVersion"
     },
     "plugins": [
       "expo-router",

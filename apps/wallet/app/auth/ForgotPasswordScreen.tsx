@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { View, StyleSheet, Alert, TouchableOpacity, Platform, SafeAreaView } from 'react-native'
 import { useRouter } from 'expo-router'
-import { Text, Input, Button } from '@repo/ui'
+import { Text, Input, Button } from '@team556/ui'
 import { requestPasswordReset } from '../../services/api/auth'
 import { Colors } from '../../constants/Colors'
 import { Ionicons } from '@expo/vector-icons'

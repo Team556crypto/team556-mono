@@ -35,6 +35,9 @@ yarn-error.log*
 .DS_Store
 *.pem
 
+# Expo
+.expo/
+
 # Token Core
 apps/token-core/mainnet-test-wallets
 apps/token-core/wallets

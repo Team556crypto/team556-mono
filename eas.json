@@ -16,6 +16,14 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "support@team556.com",
+        "ascAppId": "",
+        "appleTeamId": "CD2RXM358N",
+        "companyName": "OpenWorth Technologies, LLC",
+        "appName": "Team556 Digital Armory"
+      }
+    }
   }
 }

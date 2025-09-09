@@ -2,7 +2,7 @@
   "expo": {
     "name": "Team556 Digital Armory",
     "slug": "team556-digital-armory",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
@@ -13,7 +13,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.team.digitalarmory",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Team556 Digital Armory needs camera access to scan QR codes for secure cryptocurrency payments. For example, when you make a payment at a participating firearm retailer, you'll scan their payment QR code to complete the transaction.",
+        "NSPhotoLibraryUsageDescription": "Team556 Digital Armory needs photo library access to let you add images to your digital firearm collection records. For example, you can attach photos of your firearms, ammunition, and gear to keep visual records of your inventory for insurance and management purposes.",
+        "NSPhotoLibraryAddUsageDescription": "Team556 Digital Armory needs permission to save generated QR codes and payment receipts to your photo library. For example, when you generate a payment QR code or receive a transaction receipt, you can save it to your photos for your records."
       }
     },
     "android": {

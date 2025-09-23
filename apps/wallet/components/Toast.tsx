@@ -12,6 +12,11 @@ const Toast = () => {
   const insets = useSafeAreaInsets()
 
   useEffect(() => {
+    // Suppress error-type toasts entirely
+    if (isVisible && type === 'error') {
+      hideToast()
+      return
+    }
     if (isVisible) {
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -25,7 +30,7 @@ const Toast = () => {
         useNativeDriver: false
       }).start()
     }
-  }, [isVisible, fadeAnim])
+  }, [isVisible, type, hideToast, fadeAnim])
 
   const styles = StyleSheet.create({
     container: {
@@ -71,6 +76,11 @@ const Toast = () => {
     }
   })
 
+  // Do not render error toasts at all
+  if (type === 'error') {
+    return null
+  }
+
   if (!message && fadeAnim === new Animated.Value(0)) {
     return null
   }
@@ -79,8 +89,6 @@ const Toast = () => {
     switch (type) {
       case 'success':
         return Colors.success
-      case 'error':
-        return Colors.error
       case 'info':
       default:
         return Colors.tint
@@ -91,8 +99,6 @@ const Toast = () => {
     switch (type) {
       case 'success':
         return 'checkmark-circle-outline'
-      case 'error':
-        return 'alert-circle-outline'
       case 'info':
       default:
         return 'information-circle-outline'

@@ -7,7 +7,7 @@ import { StatusBar } from 'expo-status-bar'
 import * as Updates from 'expo-updates'
 import 'react-native-reanimated'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
-import { StyleSheet, View, ActivityIndicator, Platform, Text } from 'react-native'
+import { StyleSheet, View, ActivityIndicator, Platform, Text, LogBox } from 'react-native'
 import { setAppTheme } from '@team556/ui'
 import { Colors } from '../constants/Colors'
 import { useAuthStore } from '@/store/authStore'
@@ -17,6 +17,10 @@ import { useDrawerStore } from '@/store/drawerStore'
 
 // Configure shared UI components to use the app's colors
 setAppTheme(Colors)
+
+// Suppress React Native LogBox overlays (e.g., bottom error banners in dev)
+// We still keep console.error logs in the terminal/Metro, but prevent UI popups.
+LogBox.ignoreAllLogs(true)
 
 // --- BEGIN: Web Overscroll Prevention --- 
 const preventWebOverscroll = () => {

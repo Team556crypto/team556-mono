@@ -45,7 +45,18 @@ config.resolver = {
 };
 
 // 1. Watch all files within the monorepo
-config.watchFolders = [workspaceRoot];
+// Use Expo's default watchFolders which includes all workspace packages
+config.watchFolders = [
+  path.resolve(workspaceRoot, 'node_modules'),
+  path.resolve(workspaceRoot, 'apps/wp-plugin'),
+  path.resolve(workspaceRoot, 'apps/wallet'),
+  path.resolve(workspaceRoot, 'apps/token-core'),
+  path.resolve(workspaceRoot, 'apps/solana-api'),
+  path.resolve(workspaceRoot, 'apps/pos'),
+  path.resolve(workspaceRoot, 'packages/ui'),
+  path.resolve(workspaceRoot, 'packages/typescript-config'),
+  path.resolve(workspaceRoot, 'packages/eslint-config'),
+];
 
 // 2. Let Metro know where to resolve packages
 config.resolver.nodeModulesPaths = [
@@ -53,7 +64,7 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, 'node_modules'),
 ];
 
-// 3. Force Metro to resolve dependencies in workspace root
-config.resolver.disableHierarchicalLookup = true;
+// 3. Use Expo's default hierarchical lookup setting
+config.resolver.disableHierarchicalLookup = false;
 
 module.exports = config;

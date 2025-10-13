@@ -40,6 +40,8 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	ammos := api.Group("/ammos", middleware.AuthMiddleware(cfg.JWTSecret))
 	gear := api.Group("/gear", middleware.AuthMiddleware(cfg.JWTSecret))
 	presale := api.Group("/presale", middleware.AuthMiddleware(cfg.JWTSecret))
+	distributorsGroup := api.Group("/distributors", middleware.AuthMiddleware(cfg.JWTSecret))
+	distConnGroup := api.Group("/distributor-connections", middleware.AuthMiddleware(cfg.JWTSecret))
 	v1 := api.Group("/v1")
 
 	// Public, Rate-Limited Routes
@@ -67,6 +69,15 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	auth.Post("/verify-email", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.VerifyEmail)
 	auth.Post("/resend-verification", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.ResendVerificationEmail)
 	auth.Post("/delete-account", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.DeleteAccount)
+
+	// Distributor Routes
+	distributorHandler := handlers.NewDistributorHandler(db, cfg)
+	distributorsGroup.Get("/", distributorHandler.ListSupported)
+	distConnGroup.Get("/", distributorHandler.ListConnections)
+	distConnGroup.Post("/", distributorHandler.UpsertConnection)
+	distConnGroup.Post("/:code/validate", distributorHandler.ValidateConnection)
+	distConnGroup.Get("/:code/settings", distributorHandler.GetSettings)
+	distConnGroup.Patch("/:code/settings", distributorHandler.UpdateSettings)
 	// Password Reset Routes
 	auth.Post("/request-password-reset", authHandler.RequestPasswordReset)
 	auth.Post("/reset-password", authHandler.ResetPassword)
@@ -83,6 +94,14 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	wallet.Post("/transactions", handlers.GetTransactionsHandler(db, cfg))
 	wallet.Post("/webhook", handlers.SendWebhookHandler(db, cfg))
 	wallet.Post("/recovery-phrase", handlers.GetRecoveryPhraseHandler(db))
+
+	// POS Wallet Routes (for configuring receiving addresses)
+	posWallet := api.Group("/pos-wallet", middleware.AuthMiddleware(cfg.JWTSecret))
+	posWallet.Get("/addresses", handlers.GetPOSWalletAddressesHandler(db))
+	posWallet.Patch("/primary", handlers.UpdatePrimaryWalletAddressHandler(db))
+	posWallet.Patch("/secondary", handlers.UpdateSecondaryWalletAddressHandler(db))
+	posWallet.Post("/validate", handlers.ValidateWalletAddressHandler(db))
+	posWallet.Get("/health", handlers.GetWalletAddressHealthHandler(db))
 
 	// Swap Routes
 	swap.Post("/quote", swapHandler.HandleGetSwapQuote)

@@ -23,5 +23,9 @@ type User struct {
 	EmailVerificationCode      *string    `gorm:"index" json:"-"`                      // Nullable, index for lookup
 	EmailVerificationExpiresAt *time.Time `json:"-"`
 
+	// POS Wallet Addresses for receiving payments
+	PrimaryWalletAddress   string  `json:"primary_wallet_address" gorm:"size:44;default:''"`
+	SecondaryWalletAddress *string `json:"secondary_wallet_address,omitempty" gorm:"size:44"`
+
 	Wallets []Wallet `json:"wallets,omitempty"` // One-to-many relationship
 }

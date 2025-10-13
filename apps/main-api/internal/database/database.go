@@ -40,7 +40,7 @@ func InitDB(databaseURL string) (*gorm.DB, error) {
 
 	log.Println("Running database migrations...")
 	// Perform migrations
-	err = db.AutoMigrate(
+err = db.AutoMigrate(
 		&models.User{},
 		&models.Wallet{},
 		&models.PasswordResetCode{},
@@ -50,6 +50,7 @@ func InitDB(databaseURL string) (*gorm.DB, error) {
 		&models.Gear{},
 		&models.Document{},
 		&models.NFA{},
+		&models.DistributorConnection{},
 	)
 	if err != nil {
 		// Log migration errors but don't necessarily make it fatal

@@ -195,6 +195,34 @@ export interface ExecuteSwapResponseWithStatus {
   message?: string
 }
 
+// --- POS WALLET (addresses used for receiving Team556) ---
+export interface POSWalletAddresses {
+  primary_address: string
+  secondary_address?: string | null
+  has_primary: boolean
+  has_secondary: boolean
+}
+
+export interface UpdateWalletAddressResponse {
+  message: string
+  address: string
+  updated: boolean
+}
+
+export interface ValidateAddressResponse {
+  is_valid: boolean
+  message: string
+}
+
+export interface POSWalletHealthResponse {
+  has_primary: boolean
+  has_secondary: boolean
+  primary_valid: boolean
+  secondary_valid: boolean
+  ready_for_payments: boolean
+  recommendation?: string
+}
+
 // Add other shared types here as needed
 
 // --- TRANSACTION HISTORY ---

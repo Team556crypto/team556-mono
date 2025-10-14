@@ -36,7 +36,11 @@ export type {
   ExecuteSwapResponseWithStatus,
   Transaction,
   GetTransactionsRequest,
-  GetTransactionsResponse
+  GetTransactionsResponse,
+  POSWalletAddresses,
+  UpdateWalletAddressResponse,
+  ValidateAddressResponse,
+  POSWalletHealthResponse
 } from './types';
 
 // Export all functions from auth.ts
@@ -47,6 +51,15 @@ export * from './user';
 
 // Export all functions from swap.ts
 export * from './swap';
+
+// Export all functions from posWallet.ts
+export * from './posWallet';
+
+// Export notifications API
+export * from './notifications';
+
+// Export security API
+export * from './security';
 
 // Export the ApiClientError and apiClient for direct use if needed
 export { apiClient, ApiClientError } from './client';

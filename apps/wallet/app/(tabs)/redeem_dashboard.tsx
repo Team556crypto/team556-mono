@@ -274,8 +274,8 @@ export default function RedeemDashboard() {
       title='Presale Dashboard'
       headerRightElement={headerElement}
       headerIcon={<Ionicons name='ticket' size={24} color={Colors.tint} />}
+      contentContainerStyle={styles.contentContainer}
     >
-      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
         {/* Header section explaining vesting */}
         <View style={styles.headerSection}>
           <Text style={styles.headerDescription}>
@@ -347,7 +347,6 @@ export default function RedeemDashboard() {
             <Text style={styles.notEligibleText}>You are not currently eligible for any token vesting program.</Text>
           </View>
         )}
-      </ScrollView>
     </ScreenLayout>
   )
 }

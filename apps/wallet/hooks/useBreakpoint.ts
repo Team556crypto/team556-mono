@@ -3,7 +3,9 @@ import { useWindowDimensions } from 'react-native'
 const TABLET_BREAKPOINT = 768 // Or your desired breakpoint
 
 export const useBreakpoint = () => {
-  const { width } = useWindowDimensions()
+  const { width, height } = useWindowDimensions()
   const isTabletOrLarger = width >= TABLET_BREAKPOINT
-  return { isTabletOrLarger, width } // Return width too, might be useful
+  const isLandscape = width > height
+  const isTabletLandscape = isTabletOrLarger && isLandscape
+  return { isTabletOrLarger, isTabletLandscape, isLandscape, width, height }
 }

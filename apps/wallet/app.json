@@ -38,7 +38,12 @@
       "policy": "sdkVersion"
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          "origin": "https://wallet.team556.com"
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -55,7 +60,7 @@
     },
     "extra": {
       "router": {
-        "origin": false
+        "origin": "https://wallet.team556.com"
       },
       "eas": {
         "projectId": "a1be1306-5e66-4470-8c17-3b8e6faedb59"

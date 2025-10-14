@@ -46,7 +46,7 @@ export const ScreenLayout: React.FC<ScreenLayoutProps> = ({
     <SafeAreaView style={styles.safeArea}>
       {scrollEnabled ? (
         <ScrollView
-          style={[styles.container, isTabletOrLarger && styles.containerTablet]}
+          style={styles.container}
           contentContainerStyle={contentContainerStyle}
           showsVerticalScrollIndicator={false}
         >
@@ -54,7 +54,7 @@ export const ScreenLayout: React.FC<ScreenLayoutProps> = ({
           {children}
         </ScrollView>
       ) : (
-        <View style={[styles.container, isTabletOrLarger && styles.containerTablet]}>
+        <View style={styles.container}>
           {Header}
           <View style={{ flex: 1 }}>{children}</View>
         </View>
@@ -66,18 +66,12 @@ export const ScreenLayout: React.FC<ScreenLayoutProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.backgroundDarker // Use the darkest background from index.tsx
+    backgroundColor: Colors.backgroundDarker
   },
   container: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'android' ? 6 : 16,
-    // marginBottom: 20
-  },
-  containerTablet: {
-    marginLeft: 240, // Standard sidebar width adjustment for tablet
-    paddingTop: 32,
-    paddingRight: 32 // Different padding for tablet,
+    paddingTop: Platform.OS === 'android' ? 6 : 16
   },
   headerRow: {
     flexDirection: 'row',
@@ -93,4 +87,4 @@ const styles = StyleSheet.create({
     marginRight: 12,
     justifyContent: 'center'
   }
-})
+});

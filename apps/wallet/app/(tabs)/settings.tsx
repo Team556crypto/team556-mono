@@ -275,8 +275,7 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    paddingBottom: 50
+    paddingBottom: 20
   },
   card: {
     backgroundColor: Colors.background,

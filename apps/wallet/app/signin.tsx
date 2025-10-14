@@ -18,7 +18,7 @@ const SignInScreen = () => {
   const [rememberMe, setRememberMe] = useState(false)
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const router = useRouter()
-  const { isTabletOrLarger } = useBreakpoint()
+  const { isTabletOrLarger, isTabletLandscape } = useBreakpoint()
   const { login, isLoading, error: authError, setError: setAuthError } = useAuthStore()
 
   // Animation references for left side
@@ -240,7 +240,7 @@ const SignInScreen = () => {
         <title>Sign In | Team556 Wallet</title>
       </Head>
       <View style={styles.formContainer}>
-        {!isTabletOrLarger && (
+        {!isTabletLandscape && (
           <View style={styles.brandContainer}>
             <LogoIconSvg width={120} height={120} />
               <Text style={styles.welcomeTitle}>Welcome to Team556</Text>
@@ -248,7 +248,7 @@ const SignInScreen = () => {
           </View>
         )}
         <View style={styles.formCard}>
-          {isTabletOrLarger && (
+          {isTabletLandscape && (
             <> 
               <Text preset='h2' style={styles.formTitle}>
             Welcome Back
@@ -333,20 +333,20 @@ const SignInScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* Show back button ONLY on native platforms AND when NOT in two-column layout */}
-      {Platform.OS !== 'web' && !isTabletOrLarger && (
+      {Platform.OS !== 'web' && !isTabletLandscape && (
         <TouchableOpacity onPress={() => router.back()} style={styles.backButtonMobile}>
           <Ionicons name='arrow-back' size={24} color={Colors.text} />
         </TouchableOpacity>
       )}
       <View style={styles.outerContainer}>
-        {/* Use two-column layout if the screen is large enough (tablet or desktop/web) */}
-        {isTabletOrLarger ? (
+        {/* Use two-column layout if tablet is in landscape orientation (or desktop/web) */}
+        {isTabletLandscape ? (
           <View style={styles.desktopContainer}>
             {renderInfoSide()}
             {renderFormSide()}
           </View>
         ) : (
-          /* Otherwise (smaller screen, likely mobile), show only the form */
+          /* Otherwise (smaller screen or portrait tablet), show only the form */
           renderFormSide()
         )}
       </View>

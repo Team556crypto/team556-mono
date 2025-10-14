@@ -208,15 +208,11 @@ export default function HomeScreen() {
       title='Wallet'
       headerIcon={<Ionicons name='wallet' size={24} color={Colors.primary} />}
       headerRightElement={renderHeaderRight()}
+      contentContainerStyle={{
+        ...styles.scrollContentContainer,
+        paddingBottom: insets.bottom > 0 ? insets.bottom : 20
+      }}
     >
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={[
-          styles.scrollContentContainer,
-          { paddingBottom: insets.bottom > 0 ? insets.bottom : 20 }
-        ]}
-        nestedScrollEnabled={true}
-      >
         {/* --- BEGIN: New Portfolio Section --- */}
         <View style={styles.portfolioSectionContainer}>
           <View style={styles.userInfoContainer}>
@@ -276,7 +272,6 @@ export default function HomeScreen() {
           {/* Recent Activity Section */}
           <RecentTransactionsCard onSeeAllPress={handleSeeAllTransactions} />
         </View>
-      </ScrollView>
     </ScreenLayout>
   )
 }

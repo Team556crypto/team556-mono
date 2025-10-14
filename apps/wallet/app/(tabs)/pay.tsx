@@ -422,15 +422,14 @@ export default function PayScreen() {
 
   // This is the main QR scanner / manual input screen
   return (
-    <ScreenLayout title='Pay with TEAM' headerIcon={<Ionicons name='card' size={24} color={Colors.primary} />}>
+    <ScreenLayout 
+      title='Pay with TEAM' 
+      headerIcon={<Ionicons name='card' size={24} color={Colors.primary} />}
+      contentContainerStyle={styles.contentContainer}
+    >
       <Head>
         <title>Pay with TEAM | Team556 Wallet</title>
       </Head>
-      <ScrollView 
-        style={styles.scrollContainer}
-        contentContainerStyle={styles.contentContainer}
-        keyboardShouldPersistTaps='handled' 
-      >
         <Text style={styles.welcomeTitle}>Welcome to Team556 Pay</Text>
         <Text style={styles.welcomeTagline}>
             Use Team556 to pay at your favorite firearm business that accepts Team556.
@@ -463,8 +462,6 @@ export default function PayScreen() {
             <Button title="Submit" onPress={handleSubmitManualUrl} color={Colors.primary}/>
           </View>
         </View>
-        
-      </ScrollView>
     </ScreenLayout>
   );
 }

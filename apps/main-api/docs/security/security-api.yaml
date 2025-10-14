@@ -1,0 +1,360 @@
+openapi: 3.1.0
+info:
+  title: Team556 Security API
+  version: 0.1.0
+  description: >-
+    Contract for the Security tab (account protection, MFA TOTP, sessions, and password
+    management). This spec is backend-agnostic and assumes authenticated user context.
+servers:
+  - url: https://api.example.com
+    description: Production
+  - url: http://localhost:{{port}}
+    description: Local dev
+security:
+  - bearerAuth: []
+  - cookieAuth: []
+
+paths:
+  /me/security:
+    get:
+      summary: Get security overview for the current user
+      operationId: getSecurityOverview
+      responses:
+        '200':
+          description: Security summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecuritySummary'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  /me/password:
+    post:
+      summary: Change the user password
+      operationId: changePassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ok'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  /me/mfa/totp/setup:
+    post:
+      summary: Begin TOTP setup and return provisioning information
+      operationId: beginTotpSetup
+      responses:
+        '200':
+          description: TOTP provisioning details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TotpSetupResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  /me/mfa/totp/enable:
+    post:
+      summary: Verify code and enable TOTP MFA
+      operationId: enableTotp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+                  description: 6-digit TOTP code
+                  pattern: '^[0-9]{6}$'
+      responses:
+        '200':
+          description: MFA enabled, returns recovery codes (show once)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mfaEnabled:
+                    type: boolean
+                    example: true
+                  recoveryCodes:
+                    type: array
+                    items: { type: string }
+                    description: Display once; client should prompt to store securely
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  /me/mfa/verify:
+    post:
+      summary: Verify a TOTP or recovery code for sensitive actions
+      operationId: verifyMfa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: { type: string, description: 'TOTP (6 digits) or recovery code' }
+                purpose: { type: string, description: 'Context for verification (e.g., password_change, disable_mfa)' }
+              required: [code]
+      responses:
+        '200':
+          description: Verification ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ok' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  /me/mfa:
+    delete:
+      summary: Disable MFA (requires valid TOTP or recovery code)
+      operationId: disableMfa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: { type: string, description: 'TOTP or recovery code' }
+              required: [code]
+      responses:
+        '200':
+          description: MFA disabled
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ok' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  /me/mfa/recovery/rotate:
+    post:
+      summary: Rotate recovery codes (requires recent MFA verification)
+      operationId: rotateRecoveryCodes
+      responses:
+        '200':
+          description: New recovery codes (show once)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recoveryCodes:
+                    type: array
+                    items: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  /me/sessions:
+    get:
+      summary: List sessions for the current user
+      operationId: listSessions
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - in: query
+          name: cursor
+          schema: { type: string, nullable: true }
+      responses:
+        '200':
+          description: Sessions page
+          headers:
+            X-Next-Cursor:
+              description: Cursor for the next page if present
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Session' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  /me/sessions/{id}:
+    delete:
+      summary: Revoke a session by ID (sign out of that device)
+      operationId: revokeSession
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Session revoked
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ok' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Not Found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unprocessable:
+      description: Validation failed
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          description: Seconds until the next allowed request
+          schema: { type: integer }
+        X-RateLimit-Limit:
+          schema: { type: integer }
+        X-RateLimit-Remaining:
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    Ok:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: true
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string, example: 'validation_error' }
+            message: { type: string }
+            details: { type: object, additionalProperties: true }
+      required: [error]
+
+    SecuritySummary:
+      type: object
+      properties:
+        accountProtectionScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 72
+        status:
+          type: string
+          enum: [good, fair, at_risk]
+          example: good
+        lastPasswordChangeAt:
+          type: string
+          format: date-time
+        recommendations:
+          type: array
+          items: { type: string }
+        passwordStrength:
+          type: object
+          properties:
+            score: { type: integer, minimum: 0, maximum: 4, example: 3 }
+            hints:
+              type: array
+              items: { type: string }
+        mfaEnabled:
+          type: boolean
+          example: false
+        recentActivity:
+          type: array
+          description: Optional inline preview, not required if using /me/sessions
+          items: { $ref: '#/components/schemas/Session' }
+
+    ChangePasswordRequest:
+      type: object
+      properties:
+        currentPassword: { type: string }
+        newPassword: { type: string }
+        totpCode:
+          type: string
+          description: Required when MFA is enabled
+      required: [currentPassword, newPassword]
+
+    TotpSetupResponse:
+      type: object
+      properties:
+        secret:
+          type: string
+          example: JBSWY3DPEHPK3PXP
+        otpauthUrl:
+          type: string
+          description: otpauth:// URL for provisioning
+        qrSvg:
+          type: string
+          description: Inline SVG to render QR (optional)
+
+    Session:
+      type: object
+      properties:
+        id: { type: string }
+        createdAt: { type: string, format: date-time }
+        lastSeenAt: { type: string, format: date-time, nullable: true }
+        ip: { type: string, example: '192.168.1.10' }
+        userAgent: { type: string }
+        location: { type: string, example: 'San Francisco, CA' }
+        isCurrent: { type: boolean }
+        status:
+          type: string
+          enum: [successful_login, failed_login]
+          example: successful_login
+      required: [id, createdAt, ip, userAgent, isCurrent, status]

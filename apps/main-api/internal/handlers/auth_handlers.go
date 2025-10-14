@@ -17,6 +17,7 @@ import (
 
 	"github.com/team556-mono/server/internal/email"
 	"github.com/team556-mono/server/internal/models"
+	"github.com/team556-mono/server/internal/utils"
 )
 
 // AuthHandler holds dependencies for authentication handlers
@@ -42,8 +43,9 @@ func NewAuthHandler(db *gorm.DB, jwtSecret string, emailClient *email.Client) *A
 
 // RegisterRequest defines the expected input for registration
 type RegisterRequest struct {
-	Email     string `json:"email" validate:"required,email"`
-	Password  string `json:"password" validate:"required,min=8"`
+	Email       string  `json:"email" validate:"required,email"`
+	Password    string  `json:"password" validate:"required,min=8"`
+	ReferralCode *string `json:"referral_code,omitempty" validate:"omitempty,min=4,max=12"` // Optional referral code
 }
 
 // LoginRequest defines the expected input for login
@@ -206,6 +208,32 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		log.Printf("Created new user requires verification: %s (ID: %d)\n", user.Email, user.ID)
 	}
 
+	// 7.5. Process referral if provided (only for new users)
+	if req.ReferralCode != nil && *req.ReferralCode != "" && existingUser.ID == 0 {
+		// Validate referral code
+		status, err := utils.ValidateReferralCode(h.DB, *req.ReferralCode)
+		if err != nil {
+			log.Printf("Error validating referral code %s for user %s: %v", *req.ReferralCode, user.Email, err)
+			// Don't fail registration, just log the error
+		} else if status.Valid && status.ReferrerID != nil {
+			// Get client IP for tracking
+			clientIP := c.IP()
+			conversionSource := "api_signup" // Could be determined from request headers or params
+			
+			// Create referral record asynchronously to avoid blocking registration
+			go func(referrerID, referredUserID uint, code, ip, source string) {
+				_, err := utils.CreateReferralRecord(h.DB, referrerID, referredUserID, code, ip, source)
+				if err != nil {
+					log.Printf("Warning: failed to create referral record for user %d: %v", referredUserID, err)
+				} else {
+					log.Printf("Successfully created referral record: %d -> %d with code %s", referrerID, referredUserID, code)
+				}
+			}(*status.ReferrerID, user.ID, *req.ReferralCode, clientIP, conversionSource)
+		} else {
+			log.Printf("Invalid referral code %s provided during registration for user %s: %s", *req.ReferralCode, user.Email, status.Message)
+		}
+	}
+
 	// 8. Send verification email (always send on register/re-attempt)
 	go func(email, code string) {
 		if err := h.EmailClient.SendVerificationEmail(email, code); err != nil {
@@ -263,6 +291,8 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 	// 4. Compare hashed password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+		// Record failed login activity for existing user
+		_ = h.DB.Create(&models.LoginActivity{UserID: user.ID, Status: "failed_login", IP: c.IP(), UserAgent: c.Get("User-Agent")}).Error
 		// Make sure the error message is generic for security
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
@@ -298,7 +328,20 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate token"})
 	}
 
-	// 7. Preload wallets after successful login before returning user data
+	// 7. Record successful login activity and create/update a session
+	_ = h.DB.Create(&models.LoginActivity{UserID: user.ID, Status: "successful_login", IP: c.IP(), UserAgent: c.Get("User-Agent")}).Error
+	ua := c.Get("User-Agent")
+	ip := c.IP()
+	sess := models.UserSession{UserID: user.ID, IP: ip, UserAgent: ua}
+	_ = h.DB.Create(&sess).Error
+	// Send new device email if this UA+IP hasn't been seen before
+	var count int64
+	h.DB.Model(&models.UserSession{}).Where("user_id = ? AND ip = ? AND user_agent = ?", user.ID, ip, ua).Count(&count)
+	if count <= 1 && h.EmailClient != nil {
+		go h.EmailClient.SendNewLoginEmail(user.Email, ip, ua, "")
+	}
+
+	// 8. Preload wallets after successful login before returning user data
 	h.DB.Preload("Wallets").First(&user, user.ID) // Reload user with wallets
 
 	// 7.5 Check redeemed presale code status (similar to GetMe)
@@ -333,10 +376,20 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	})
 }
 
-// Logout handles user logout (currently stateless, could implement token blocklist).
+// Logout handles user logout (best-effort session revocation by IP/UA).
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
-	// TODO: Implement token blocklisting or session invalidation if needed in the future
-	log.Println("Logout request received.") // Added basic logging
+	log.Println("Logout request received.")
+	userID, _ := c.Locals("userID").(uint)
+	ip := c.IP()
+	ua := c.Get("User-Agent")
+	if userID != 0 {
+		var sess models.UserSession
+		// Revoke the most recent active session for this IP/UA
+		if err := h.DB.Where("user_id = ? AND ip = ? AND user_agent = ? AND is_revoked = false", userID, ip, ua).
+			Order("created_at DESC").First(&sess).Error; err == nil {
+			_ = h.DB.Model(&sess).Update("is_revoked", true).Error
+		}
+	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Logout successful"})
 }
 
@@ -603,6 +656,15 @@ func (h *AuthHandler) VerifyEmail(c *fiber.Ctx) error {
 		log.Printf("Error saving user after email verification: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update user verification status"})
 	}
+
+	// 8.5. Log referral event if user was referred
+	go func() {
+		if err := utils.LogReferralEvent(h.DB, userID, "email_verified", map[string]interface{}{
+			"verified_at": time.Now(),
+		}); err != nil {
+			log.Printf("Warning: failed to log referral email verification event for user %d: %v", userID, err)
+		}
+	}()
 
 	// 9. Return success response
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Email successfully verified"})

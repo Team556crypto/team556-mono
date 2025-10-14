@@ -89,5 +89,25 @@ Table "public.users"
  email_verification_code     | text                     |          | 
  email_verification_expires_at| timestamp with time zone |          | 
  primary_wallet_address      | varchar(44)              |          | ''::character varying
- secondary_wallet_address    | varchar(44)              |          | 
+secondary_wallet_address    | varchar(44)              |          | 
+```
+
+### 002_security_core.sql
+- Purpose: Introduce core security tables and user fields to support the Security tab (2FA, sessions, activity, audit logs).
+- Changes:
+  - users: mfa_enabled (bool, default false), mfa_secret_encrypted (text, nullable), password_changed_at (timestamptz, nullable)
+  - mfa_recovery_codes: stores hashed recovery codes per user
+  - user_sessions: tracks active sessions/devices
+  - login_activities: records successful/failed login attempts
+  - security_audit_logs: records sensitive security actions (password change, MFA toggle, session revoke)
+- Rollback: use `002_security_core_rollback.sql`
+
+#### Manual migration
+```bash
+psql $DATABASE_URL -f migrations/002_security_core.sql
+```
+
+#### Rollback
+```bash
+psql $DATABASE_URL -f migrations/002_security_core_rollback.sql
 ```

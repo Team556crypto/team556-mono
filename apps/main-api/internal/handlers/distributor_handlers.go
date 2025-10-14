@@ -25,12 +25,15 @@ type DistributorHandler struct {
 // Fields are optional; defaults applied on read
 // rounding: "none" | "nearest" | "up"
 type PricingSettings struct {
-    MarginPercent      *float64 `json:"margin_percent,omitempty"`
-    MinMarginPercent   *float64 `json:"min_margin_percent,omitempty"`
-    Rounding           *string  `json:"rounding,omitempty"`
-    PriceFloorCents    *int64   `json:"price_floor_cents,omitempty"`
-    MapEnforced        *bool    `json:"map_enforced,omitempty"`
-    ShippingHandlingCents *int64 `json:"shipping_handling_cents,omitempty"`
+    MarginPercent        *float64 `json:"margin_percent,omitempty"`
+    MinMarginPercent     *float64 `json:"min_margin_percent,omitempty"`
+    FixedMarkupCents     *int64   `json:"fixed_markup_cents,omitempty"`
+    Rounding             *string  `json:"rounding,omitempty"`
+    PriceFloorCents      *int64   `json:"price_floor_cents,omitempty"`
+    ShippingHandlingCents *int64  `json:"shipping_handling_cents,omitempty"`
+    MapEnforced          *bool    `json:"map_enforced,omitempty"`
+    AutoImportNew        *bool    `json:"auto_import_new,omitempty"`
+    AutoUpdateExisting   *bool    `json:"auto_update_existing,omitempty"`
 }
 
 type DistributorSettings struct {
@@ -243,4 +246,47 @@ func (h *DistributorHandler) UpdateSettings(c *fiber.Ctx) error {
     }
 
     return c.Status(http.StatusOK).JSON(fiber.Map{"message": "settings updated"})
+}
+
+// DELETE /api/distributor-connections/:code
+func (h *DistributorHandler) DeleteConnection(c *fiber.Ctx) error {
+    userIDVal := c.Locals("userID")
+    userID, ok := userIDVal.(uint)
+    if !ok { return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"}) }
+
+    code := c.Params("code")
+    if code == "" { return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "missing code"}) }
+
+    if err := h.db.Where("user_id = ? AND distributor_code = ?", userID, code).Delete(&models.DistributorConnection{}).Error; err != nil {
+        return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "failed to delete connection"})
+    }
+    return c.Status(http.StatusNoContent).Send(nil)
+}
+
+// POST /api/distributor-connections/:code/sync
+// Stub: marks last_sync_at now; a worker will do the real sync later.
+func (h *DistributorHandler) TriggerSync(c *fiber.Ctx) error {
+    userIDVal := c.Locals("userID")
+    userID, ok := userIDVal.(uint)
+    if !ok { return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"}) }
+
+    code := c.Params("code")
+    if code == "" { return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "missing code"}) }
+
+    var conn models.DistributorConnection
+    if err := h.db.Where("user_id = ? AND distributor_code = ?", userID, code).First(&conn).Error; err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return c.Status(http.StatusNotFound).JSON(fiber.Map{"error": "connection not found"})
+        }
+        return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "database error"})
+    }
+
+    now := time.Now().UTC()
+    conn.LastSyncAt = &now
+    if err := h.db.Save(&conn).Error; err != nil {
+        return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update last sync"})
+    }
+
+    // TODO: enqueue background job
+    return c.Status(http.StatusAccepted).JSON(fiber.Map{"message": "sync queued"})
 }

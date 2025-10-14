@@ -15,6 +15,7 @@ import (
 	"github.com/team556-mono/server/internal/config"
 	"github.com/team556-mono/server/internal/crypto"
 	"github.com/team556-mono/server/internal/models"
+	"github.com/team556-mono/server/internal/utils"
 	"gorm.io/gorm"
 )
 
@@ -255,6 +256,18 @@ func CreateWalletHandler(db *gorm.DB, cfg *config.Config) fiber.Handler {
 		}
 
 		log.Printf("Successfully created wallet record %d for user %d", newWallet.ID, userID)
+
+		// --- Log Referral Event ---
+		// Log wallet creation event for referral tracking (async)
+		go func() {
+			if err := utils.LogReferralEvent(db, userID, "wallet_created", map[string]interface{}{
+				"wallet_id":      newWallet.ID,
+				"wallet_address": newWallet.Address,
+				"created_at":     time.Now(),
+			}); err != nil {
+				log.Printf("Warning: failed to log referral wallet creation event for user %d: %v", userID, err)
+			}
+		}()
 
 		// --- Return Mnemonic to Client ---
 		// CRITICAL: Only return the mnemonic, do not store it anywhere in main-api DB

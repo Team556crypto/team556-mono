@@ -9,6 +9,7 @@ import (
 	"github.com/team556-mono/server/internal/email"
 	"github.com/team556-mono/server/internal/handlers"
 	"github.com/team556-mono/server/internal/middleware"
+	"github.com/team556-mono/server/internal/security"
 	"gorm.io/gorm"
 	"time"
 )
@@ -31,6 +32,7 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	swapHandler := handlers.NewSwapHandler(db, cfg)
 	priceHandler := handlers.NewPriceHandler(cfg)
 	presaleHandler := handlers.NewPresaleHandler(db, cfg.JWTSecret, cfg.SolanaAPIURL)
+	referralHandler := handlers.NewReferralHandler(db)
 
 	// Groups Routes
 	auth := api.Group("/auth")
@@ -42,6 +44,8 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	presale := api.Group("/presale", middleware.AuthMiddleware(cfg.JWTSecret))
 	distributorsGroup := api.Group("/distributors", middleware.AuthMiddleware(cfg.JWTSecret))
 	distConnGroup := api.Group("/distributor-connections", middleware.AuthMiddleware(cfg.JWTSecret))
+	notifications := api.Group("/notifications", middleware.AuthMiddleware(cfg.JWTSecret))
+	referrals := api.Group("/referrals", middleware.AuthMiddleware(cfg.JWTSecret))
 	v1 := api.Group("/v1")
 
 	// Public, Rate-Limited Routes
@@ -59,16 +63,33 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 		},
 	})
 	api.Get("/price/team556-usdc", priceLimiter, priceHandler.HandleGetTeam556UsdcPriceAlchemy)
+	
+	// Public referral validation endpoint (for signup process)
+	api.Post("/referrals/validate", referralHandler.ValidateReferralCode)
 
 	// Auth Routes
 	auth.Post("/register", authHandler.Register)
 	auth.Post("/signup", authHandler.Register)
-	auth.Post("/login", authHandler.Login)
+	auth.Post("/login", limiter.New(security.SensitiveLimiter(10, time.Minute)), authHandler.Login)
 	auth.Post("/logout", authHandler.Logout)
 	auth.Get("/me", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.GetMe)
 	auth.Post("/verify-email", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.VerifyEmail)
 	auth.Post("/resend-verification", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.ResendVerificationEmail)
 	auth.Post("/delete-account", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.DeleteAccount)
+
+	// Security routes under /me
+	me := api.Group("/me", middleware.AuthMiddleware(cfg.JWTSecret))
+	secHandler := handlers.NewSecurityHandler(db, cfg, emailClient)
+	me.Get("/security", secHandler.GetSecurityOverview)
+	// Apply rate limiting for sensitive routes
+	me.Post("/password", limiter.New(security.SensitiveLimiter(5, time.Minute)), secHandler.ChangePassword)
+	me.Post("/mfa/totp/setup", limiter.New(security.SensitiveLimiter(10, time.Minute)), secHandler.BeginTOTPSetup)
+	me.Post("/mfa/totp/enable", limiter.New(security.SensitiveLimiter(10, time.Minute)), secHandler.EnableTOTP)
+	me.Post("/mfa/verify", limiter.New(security.SensitiveLimiter(20, time.Minute)), secHandler.VerifyMFA)
+	me.Delete("/mfa", limiter.New(security.SensitiveLimiter(5, time.Minute)), secHandler.DisableMFA)
+	me.Post("/mfa/recovery/rotate", limiter.New(security.SensitiveLimiter(5, time.Minute)), secHandler.RotateRecoveryCodes)
+	me.Get("/sessions", secHandler.ListSessions)
+	me.Delete("/sessions/:id", secHandler.RevokeSession)
 
 	// Distributor Routes
 	distributorHandler := handlers.NewDistributorHandler(db, cfg)
@@ -78,6 +99,16 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	distConnGroup.Post("/:code/validate", distributorHandler.ValidateConnection)
 	distConnGroup.Get("/:code/settings", distributorHandler.GetSettings)
 	distConnGroup.Patch("/:code/settings", distributorHandler.UpdateSettings)
+	distConnGroup.Delete("/:code", distributorHandler.DeleteConnection)
+	distConnGroup.Post("/:code/sync", distributorHandler.TriggerSync)
+
+	// Notification Routes
+	notificationHandler := handlers.NewNotificationHandler(db, cfg)
+	notifications.Get("/settings", notificationHandler.GetSettings)
+	notifications.Patch("/settings", notificationHandler.UpdateSettings)
+notifications.Post("/resend-verification", authHandler.ResendVerificationEmail)
+	notifications.Post("/push/devices", notificationHandler.RegisterPushDevice)
+	notifications.Delete("/push/devices", notificationHandler.UnregisterPushDevice)
 	// Password Reset Routes
 	auth.Post("/request-password-reset", authHandler.RequestPasswordReset)
 	auth.Post("/reset-password", authHandler.ResetPassword)
@@ -150,6 +181,12 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	presale.Post("/claim/p1p1", presaleHandler.ClaimPresaleP1P1)
 	presale.Post("/claim/p1p2", presaleHandler.ClaimPresaleP1P2)
 	presale.Post("/claim/p2", presaleHandler.ClaimPresaleP2)
+
+	// --- Referral Routes ---
+	referrals.Get("/code", referralHandler.GenerateReferralCode)       // Get or generate referral code
+	referrals.Post("/code/regenerate", referralHandler.RegenerateReferralCode) // Generate new referral code
+	referrals.Get("/stats", referralHandler.GetReferralStats)          // Get referral statistics
+	referrals.Get("/history", referralHandler.GetReferralHistory)      // Get referral history with pagination
 
 	// --- Solana RPC proxy ---
 	v1.Post("/solana/rpc", handlers.SolanaRpcProxy)

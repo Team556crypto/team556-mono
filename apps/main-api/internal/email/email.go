@@ -14,6 +14,13 @@ type Client struct {
 	resendClient *resend.Client
 }
 
+// Basic helper to send a simple HTML email.
+func (c *Client) sendSimple(toEmail, subject, html string) error {
+	params := &resend.SendEmailRequest{From: senderAddress, To: []string{toEmail}, Subject: subject, Html: html}
+	_, err := c.resendClient.Emails.Send(params)
+	return err
+}
+
 // NewClient creates a new email client instance.
 func NewClient(apiKey string) (*Client, error) {
 	if apiKey == "" {
@@ -114,7 +121,37 @@ func (c *Client) SendVerificationEmail(toEmail, verificationCode string) error {
 	}
 
 	_, err := c.resendClient.Emails.Send(params)
-	return err
+return err
+}
+
+// SendPasswordChangedEmail notifies a user when their password has changed.
+func (c *Client) SendPasswordChangedEmail(toEmail string) error {
+	subject := "Your Team556 password was changed"
+	html := `<p>Hello,</p><p>This is a confirmation that your Team556 account password was changed. If you did not perform this action, please reset your password immediately and contact support.</p>`
+	return c.sendSimple(toEmail, subject, html)
+}
+
+// SendMFAEnabledEmail notifies a user when MFA is enabled.
+func (c *Client) SendMFAEnabledEmail(toEmail string) error {
+	subject := "Two-Factor Authentication enabled"
+	html := `<p>Hello,</p><p>Two-Factor Authentication (TOTP) was enabled on your Team556 account. If this wasn’t you, please disable it and reset your password.</p>`
+	return c.sendSimple(toEmail, subject, html)
+}
+
+// SendMFADisabledEmail notifies a user when MFA is disabled.
+func (c *Client) SendMFADisabledEmail(toEmail string) error {
+	subject := "Two-Factor Authentication disabled"
+	html := `<p>Hello,</p><p>Two-Factor Authentication (TOTP) was disabled on your Team556 account. If this wasn’t you, please re-enable it and reset your password.</p>`
+	return c.sendSimple(toEmail, subject, html)
+}
+
+// SendNewLoginEmail notifies a user of a new login from a new device or location.
+func (c *Client) SendNewLoginEmail(toEmail, ip, ua, location string) error {
+	subject := "New login to your Team556 account"
+	html := `<p>Hello,</p><p>Your account was just accessed.</p>` +
+		fmt.Sprintf(`<ul><li>IP: %s</li><li>Device: %s</li><li>Location: %s</li></ul>`, ip, ua, location) +
+		`<p>If this was not you, please change your password and enable 2FA.</p>`
+	return c.sendSimple(toEmail, subject, html)
 }
 
 // SendPasswordResetEmail sends the password reset code to the user.

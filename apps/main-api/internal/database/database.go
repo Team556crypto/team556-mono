@@ -51,6 +51,17 @@ err = db.AutoMigrate(
 		&models.Document{},
 		&models.NFA{},
 		&models.DistributorConnection{},
+		&models.NotificationSettings{},
+		&models.PushDevice{},
+	// Security models
+	&models.MfaRecoveryCode{},
+	&models.UserSession{},
+	&models.LoginActivity{},
+	&models.SecurityAuditLog{},
+	// Referral models
+	&models.Referral{},
+	&models.ReferralStats{},
+	&models.ReferralEvent{},
 	)
 	if err != nil {
 		// Log migration errors but don't necessarily make it fatal

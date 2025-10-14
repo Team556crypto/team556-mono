@@ -15,6 +15,7 @@ type Config struct {
 	SolanaAPIURL      string `env:"MAIN_API__SOLANA_API_URL,required"`
 	ResendAPIKey      string
 	ArmorySecret      string
+	MFAEncryptSecret  string // For MAIN_API__MFA_ENC_SECRET (encrypting TOTP secrets)
 	UploadthingSecret string // For GLOBAL__UPLOADTHING_SECRET
 	UploadthingApiURL string // For GLOBAL__UPLOADTHING_API_URL
 	AlchemyAPIKey     string // For GLOBAL__ALCHEMY_API_KEY
@@ -36,12 +37,13 @@ func LoadConfig() (*Config, error) {
 		}
 	}
 
-	cfg := &Config{
+cfg := &Config{
 		DatabaseURL:       os.Getenv("MAIN_API__DB_DIRECT"),
 		JWTSecret:         os.Getenv("MAIN_API__JWT_SECRET"),
 		SolanaAPIURL:      os.Getenv("MAIN_API__SOLANA_API_URL"),
 		ResendAPIKey:      os.Getenv("GLOBAL__RESEND_API_KEY"),
 		ArmorySecret:      os.Getenv("MAIN_API__ARMORY_SECRET"),
+		MFAEncryptSecret:  os.Getenv("MAIN_API__MFA_ENC_SECRET"),
 		UploadthingSecret: os.Getenv("GLOBAL__UPLOADTHING_SECRET"),
 		UploadthingApiURL: os.Getenv("GLOBAL__UPLOADTHING_API_URL"), // Or use GetEnv with a default
 		AlchemyAPIKey:     os.Getenv("GLOBAL__ALCHEMY_API_KEY"),
@@ -59,11 +61,14 @@ func LoadConfig() (*Config, error) {
 	if cfg.ResendAPIKey == "" {
 		log.Fatal("Error: GLOBAL__RESEND_API_KEY environment variable not set.")
 	}
-	if cfg.ArmorySecret == "" {
+if cfg.ArmorySecret == "" {
 		log.Println("CRITICAL WARNING: MAIN_API__ARMORY_SECRET environment variable not set. Firearm data encryption/decryption will fail.")
 		// Decide if the application should start without the secret.
 		// For security, it might be better to return an error:
 		// return nil, fmt.Errorf("MAIN_API__ARMORY_SECRET environment variable is required for firearm data encryption")
+	}
+if cfg.MFAEncryptSecret == "" {
+		log.Println("Warning: MAIN_API__MFA_ENC_SECRET is not set. MFA TOTP secrets will be stored in plaintext unless encryption is handled elsewhere.")
 	}
 	if cfg.UploadthingSecret == "" {
 		log.Println("Warning: GLOBAL__UPLOADTHING_SECRET environment variable not set. Image uploads will fail.")

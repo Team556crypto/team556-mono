@@ -1,0 +1,222 @@
+{
+  "name": "Daily Referral Statistics Update",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "cronExpression": "0 2 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-daily",
+      "name": "Daily at 2 AM",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT DISTINCT r.referrer_user_id FROM referrals r WHERE r.created_at >= CURRENT_DATE - INTERVAL '7 days' OR r.updated_at >= CURRENT_DATE - INTERVAL '1 day'",
+        "options": {}
+      },
+      "id": "get-active-referrers",
+      "name": "Get Active Referrers",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [480, 300],
+      "credentials": {
+        "postgres": {
+          "id": "team556-db",
+          "name": "Team556 Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 25,
+        "options": {}
+      },
+      "id": "split-referrers",
+      "name": "Split Referrers",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH referral_stats AS (\n  SELECT \n    r.referrer_user_id,\n    COUNT(*) as total_referrals,\n    COUNT(CASE WHEN r.email_verified_at IS NOT NULL THEN 1 END) as verified_referrals,\n    COUNT(CASE WHEN r.wallet_created_at IS NOT NULL THEN 1 END) as wallet_created_referrals,\n    COUNT(CASE WHEN r.current_team556_balance > 0 THEN 1 END) as team556_holding_referrals,\n    COALESCE(SUM(r.current_team556_balance), 0) as total_team556_volume,\n    COALESCE(AVG(CASE WHEN r.current_team556_balance > 0 THEN r.current_team556_balance END), 0) as avg_balance,\n    MIN(r.created_at) as first_referral_at,\n    MAX(r.created_at) as most_recent_referral_at\n  FROM referrals r \n  WHERE r.referrer_user_id = {{$json.referrer_user_id}}\n  GROUP BY r.referrer_user_id\n)\nSELECT \n  referrer_user_id,\n  total_referrals,\n  verified_referrals,\n  wallet_created_referrals,\n  team556_holding_referrals,\n  total_team556_volume,\n  avg_balance,\n  CASE WHEN total_referrals > 0 THEN ROUND(verified_referrals::numeric / total_referrals::numeric, 4) ELSE 0 END as conversion_rate_to_verified,\n  CASE WHEN total_referrals > 0 THEN ROUND(wallet_created_referrals::numeric / total_referrals::numeric, 4) ELSE 0 END as conversion_rate_to_wallet,\n  CASE WHEN total_referrals > 0 THEN ROUND(team556_holding_referrals::numeric / total_referrals::numeric, 4) ELSE 0 END as conversion_rate_to_team556,\n  first_referral_at,\n  most_recent_referral_at,\n  NOW() as last_calculated_at\nFROM referral_stats",
+        "options": {}
+      },
+      "id": "calculate-stats",
+      "name": "Calculate Stats",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [920, 300],
+      "credentials": {
+        "postgres": {
+          "id": "team556-db",
+          "name": "Team556 Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO referral_stats (\n  user_id, total_referrals, verified_referrals, wallet_created_referrals, \n  team556_holding_referrals, total_team556_volume_referred, average_team556_balance_referred,\n  conversion_rate_to_verified, conversion_rate_to_wallet, conversion_rate_to_team556,\n  first_referral_at, most_recent_referral_at, last_calculated_at\n) VALUES (\n  {{$json.referrer_user_id}}, {{$json.total_referrals}}, {{$json.verified_referrals}}, \n  {{$json.wallet_created_referrals}}, {{$json.team556_holding_referrals}}, \n  {{$json.total_team556_volume}}, {{$json.avg_balance}}, \n  {{$json.conversion_rate_to_verified}}, {{$json.conversion_rate_to_wallet}}, \n  {{$json.conversion_rate_to_team556}}, {{$json.first_referral_at}}, \n  {{$json.most_recent_referral_at}}, {{$json.last_calculated_at}}\n) ON CONFLICT (user_id) DO UPDATE SET\n  total_referrals = EXCLUDED.total_referrals,\n  verified_referrals = EXCLUDED.verified_referrals,\n  wallet_created_referrals = EXCLUDED.wallet_created_referrals,\n  team556_holding_referrals = EXCLUDED.team556_holding_referrals,\n  total_team556_volume_referred = EXCLUDED.total_team556_volume_referred,\n  average_team556_balance_referred = EXCLUDED.average_team556_balance_referred,\n  conversion_rate_to_verified = EXCLUDED.conversion_rate_to_verified,\n  conversion_rate_to_wallet = EXCLUDED.conversion_rate_to_wallet,\n  conversion_rate_to_team556 = EXCLUDED.conversion_rate_to_team556,\n  most_recent_referral_at = EXCLUDED.most_recent_referral_at,\n  last_calculated_at = EXCLUDED.last_calculated_at,\n  updated_at = NOW()",
+        "options": {}
+      },
+      "id": "upsert-stats",
+      "name": "Upsert Stats",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1140, 300],
+      "credentials": {
+        "postgres": {
+          "id": "team556-db",
+          "name": "Team556 Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  COUNT(*) as total_referral_relationships,\n  COUNT(DISTINCT referrer_user_id) as total_referrers,\n  COUNT(CASE WHEN email_verified_at IS NOT NULL THEN 1 END) as total_verified,\n  COUNT(CASE WHEN wallet_created_at IS NOT NULL THEN 1 END) as total_with_wallets,\n  COUNT(CASE WHEN current_team556_balance > 0 THEN 1 END) as total_with_team556,\n  COALESCE(SUM(current_team556_balance), 0) as total_team556_volume,\n  ROUND(AVG(CASE WHEN current_team556_balance > 0 THEN current_team556_balance END), 2) as avg_team556_balance\nFROM referrals \nWHERE created_at >= CURRENT_DATE - INTERVAL '30 days'",
+        "options": {}
+      },
+      "id": "generate-summary",
+      "name": "Generate Summary",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [480, 500],
+      "credentials": {
+        "postgres": {
+          "id": "team556-db",
+          "name": "Team556 Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate daily referral report\nconst summaryData = $input.first().json;\nconst currentDate = new Date().toISOString().split('T')[0];\n\nconst report = {\n  date: currentDate,\n  summary: {\n    total_referral_relationships: summaryData.total_referral_relationships,\n    total_referrers: summaryData.total_referrers,\n    total_verified: summaryData.total_verified,\n    total_with_wallets: summaryData.total_with_wallets,\n    total_with_team556: summaryData.total_with_team556,\n    total_team556_volume: parseFloat(summaryData.total_team556_volume),\n    avg_team556_balance: parseFloat(summaryData.avg_team556_balance) || 0\n  },\n  conversion_rates: {\n    signup_to_verified: summaryData.total_referral_relationships > 0 ? \n      (summaryData.total_verified / summaryData.total_referral_relationships * 100).toFixed(2) + '%' : '0%',\n    signup_to_wallet: summaryData.total_referral_relationships > 0 ? \n      (summaryData.total_with_wallets / summaryData.total_referral_relationships * 100).toFixed(2) + '%' : '0%',\n    signup_to_team556: summaryData.total_referral_relationships > 0 ? \n      (summaryData.total_with_team556 / summaryData.total_referral_relationships * 100).toFixed(2) + '%' : '0%'\n  },\n  report_generated_at: new Date().toISOString()\n};\n\nreturn [{ json: report }];"
+      },
+      "id": "format-report",
+      "name": "Format Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 500]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.TEAM556_API_URL}}/internal/referrals/daily-report",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{$env.TEAM556_INTERNAL_API_KEY}}\",\n  \"Content-Type\": \"application/json\"\n}",
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "={{JSON.stringify($json)}}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "send-report",
+      "name": "Send Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [920, 500]
+    }
+  ],
+  "connections": {
+    "Daily at 2 AM": {
+      "main": [
+        [
+          {
+            "node": "Get Active Referrers",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Active Referrers": {
+      "main": [
+        [
+          {
+            "node": "Split Referrers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Referrers": {
+      "main": [
+        [
+          {
+            "node": "Calculate Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Stats": {
+      "main": [
+        [
+          {
+            "node": "Upsert Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Summary": {
+      "main": [
+        [
+          {
+            "node": "Format Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Report": {
+      "main": [
+        [
+          {
+            "node": "Send Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "team556-referral-tracker"
+  },
+  "id": "daily-referral-stats",
+  "tags": ["referral", "statistics", "daily"]
+}

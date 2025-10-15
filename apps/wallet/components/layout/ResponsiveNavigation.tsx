@@ -1,12 +1,10 @@
 import React from 'react'
-import { Platform, useWindowDimensions } from 'react-native'
+import { Platform, useWindowDimensions, View } from 'react-native'
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 
 import { CustomTabBar } from './CustomTabBar'
 import { CustomSideBar } from './CustomSideBar'
-
-// Define breakpoint for switching to sidebar navigation
-const SIDEBAR_BREAKPOINT = 768
+import { useSidebarVisible, SIDEBAR_WIDTH } from '@/constants/Layout'
 
 /**
  * Navigation component that renders either a sidebar or bottom tabs based on platform and screen width
@@ -21,7 +19,7 @@ export function ResponsiveNavigation(props: BottomTabBarProps) {
   const isWeb = Platform.OS === 'web'
 
   // On native platforms, use sidebar for large screens only
-  const isLargeScreen = width >= SIDEBAR_BREAKPOINT
+  const isLargeScreen = useSidebarVisible(width)
 
   // Use sidebar when on web OR when on a large screen on native
   const useSidebar = isLargeScreen

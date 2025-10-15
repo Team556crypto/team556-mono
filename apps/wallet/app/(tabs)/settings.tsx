@@ -17,6 +17,7 @@ import ComingSoonDrawerContent from '@/components/drawers/account/ComingSoonDraw
 import RedeemPresaleDrawerContent from '@/components/drawers/account/RedeemPresaleDrawerContent'
 import ViewRecoveryPhraseDrawerContent from '@/components/drawers/account/ViewRecoveryPhraseDrawerContent'
 import DeleteUserDrawerContent from '@/components/drawers/account/DeleteUserDrawerContent'
+import ReferralDashboardDrawerContent from '@/components/drawers/account/ReferralDashboardDrawerContent'
 
 export default function SettingsScreen() {
   const router = useRouter()
@@ -85,6 +86,10 @@ export default function SettingsScreen() {
 
   const handleDeleteUser = () => {
     openDrawer(<DeleteUserDrawerContent onClose={closeDrawer} />)
+  }
+
+  const handleReferralDashboard = () => {
+    openDrawer(<ReferralDashboardDrawerContent onClose={closeDrawer} />)
   }
 
   return (
@@ -205,6 +210,25 @@ export default function SettingsScreen() {
                 Version 1.0.0
               </Text>
             </View>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text preset='h4'>Referrals</Text>
+          </View>
+
+          <View style={styles.cardContent}>
+            <TouchableOpacity style={styles.menuItem} onPress={handleReferralDashboard}>
+              <View style={styles.menuItemIcon}>
+                <Ionicons name='people-outline' size={22} color={Colors.primary} />
+              </View>
+              <View style={styles.menuItemContent}>
+                <Text preset='label'>Referral Dashboard</Text>
+                <Text preset='caption'>View your referral code and statistics</Text>
+              </View>
+              <Ionicons name='chevron-forward' size={18} color={Colors.icon} />
+            </TouchableOpacity>
           </View>
         </View>
 

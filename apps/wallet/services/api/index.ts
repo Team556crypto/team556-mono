@@ -69,5 +69,8 @@ export * from './documents';
 // Export all functions from nfa.ts
 export * from './nfa';
 
+// Export all functions from referrals.ts
+export * from './referrals';
+
 // Export the ApiClientError and apiClient for direct use if needed
 export { apiClient, ApiClientError } from './client';

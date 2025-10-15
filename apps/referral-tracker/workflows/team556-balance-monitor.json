@@ -1,0 +1,311 @@
+{
+  "name": "Team556 Token Balance Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Every 15 Minutes",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT DISTINCT r.referred_user_id, r.id as referral_id, u.primary_wallet_address, r.current_team556_balance, r.first_team556_balance_detected_at FROM referrals r JOIN users u ON r.referred_user_id = u.id WHERE u.primary_wallet_address IS NOT NULL AND u.primary_wallet_address != '' AND (r.last_balance_check_at IS NULL OR r.last_balance_check_at < NOW() - INTERVAL '15 minutes') LIMIT 50",
+        "options": {}
+      },
+      "id": "get-users-to-check",
+      "name": "Get Users to Check",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [480, 300],
+      "credentials": {
+        "postgres": {
+          "id": "team556-db",
+          "name": "Team556 Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 10,
+        "options": {}
+      },
+      "id": "split-in-batches",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SOLANA_RPC_URL}}",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{\n  \"Content-Type\": \"application/json\"\n}",
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"getTokenAccountsByOwner\",\n  \"params\": [\n    \"{{$json.primary_wallet_address}}\",\n    {\n      \"mint\": \"{{$env.TEAM556_TOKEN_MINT}}\"\n    },\n    {\n      \"encoding\": \"jsonParsed\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "check-team556-balance",
+      "name": "Check Team556 Balance",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [920, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process Solana RPC response and calculate token balance\nconst items = [];\n\nfor (const item of $input.all()) {\n  const response = item.json.result;\n  let tokenBalance = 0;\n  \n  // Check if user has Team556 token accounts\n  if (response && response.value && response.value.length > 0) {\n    // Sum all token account balances\n    tokenBalance = response.value.reduce((total, account) => {\n      const balance = parseFloat(account.account.data.parsed.info.tokenAmount.uiAmount) || 0;\n      return total + balance;\n    }, 0);\n  }\n  \n  // Get original user data from the split batches node\n  const userData = $node[\"Split In Batches\"].json;\n  \n  const processedItem = {\n    referred_user_id: userData.referred_user_id,\n    referral_id: userData.referral_id,\n    wallet_address: userData.primary_wallet_address,\n    previous_balance: parseFloat(userData.current_team556_balance) || 0,\n    current_balance: tokenBalance,\n    balance_changed: tokenBalance !== (parseFloat(userData.current_team556_balance) || 0),\n    first_detection: !userData.first_team556_balance_detected_at && tokenBalance > 0,\n    check_timestamp: new Date().toISOString()\n  };\n  \n  items.push(processedItem);\n}\n\nreturn items;"
+      },
+      "id": "process-balance-data",
+      "name": "Process Balance Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1140, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "balance-changed",
+              "leftValue": "={{$json.balance_changed}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-balance-changed",
+      "name": "If Balance Changed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1360, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE referrals SET current_team556_balance = {{$json.current_balance}}, last_balance_check_at = NOW(), first_team556_balance_detected_at = CASE WHEN {{$json.first_detection}} THEN NOW() ELSE first_team556_balance_detected_at END, first_team556_purchase_amount = CASE WHEN {{$json.first_detection}} THEN {{$json.current_balance}} ELSE first_team556_purchase_amount END WHERE id = {{$json.referral_id}}",
+        "options": {}
+      },
+      "id": "update-referral-balance",
+      "name": "Update Referral Balance",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1580, 200],
+      "credentials": {
+        "postgres": {
+          "id": "team556-db",
+          "name": "Team556 Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "referral_events",
+        "columns": [
+          "referral_id",
+          "event_type",
+          "previous_value",
+          "new_value",
+          "metadata",
+          "created_at"
+        ],
+        "additionalFields": {
+          "mode": "defineBelow",
+          "values": {
+            "referral_id": "={{$json.referral_id}}",
+            "event_type": "={{$json.first_detection ? 'first_team556' : 'balance_updated'}}",
+            "previous_value": "={{$json.previous_balance}}",
+            "new_value": "={{$json.current_balance}}",
+            "metadata": "={{JSON.stringify({\"wallet_address\": $json.wallet_address, \"balance_increase\": $json.current_balance - $json.previous_balance, \"check_timestamp\": $json.check_timestamp})}}",
+            "created_at": "={{new Date().toISOString()}}"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-referral-event",
+      "name": "Log Referral Event",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1800, 200],
+      "credentials": {
+        "postgres": {
+          "id": "team556-db",
+          "name": "Team556 Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE referrals SET last_balance_check_at = NOW() WHERE id = {{$json.referral_id}}",
+        "options": {}
+      },
+      "id": "update-check-timestamp",
+      "name": "Update Check Timestamp",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1580, 400],
+      "credentials": {
+        "postgres": {
+          "id": "team556-db",
+          "name": "Team556 Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{$env.TEAM556_API_URL}}/internal/referrals/stats/update/{{$json.referral_id}}",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{$env.TEAM556_INTERNAL_API_KEY}}\",\n  \"Content-Type\": \"application/json\"\n}",
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "{\n  \"trigger\": \"balance_update\",\n  \"referral_id\": {{$json.referral_id}},\n  \"new_balance\": {{$json.current_balance}},\n  \"previous_balance\": {{$json.previous_balance}}\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "trigger-stats-update",
+      "name": "Trigger Stats Update",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2020, 200]
+    }
+  ],
+  "connections": {
+    "Every 15 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Get Users to Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Users to Check": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [
+          {
+            "node": "Check Team556 Balance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Team556 Balance": {
+      "main": [
+        [
+          {
+            "node": "Process Balance Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Balance Data": {
+      "main": [
+        [
+          {
+            "node": "If Balance Changed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Balance Changed": {
+      "main": [
+        [
+          {
+            "node": "Update Referral Balance",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Check Timestamp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Referral Balance": {
+      "main": [
+        [
+          {
+            "node": "Log Referral Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Referral Event": {
+      "main": [
+        [
+          {
+            "node": "Trigger Stats Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "team556-referral-tracker"
+  },
+  "id": "team556-balance-monitor",
+  "tags": ["referral", "team556", "monitoring"]
+}

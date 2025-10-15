@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import LogoWideSvg from '@/assets/images/logo-wide.svg'
 import { excludedRoutes } from '@/constants/Global'
 import { Colors } from '@/constants/Colors'
+import { SIDEBAR_WIDTH } from '@/constants/Layout'
 
 export function CustomSideBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets()
@@ -101,7 +102,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     bottom: 0,
-    width: 220
+    width: SIDEBAR_WIDTH
     // borderRadius: 10
   },
   header: {

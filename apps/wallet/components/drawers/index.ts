@@ -15,6 +15,7 @@ export * from './armory/details/GearDetailsDrawerContent';
 export * from './payments/PaymentReceiptDrawerContent';
 export * from './payments/ReceiveDrawerContent';
 export * from './account/RedeemPresaleDrawerContent';
+export { default as ReferralDashboardDrawerContent } from './account/ReferralDashboardDrawerContent';
 export * from './payments/SendDrawerContent';
 export * from './payments/SwapDrawerContent';
 export * from './payments/TransactionHistoryDrawer';

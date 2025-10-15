@@ -1,0 +1,352 @@
+{
+  "name": "Team556 Transaction Webhook",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "team556-transaction",
+        "options": {
+          "noResponseBody": false
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "Team556 Transaction Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [260, 300],
+      "webhookId": "team556-tx-hook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process incoming transaction webhook\nconst payload = $input.first().json.body || $input.first().json;\n\n// Expected webhook payload structure:\n// {\n//   \"signature\": \"transaction_signature\",\n//   \"slot\": block_slot_number,\n//   \"accounts\": [\"account1\", \"account2\"],\n//   \"instructions\": [...],\n//   \"timestamp\": \"2025-10-14T20:52:04Z\",\n//   \"token_transfers\": [\n//     {\n//       \"mint\": \"AMNfeXpjD6kXyyTDB4LMKzNWypqNHwtgJUACHUmuKLD5\",\n//       \"from\": \"sender_address\",\n//       \"to\": \"receiver_address\",\n//       \"amount\": 1000.5,\n//       \"decimals\": 9\n//     }\n//   ]\n// }\n\nconst items = [];\n\nif (payload && payload.token_transfers) {\n  // Filter for Team556 token transfers\n  const team556Transfers = payload.token_transfers.filter(transfer => \n    transfer.mint === process.env.TEAM556_TOKEN_MINT\n  );\n  \n  for (const transfer of team556Transfers) {\n    items.push({\n      json: {\n        signature: payload.signature,\n        slot: payload.slot,\n        timestamp: payload.timestamp,\n        mint: transfer.mint,\n        from_address: transfer.from,\n        to_address: transfer.to,\n        amount: transfer.amount,\n        decimals: transfer.decimals,\n        ui_amount: transfer.amount / Math.pow(10, transfer.decimals),\n        transfer_type: transfer.from ? 'transfer' : 'mint',\n        processed_at: new Date().toISOString()\n      }\n    });\n  }\n}\n\nif (items.length === 0) {\n  // No Team556 transfers found, return empty to stop workflow\n  return [];\n}\n\nreturn items;"
+      },
+      "id": "process-webhook",
+      "name": "Process Webhook",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT r.id as referral_id, r.referred_user_id, r.current_team556_balance, u.primary_wallet_address FROM referrals r JOIN users u ON r.referred_user_id = u.id WHERE u.primary_wallet_address = '{{$json.to_address}}' AND r.first_team556_balance_detected_at IS NULL",
+        "options": {}
+      },
+      "id": "check-first-purchase",
+      "name": "Check First Purchase",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [700, 300],
+      "credentials": {
+        "postgres": {
+          "id": "team556-db",
+          "name": "Team556 Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-referral",
+              "leftValue": "={{$json.referral_id}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-first-purchase",
+      "name": "If First Purchase",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [920, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE referrals SET first_team556_balance_detected_at = NOW(), first_team556_purchase_amount = {{$('Process Webhook').item.json.ui_amount}}, current_team556_balance = {{$('Process Webhook').item.json.ui_amount}}, last_balance_check_at = NOW() WHERE id = {{$json.referral_id}}",
+        "options": {}
+      },
+      "id": "update-first-purchase",
+      "name": "Update First Purchase",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1140, 200],
+      "credentials": {
+        "postgres": {
+          "id": "team556-db",
+          "name": "Team556 Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "referral_events",
+        "columns": [
+          "referral_id",
+          "event_type",
+          "new_value",
+          "metadata",
+          "transaction_signature",
+          "block_slot",
+          "created_at"
+        ],
+        "additionalFields": {
+          "mode": "defineBelow",
+          "values": {
+            "referral_id": "={{$json.referral_id}}",
+            "event_type": "first_team556",
+            "new_value": "={{$('Process Webhook').item.json.ui_amount}}",
+            "metadata": "={{JSON.stringify({\"wallet_address\": $('Process Webhook').item.json.to_address, \"mint\": $('Process Webhook').item.json.mint, \"from_address\": $('Process Webhook').item.json.from_address, \"transfer_type\": $('Process Webhook').item.json.transfer_type, \"webhook_processed_at\": $('Process Webhook').item.json.processed_at})}}",
+            "transaction_signature": "={{$('Process Webhook').item.json.signature}}",
+            "block_slot": "={{$('Process Webhook').item.json.slot}}",
+            "created_at": "={{new Date().toISOString()}}"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-first-purchase",
+      "name": "Log First Purchase",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1360, 200],
+      "credentials": {
+        "postgres": {
+          "id": "team556-db",
+          "name": "Team556 Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{$env.TEAM556_API_URL}}/internal/referrals/stats/update/{{$json.referral_id}}",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{\n  \"Authorization\": \"Bearer {{$env.TEAM556_INTERNAL_API_KEY}}\",\n  \"Content-Type\": \"application/json\"\n}",
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "{\n  \"trigger\": \"first_team556_purchase\",\n  \"referral_id\": {{$json.referral_id}},\n  \"amount\": {{$('Process Webhook').item.json.ui_amount}},\n  \"transaction_signature\": \"{{$('Process Webhook').item.json.signature}}\",\n  \"wallet_address\": \"{{$('Process Webhook').item.json.to_address}}\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "trigger-stats-update-webhook",
+      "name": "Trigger Stats Update",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1580, 200]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT r.id as referral_id, r.referred_user_id, r.current_team556_balance, u.primary_wallet_address FROM referrals r JOIN users u ON r.referred_user_id = u.id WHERE u.primary_wallet_address = '{{$('Process Webhook').item.json.to_address}}' AND r.first_team556_balance_detected_at IS NOT NULL",
+        "options": {}
+      },
+      "id": "check-existing-holder",
+      "name": "Check Existing Holder",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1140, 400],
+      "credentials": {
+        "postgres": {
+          "id": "team556-db",
+          "name": "Team556 Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-existing-referral",
+              "leftValue": "={{$json.referral_id}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-existing-holder",
+      "name": "If Existing Holder",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1360, 400]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "referral_events",
+        "columns": [
+          "referral_id",
+          "event_type",
+          "previous_value",
+          "new_value",
+          "metadata",
+          "transaction_signature",
+          "block_slot",
+          "created_at"
+        ],
+        "additionalFields": {
+          "mode": "defineBelow",
+          "values": {
+            "referral_id": "={{$json.referral_id}}",
+            "event_type": "balance_updated",
+            "previous_value": "={{$json.current_team556_balance}}",
+            "new_value": "={{parseFloat($json.current_team556_balance) + parseFloat($('Process Webhook').item.json.ui_amount)}}",
+            "metadata": "={{JSON.stringify({\"wallet_address\": $('Process Webhook').item.json.to_address, \"mint\": $('Process Webhook').item.json.mint, \"from_address\": $('Process Webhook').item.json.from_address, \"transfer_amount\": $('Process Webhook').item.json.ui_amount, \"transfer_type\": $('Process Webhook').item.json.transfer_type, \"webhook_processed_at\": $('Process Webhook').item.json.processed_at})}}",
+            "transaction_signature": "={{$('Process Webhook').item.json.signature}}",
+            "block_slot": "={{$('Process Webhook').item.json.slot}}",
+            "created_at": "={{new Date().toISOString()}}"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-balance-update",
+      "name": "Log Balance Update",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1580, 400],
+      "credentials": {
+        "postgres": {
+          "id": "team556-db",
+          "name": "Team556 Database"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Team556 Transaction Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Webhook": {
+      "main": [
+        [
+          {
+            "node": "Check First Purchase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check First Purchase": {
+      "main": [
+        [
+          {
+            "node": "If First Purchase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If First Purchase": {
+      "main": [
+        [
+          {
+            "node": "Update First Purchase",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Existing Holder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update First Purchase": {
+      "main": [
+        [
+          {
+            "node": "Log First Purchase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log First Purchase": {
+      "main": [
+        [
+          {
+            "node": "Trigger Stats Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Existing Holder": {
+      "main": [
+        [
+          {
+            "node": "If Existing Holder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Existing Holder": {
+      "main": [
+        [
+          {
+            "node": "Log Balance Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "team556-referral-tracker"
+  },
+  "id": "team556-transaction-webhook",
+  "tags": ["referral", "webhook", "real-time"]
+}

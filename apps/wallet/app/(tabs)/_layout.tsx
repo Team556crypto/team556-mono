@@ -7,12 +7,8 @@ import { Colors } from '@/constants/Colors'
 import { Entypo, Ionicons } from '@expo/vector-icons'
 import { useAuthStore } from '@/store/authStore'
 
-const SIDEBAR_BREAKPOINT = 768;
-
 export default function TabLayout() {
   const isLoadingAuth = useAuthStore(state => state.isLoading);
-  const { width } = useWindowDimensions();
-  const isLargeScreen = width >= SIDEBAR_BREAKPOINT;
   
   if (isLoadingAuth) {
     return null; 

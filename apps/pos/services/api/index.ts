@@ -61,5 +61,8 @@ export * from './notifications';
 // Export security API
 export * from './security';
 
+// Export transactions API
+export * from './transactions';
+
 // Export the ApiClientError and apiClient for direct use if needed
 export { apiClient, ApiClientError } from './client';

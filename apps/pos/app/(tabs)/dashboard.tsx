@@ -6,6 +6,10 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { Colors } from '@/constants/Colors'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import type { Transaction } from '@/services/api'
+import { transactionsApi } from '@/services/api'
+import { useAuthStore } from '@/store/authStore'
+import { usePOSWalletStore } from '@/store/posWalletStore'
+import { formatPrice } from '@/utils/formatters'
 
 // Lightweight, file-local stat card for simple KPIs
 function StatCard({
@@ -69,45 +73,76 @@ export default function Dashboard() {
   const { colors } = useTheme()
   const { isTabletOrLarger } = useBreakpoint()
 
-  // TODO: Replace with live data once API is available
-  const metrics = {
-    salesToday: '$4,230.54',
-    ordersToday: 128,
-    avgOrderValue: '$33.05',
-    conversionRate: '2.8%'
+  const token = useAuthStore(s => s.token)
+  const addresses = usePOSWalletStore(s => s.addresses)
+  const fetchWalletAddresses = usePOSWalletStore(s => s.fetchWalletAddresses)
+
+  const [transactions, setTransactions] = React.useState<Transaction[]>([])
+  const [loading, setLoading] = React.useState(true)
+  const [error, setError] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      if (!token) {
+        setError('Not authenticated')
+        setLoading(false)
+        return
+      }
+      try {
+        // Ensure we have wallet addresses
+        if (!addresses) {
+          await fetchWalletAddresses()
+        }
+        const addr = (addresses?.primary_address) || ''
+        if (!addr) {
+          setError('No POS wallet address configured')
+          setTransactions([])
+          return
+        }
+        const resp = await transactionsApi.getTransactions(token, { address: addr, limit: 50 })
+        if (!cancelled) {
+          setTransactions(resp.transactions || [])
+          setError(null)
+        }
+      } catch (e: any) {
+        if (!cancelled) setError(e?.message || 'Failed to load transactions')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [token, addresses?.primary_address])
+
+  // Compute metrics from live data
+  const today = new Date()
+  const isToday = (d: string) => {
+    const dt = new Date(d)
+    return (
+      dt.getFullYear() === today.getFullYear() &&
+      dt.getMonth() === today.getMonth() &&
+      dt.getDate() === today.getDate()
+    )
   }
 
-  const recentTransactions: Transaction[] = [
-    {
-      signature: 'abc123',
-      date: new Date().toISOString(),
-      type: 'Receive',
-      amount: '152.00',
-      token: 'USDC',
-      from: 'Customer A',
-      to: 'Merchant',
-      memo: 'POS Payment'
-    },
-    {
-      signature: 'def456',
-      date: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
-      type: 'Send',
-      amount: '45.00',
-      token: 'USDC',
-      from: 'Merchant',
-      to: 'Supplier',
-      memo: 'Order #1043'
-    },
-    {
-      signature: 'ghi789',
-      date: new Date(Date.now() - 1000 * 60 * 65).toISOString(),
-      type: 'Team556 Pay',
-      amount: '18.75',
-      token: 'USDC',
-      from: 'Customer B',
-      to: 'Merchant'
-    }
-  ]
+  const todaysSalesTx = transactions.filter(
+    (t) => (t.type === 'Receive' || t.type === 'Team556 Pay') && isToday(t.date)
+  )
+  const salesTotal = todaysSalesTx.reduce((sum, t) => sum + (parseFloat(t.amount || '0') || 0), 0)
+  const ordersCount = todaysSalesTx.length
+  const avgOrder = ordersCount > 0 ? salesTotal / ordersCount : 0
+
+  const metrics = {
+    salesToday: formatPrice(salesTotal, 2),
+    ordersToday: ordersCount,
+    avgOrderValue: formatPrice(avgOrder, 2),
+    conversionRate: '--'
+  }
+
+  const recentTransactions: Transaction[] = transactions.slice(0, 20)
 
   return (
     <ScreenLayout
@@ -126,14 +161,12 @@ export default function Dashboard() {
         <StatCard
           label='Sales Today'
           value={metrics.salesToday}
-          delta='12.3% vs. yesterday'
           positive
           icon={<Ionicons name='cash' size={18} color={colors.icon} />}
         />
         <StatCard
           label='Orders Today'
           value={metrics.ordersToday}
-          delta='-3.1% vs. yesterday'
           positive={false}
           icon={<Ionicons name='cart' size={18} color={colors.icon} />}
         />
@@ -170,12 +203,27 @@ export default function Dashboard() {
             <Text preset='h4'>Recent Activity</Text>
             <Button title='View All' variant='ghost' />
           </View>
-          <FlatList
-            data={recentTransactions}
-            keyExtractor={(item) => item.signature}
-            renderItem={({ item }) => <TransactionRow item={item} />}
-            ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-          />
+          {loading ? (
+            <View style={{ padding: 12 }}>
+              <Text preset='caption' style={{ color: colors.textSecondary }}>Loading...</Text>
+            </View>
+          ) : error ? (
+            <View style={{ padding: 12 }}>
+              <Text preset='caption' style={{ color: colors.error }}>{error}</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={recentTransactions}
+              keyExtractor={(item) => item.signature}
+              renderItem={({ item }) => <TransactionRow item={item} />}
+              ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+              ListEmptyComponent={() => (
+                <View style={{ padding: 12 }}>
+                  <Text preset='caption' style={{ color: colors.textSecondary }}>No activity yet</Text>
+                </View>
+              )}
+            />
+          )}
         </View>
       </View>
 

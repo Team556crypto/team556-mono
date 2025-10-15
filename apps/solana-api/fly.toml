@@ -8,8 +8,10 @@ primary_region = 'lax'
 console_command = '/bin/sh'
 
 [build]
-  # dockerfile = 'apps/solana-api/Dockerfile'
-  dockerfile = "Dockerfile" # Path relative to this fly.toml file
+  # Build from monorepo root context
+  dockerfile = "Dockerfile"
+  ignorefile = ".dockerignore"
+  buildpacks = []
 
 [env]
   SOLANA_API__NODE_ENV = "production"

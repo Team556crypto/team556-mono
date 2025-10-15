@@ -140,10 +140,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  signup: async ({ email, password }) => {
+  signup: async (credentials) => {
     set({ isLoading: true, error: null })
     try {
-      const responseData = await signupUser({ email, password })
+      const responseData = await signupUser(credentials)
       const { token, user } = responseData
 
       if (!token || !user) {
@@ -153,7 +153,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await saveToken(token)
 
       // Store password temporarily for wallet creation
-      set({ token, user, password, isAuthenticated: true, isLoading: false, error: null })
+      set({ token, user, password: credentials.password, isAuthenticated: true, isLoading: false, error: null })
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || error.message || 'Signup failed'
       set({ token: null, user: null, isAuthenticated: false, isLoading: false, error: errorMessage })

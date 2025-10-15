@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { View, StyleSheet, Alert, SafeAreaView, Platform, TouchableOpacity, ScrollView, Animated } from 'react-native'
 import { Input, Text } from '@team556/ui'
-import { useRouter, Link } from 'expo-router'
+import { useRouter, Link, useLocalSearchParams } from 'expo-router'
 import Head from 'expo-router/head'
 import { genericStyles } from '@/constants/GenericStyles'
 import { Colors } from '@/constants/Colors'
@@ -14,15 +14,17 @@ const SignUpScreen = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [referralCode, setReferralCode] = useState('')
   const { isTabletOrLarger } = useBreakpoint()
   const { signup, isLoading, error: authError, setError: setAuthError } = useAuthStore()
   const router = useRouter()
+  const params = useLocalSearchParams()
 
   // Animation references for left side
   const fadeAnim = useRef(new Animated.Value(0)).current
   const translateAnim = useRef(new Animated.Value(20)).current
 
-  // Trigger animations on component mount
+  // Trigger animations on component mount and handle referral code from URL
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -36,7 +38,12 @@ const SignUpScreen = () => {
         useNativeDriver: true
       })
     ]).start()
-  }, [])
+    
+    // Set referral code from URL parameter if present
+    if (params.ref && typeof params.ref === 'string') {
+      setReferralCode(params.ref.toUpperCase())
+    }
+  }, [params.ref])
 
   const handleSignUp = async () => {
     setAuthError(null)
@@ -45,7 +52,17 @@ const SignUpScreen = () => {
       return
     }
     try {
-      await signup({ email, password })
+      const signupData: { email: string; password: string; referral_code?: string } = { 
+        email, 
+        password 
+      }
+      
+      // Add referral code if provided
+      if (referralCode.trim()) {
+        signupData.referral_code = referralCode.trim().toUpperCase()
+      }
+      
+      await signup(signupData)
       // Navigation is handled by the root _layout based on auth state
     } catch (err) {
       // Error is set in the store
@@ -227,6 +244,17 @@ const SignUpScreen = () => {
             style={[genericStyles.input, styles.input]}
             placeholderTextColor={Colors.textSecondary}
             leftIcon={<Ionicons name='lock-closed-outline' size={20} color={Colors.icon} />}
+          />
+
+          <Text style={styles.label}>Referral Code (Optional)</Text>
+          <Input
+            placeholder='Enter referral code'
+            value={referralCode}
+            onChangeText={setReferralCode}
+            autoCapitalize='characters'
+            style={[genericStyles.input, styles.input]}
+            placeholderTextColor={Colors.textSecondary}
+            leftIcon={<Ionicons name='people-outline' size={20} color={Colors.icon} />}
           />
 
           <TouchableOpacity onPress={handleSignUp} disabled={isLoading} style={styles.signUpButtonContainer}>

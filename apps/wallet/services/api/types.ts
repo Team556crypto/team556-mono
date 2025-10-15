@@ -26,6 +26,7 @@ export interface User {
 export interface UserCredentials {
   email: string
   password: string
+  referral_code?: string // Optional referral code for signup
 }
 
 // Type for the successful login response

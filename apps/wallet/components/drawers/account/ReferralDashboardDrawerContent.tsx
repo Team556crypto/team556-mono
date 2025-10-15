@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { View, StyleSheet, ScrollView, Alert, TouchableOpacity, Share, Linking, ActivityIndicator } from 'react-native'
+import { View, StyleSheet, ScrollView, Alert, TouchableOpacity, Share, Linking, ActivityIndicator, Platform } from 'react-native'
 import { Text, Button } from '@team556/ui'
 import { Ionicons } from '@expo/vector-icons'
 import { Colors } from '@/constants/Colors'
@@ -161,95 +161,91 @@ export default function ReferralDashboardDrawerContent({ onClose }: ReferralDash
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
-        <View style={styles.titleContainer}>
-          <Ionicons name="people" size={24} color={Colors.primary} />
-          <Text preset="h3" style={styles.title}>Referral Dashboard</Text>
-        </View>
+        <Text preset="h3" style={styles.title}>Referral Dashboard</Text>
         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <Ionicons name="close" size={24} color={Colors.icon} />
+          <Ionicons name="close" size={24} color={Colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
-      {/* Referral Code Section */}
-      <View style={styles.card}>
-        <Text preset="h4" style={styles.cardTitle}>Your Referral Code</Text>
+      {/* Referral Code Card */}
+      <View style={[styles.card, { borderLeftColor: Colors.primary }]}>
+        <Text style={styles.cardLabel}>Your Referral Code</Text>
         {stats?.referral_code ? (
-          <View style={styles.codeContainer}>
-            <View style={styles.codeDisplay}>
-              <Text preset="h2" style={styles.codeText}>{stats.referral_code}</Text>
+          <>
+            <Text preset="h1" style={styles.referralCode}>{stats.referral_code}</Text>
+            <View style={styles.shareUrlContainer}>
+              <Text style={styles.shareUrlText}>wallet.team556.com/signup?ref={stats.referral_code}</Text>
             </View>
             <View style={styles.actionButtons}>
               <TouchableOpacity style={styles.actionButton} onPress={handleCopyCode}>
-                <Ionicons name="copy-outline" size={20} color={Colors.primary} />
-                <Text preset="label" style={styles.actionButtonText}>Copy Code</Text>
+                <Ionicons name="copy-outline" size={18} color={Colors.primary} />
+                <Text style={styles.actionButtonText}>Copy Code</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.actionButton} onPress={handleCopyLink}>
-                <Ionicons name="link-outline" size={20} color={Colors.primary} />
-                <Text preset="label" style={styles.actionButtonText}>Copy Link</Text>
+                <Ionicons name="link-outline" size={18} color={Colors.primary} />
+                <Text style={styles.actionButtonText}>Copy Link</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
-                <Ionicons name="share-outline" size={20} color={Colors.primary} />
-                <Text preset="label" style={styles.actionButtonText}>Share</Text>
+                <Ionicons name="share-social-outline" size={18} color={Colors.primary} />
+                <Text style={styles.actionButtonText}>Share</Text>
               </TouchableOpacity>
             </View>
-            <Button
-              title={regenerating ? "Regenerating..." : "Regenerate Code"}
+            <TouchableOpacity 
+              style={styles.regenerateButton} 
               onPress={handleRegenerateCode}
-              variant="outline"
-              size="small"
               disabled={regenerating}
-              style={styles.regenerateButton}
-            />
-          </View>
+            >
+              <Text style={styles.regenerateText}>
+                {regenerating ? "Regenerating..." : "Regenerate Code"}
+              </Text>
+            </TouchableOpacity>
+          </>
         ) : (
-          <Text preset="paragraph" color={Colors.textSecondary}>
-            No referral code generated yet
-          </Text>
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>
+              No referral code generated yet
+            </Text>
+          </View>
         )}
       </View>
 
-      {/* Statistics Overview */}
-      <View style={styles.card}>
-        <Text preset="h4" style={styles.cardTitle}>Referral Statistics</Text>
-        <View style={styles.statsGrid}>
-          <View style={styles.statItem}>
-            <Text preset="h2" color={Colors.primary}>{stats?.total_referrals || 0}</Text>
-            <Text preset="caption" color={Colors.textSecondary}>Total Signups</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text preset="h2" color={Colors.success}>{stats?.wallet_created_referrals || 0}</Text>
-            <Text preset="caption" color={Colors.textSecondary}>Created Wallets</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text preset="h2" style={styles.team556Stat}>{stats?.team556_holding_referrals || 0}</Text>
-            <Text preset="caption" color={Colors.textSecondary}>Hold Team556</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text preset="h2" color={Colors.tint}>
-              {stats?.wallet_created_referrals ? 
-                Math.round(((stats?.team556_holding_referrals || 0) / stats.wallet_created_referrals) * 100) : 0}%
-            </Text>
-            <Text preset="caption" color={Colors.textSecondary}>Token Adoption</Text>
-          </View>
+      {/* Statistics Grid */}
+      <View style={styles.statsContainer}>
+        <View style={[styles.statCard, { borderLeftColor: Colors.textSecondary }]}>
+          <Text style={styles.statValue}>{stats?.total_referrals || 0}</Text>
+          <Text style={styles.statLabel}>Total Signups</Text>
+        </View>
+        <View style={[styles.statCard, { borderLeftColor: Colors.success }]}>
+          <Text style={styles.statValue}>{stats?.wallet_created_referrals || 0}</Text>
+          <Text style={styles.statLabel}>Wallets Created</Text>
+        </View>
+        <View style={[styles.statCard, { borderLeftColor: Colors.secondary }]}>
+          <Text style={styles.statValue}>{stats?.team556_holding_referrals || 0}</Text>
+          <Text style={styles.statLabel}>Hold Team556</Text>
+        </View>
+        <View style={[styles.statCard, { borderLeftColor: Colors.primary }]}>
+          <Text style={styles.statValue}>
+            {stats?.wallet_created_referrals ? 
+              Math.round(((stats?.team556_holding_referrals || 0) / stats.wallet_created_referrals) * 100) : 0}%
+          </Text>
+          <Text style={styles.statLabel}>Token Adoption</Text>
         </View>
       </View>
 
-      {/* Conversion Rates */}
-      <View style={styles.card}>
-        <Text preset="h4" style={styles.cardTitle}>Conversion Funnel</Text>
-        <View style={styles.conversionList}>
-          <View style={styles.conversionItem}>
-            <Text preset="label">Signup → Wallet Creation</Text>
-            <Text preset="paragraph" color={Colors.success}>
-              {formatPercentage(stats?.conversion_rate_to_wallet || 0)}
-            </Text>
-          </View>
-          <View style={styles.conversionItem}>
-            <Text preset="label">Wallet → Team556 Holding</Text>
-            <Text preset="paragraph" style={styles.team556Text}>
-              {formatPercentage(stats?.conversion_rate_to_team556 || 0)}
-            </Text>
-          </View>
+      {/* Conversion Funnel */}
+      <View style={[styles.card, { borderLeftColor: Colors.tint }]}>
+        <Text style={styles.cardLabel}>Conversion Funnel</Text>
+        <View style={styles.conversionItem}>
+          <Text style={styles.conversionLabel}>Signup → Wallet</Text>
+          <Text style={[styles.conversionValue, { color: Colors.success }]}>
+            {formatPercentage(stats?.conversion_rate_to_wallet || 0)}
+          </Text>
+        </View>
+        <View style={styles.conversionItem}>
+          <Text style={styles.conversionLabel}>Wallet → Team556</Text>
+          <Text style={[styles.conversionValue, { color: Colors.secondary }]}>
+            {formatPercentage(stats?.conversion_rate_to_team556 || 0)}
+          </Text>
         </View>
       </View>
 
@@ -368,30 +364,36 @@ export default function ReferralDashboardDrawerContent({ onClose }: ReferralDash
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    padding: 16,
+    backgroundColor: Colors.backgroundDarker,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
+    backgroundColor: Colors.backgroundDarker,
   },
   loadingText: {
     marginTop: 16,
+    color: Colors.textSecondary,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
+    backgroundColor: Colors.backgroundDarker,
   },
   errorTitle: {
     marginTop: 16,
     marginBottom: 8,
+    color: Colors.error,
   },
   errorMessage: {
     textAlign: 'center',
     marginBottom: 24,
+    color: Colors.textSecondary,
   },
   retryButton: {
     minWidth: 120,
@@ -400,95 +402,136 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    marginBottom: 20,
   },
   title: {
-    color: Colors.primary,
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: Colors.text,
   },
   closeButton: {
     padding: 8,
   },
+  // Card Styles
   card: {
     backgroundColor: Colors.background,
     borderRadius: 12,
-    padding: 20,
+    padding: 18,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: Colors.backgroundSubtle,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.backgroundDark,
   },
-  cardTitle: {
-    marginBottom: 16,
-    color: Colors.text,
+  cardLabel: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 12,
+    fontWeight: '500',
   },
-  codeContainer: {
-    alignItems: 'center',
-  },
-  codeDisplay: {
-    backgroundColor: Colors.primarySubtle,
-    borderRadius: 8,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    marginBottom: 16,
-    minWidth: '80%',
-    alignItems: 'center',
-  },
-  codeText: {
-    color: Colors.primary,
+  // Referral Code
+  referralCode: {
+    fontSize: 32,
     fontWeight: 'bold',
-    letterSpacing: 2,
+    color: Colors.primary,
+    letterSpacing: 3,
+    marginBottom: 8,
+    textAlign: 'center',
   },
+  shareUrlContainer: {
+    backgroundColor: Colors.backgroundSubtle,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  shareUrlText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  // Action Buttons
   actionButtons: {
     flexDirection: 'row',
-    gap: 16,
-    marginBottom: 16,
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
   actionButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    marginHorizontal: 4,
+    backgroundColor: Colors.backgroundSubtle,
+    borderRadius: 8,
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: 6,
   },
   actionButtonText: {
+    fontSize: 13,
     color: Colors.primary,
+    fontWeight: '500',
   },
   regenerateButton: {
-    minWidth: 150,
+    alignItems: 'center',
+    paddingVertical: 8,
   },
-  statsGrid: {
+  regenerateText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textDecorationLine: 'underline',
+  },
+  // Empty State
+  emptyState: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  // Statistics
+  statsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
+    marginBottom: 16,
+    gap: 8,
   },
-  statItem: {
+  statCard: {
     flex: 1,
-    minWidth: '45%',
-    alignItems: 'center',
+    minWidth: '48%',
+    backgroundColor: Colors.background,
+    borderRadius: 12,
     padding: 16,
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: 8,
+    borderLeftWidth: 4,
+    alignItems: 'center',
   },
-  team556Stat: {
-    color: '#FF6B35', // Team556 brand color
+  statValue: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: 4,
   },
-  conversionList: {
-    gap: 12,
+  statLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
   },
+  // Conversion Funnel
   conversionItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.backgroundSubtle,
   },
-  team556Text: {
-    color: '#FF6B35', // Team556 brand color
+  conversionLabel: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  conversionValue: {
+    fontSize: 18,
+    fontWeight: '600',
   },
   tokenStats: {
     gap: 16,

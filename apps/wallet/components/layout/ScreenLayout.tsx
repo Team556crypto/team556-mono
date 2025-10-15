@@ -1,9 +1,8 @@
 import React from 'react'
-import { SafeAreaView, ScrollView, StyleSheet, View, type ViewStyle, Platform, useWindowDimensions } from 'react-native'
+import { SafeAreaView, ScrollView, StyleSheet, View, type ViewStyle, Platform } from 'react-native'
 import { Text } from '@team556/ui' // Assuming Text comes from shared UI
 import { Colors } from '@/constants/Colors'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
-import { calculateSidebarMargin } from '@/constants/Layout'
 
 interface ScreenLayoutProps {
   children: React.ReactNode
@@ -30,8 +29,6 @@ export const ScreenLayout: React.FC<ScreenLayoutProps> = ({
   scrollEnabled = true
 }) => {
   const { isTabletOrLarger } = useBreakpoint()
-  const { width } = useWindowDimensions()
-  const sidebarMargin = calculateSidebarMargin(width)
 
   const Header = (
     <View style={[styles.headerRow, Platform.OS === 'android' && { paddingTop: 50 }]}>
@@ -49,7 +46,7 @@ export const ScreenLayout: React.FC<ScreenLayoutProps> = ({
     <SafeAreaView style={styles.safeArea}>
       {scrollEnabled ? (
         <ScrollView
-          style={[styles.container, { marginLeft: sidebarMargin }]}
+          style={[styles.container, isTabletOrLarger && styles.containerTablet]}
           contentContainerStyle={contentContainerStyle}
           showsVerticalScrollIndicator={false}
         >
@@ -57,7 +54,7 @@ export const ScreenLayout: React.FC<ScreenLayoutProps> = ({
           {children}
         </ScrollView>
       ) : (
-        <View style={[styles.container, { marginLeft: sidebarMargin }]}>
+        <View style={[styles.container, isTabletOrLarger && styles.containerTablet]}>
           {Header}
           <View style={{ flex: 1 }}>{children}</View>
         </View>
@@ -75,6 +72,11 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'android' ? 6 : 16
+  },
+  containerTablet: {
+    marginLeft: 240,
+    paddingTop: 32,
+    paddingRight: 32
   },
   headerRow: {
     flexDirection: 'row',

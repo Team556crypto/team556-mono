@@ -1,6 +1,5 @@
 import { Tabs } from 'expo-router'
 import React from 'react'
-import { View, useWindowDimensions, Platform } from 'react-native'
 
 import { ResponsiveNavigation } from '@/components/layout/ResponsiveNavigation'
 import { Colors } from '@/constants/Colors'
@@ -15,14 +14,13 @@ export default function TabLayout() {
   }
 
   return (
-    <View style={{ flex: 1, flexDirection: 'row' }}>
-      <Tabs
-        tabBar={props => <ResponsiveNavigation {...props} />}
-        screenOptions={{
-          tabBarActiveTintColor: Colors.tint,
-          headerShown: false
-        }}
-      >
+    <Tabs
+      tabBar={props => <ResponsiveNavigation {...props} />}
+      screenOptions={{
+        tabBarActiveTintColor: Colors.tint,
+        headerShown: false
+      }}
+    >
         <Tabs.Screen
           name='index'
           options={{
@@ -52,6 +50,5 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
-    </View>
   )
 }

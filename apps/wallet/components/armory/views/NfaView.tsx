@@ -14,8 +14,8 @@ import { useDrawerStore } from '@/store/drawerStore';
 import { useNFAStore } from '@/store/nfaStore';
 
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
-// import { NFADetailsDrawerContent } from '@/components/drawers/NFADetailsDrawerContent';
-// import { AddNFADrawerContent } from '@/components/drawers/AddNFADrawerContent';
+import { NFADetailsDrawerContent } from '@/components/drawers/armory/details/NFADetailsDrawerContent';
+import { AddNFADrawerContent } from '@/components/drawers/armory/add/AddNFADrawerContent';
 import NFACard from '../cards/NFACard';
 import { viewStyles } from './styles';
 
@@ -59,11 +59,11 @@ export const NFAView = () => {
   }, [token, hasAttemptedInitialFetch, isLoading, fetchInitialNFAItems])
 
   const handleNfaPress = (nfa: NFA) => {
-    // openDrawer(<NFADetailsDrawerContent nfa={nfa} />, { maxHeight: '90%' });
+    openDrawer(<NFADetailsDrawerContent nfa={nfa} />, { maxHeight: '90%' });
   }
 
-  const handleAddGear = () => {
-    // openDrawer(<AddGearDrawerContent />);
+  const handleAddNFA = () => {
+    openDrawer(<AddNFADrawerContent />);
   }
 
   const handleDelete = (gearId: number) => {
@@ -119,45 +119,32 @@ export const NFAView = () => {
     )
   } else if (nfas.length === 0) {
     content = (
-      // <EmptyState
-      //   icon={<MaterialCommunityIcons name='file-certificate-outline' size={80} color={colors.primary} />}
-      //   title='No NFA Items Yet'
-      //   subtitle='Get started by adding your first NFA item to your armory.'
-      //   buttonText='+ Add NFA Item'
-      //   onPress={handleAddGear}
-      // />
       <EmptyState
-        icon={<MaterialCommunityIcons name='file-certificate-outline' size={80} color={colors.primary} />}
-        title='Coming Soon!'
-        subtitle='NFA is currently in development and will be available soon.'
+        icon={<MaterialCommunityIcons name='shield-check' size={80} color={colors.primary} />}
+        title='No NFA Items Yet'
+        subtitle='Get started by adding your first NFA item to your armory.'
         buttonText='+ Add NFA Item'
-        onPress={handleAddGear}
+        onPress={handleAddNFA}
       />
     )
   } else {
+    const FlatList = require('react-native').FlatList;
     content = (
-      <EmptyState
-        icon={<MaterialCommunityIcons name='file-certificate-outline' size={80} color={colors.primary} />}
-        title='Coming Soon!'
-        subtitle='NFA is currently in development and will be available soon.'
-        buttonText='+ Add NFA Item'
-        onPress={handleAddGear}
+      <FlatList
+        key={numColumns}
+        data={nfas}
+        renderItem={renderItem}
+        keyExtractor={item => item.id.toString()}
+        numColumns={numColumns}
+        style={styles.flatListContainer}
+        contentContainerStyle={styles.gridContent}
+        columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
+        ListHeaderComponent={
+          isLoading && nfas.length > 0 ? (
+            <ActivityIndicator style={{ marginVertical: 20 }} size='large' color={colors.primary} />
+          ) : null
+        }
       />
-      // <FlatList
-      //   key={numColumns}
-      //   data={nfas}
-      //   renderItem={renderItem}
-      //   keyExtractor={item => item.id.toString()}
-      //   numColumns={numColumns}
-      //   style={styles.flatListContainer}
-      //   contentContainerStyle={styles.gridContent}
-      //   columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
-      //   ListHeaderComponent={
-      //     isLoading && nfas.length > 0 ? (
-      //       <ActivityIndicator style={{ marginVertical: 20 }} size='large' color={colors.primary} />
-      //     ) : null
-      //   }
-      // />
     )
   }
 
@@ -175,7 +162,7 @@ export const NFAView = () => {
         </View>
         {canAddItem && (
           <TouchableOpacity 
-            onPress={handleAddGear} 
+            onPress={handleAddNFA} 
             style={screenWidth >= MEDIUM_SCREEN_BREAKPOINT ? styles.addButtonLarge : styles.addButtonHeaderSmall} 
           >
             <Ionicons 
@@ -184,7 +171,7 @@ export const NFAView = () => {
               color={colors.primary} 
             />
             {screenWidth >= MEDIUM_SCREEN_BREAKPOINT && (
-              <Text style={styles.addButtonText}>Add Gear</Text>
+              <Text style={styles.addButtonText}>Add NFA Item</Text>
             )}
           </TouchableOpacity>
         )}

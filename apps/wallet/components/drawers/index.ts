@@ -1,7 +1,7 @@
 export * from './armory/add/AddAmmoDrawerContent';
 // export * from './AddDocumentDrawerContent';
 export * from './armory/add/AddFirearmDrawerContent';
-// export * from './armory/add/AddGearDrawerContent';
+export * from './armory/add/AddGearDrawerContent';
 // export * from './AddNFADrawerContent';
 export * from './armory/details/AmmoDetailsDrawerContent';
 export * from './armory/AssetDetailsDrawerContent';

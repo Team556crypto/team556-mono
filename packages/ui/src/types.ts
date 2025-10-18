@@ -104,16 +104,78 @@ export interface Gear {
   id: number;
   owner_user_id: number;
   name: string;
-  type: string; // e.g., "Combat", "Hunting", "Camping"
+  type: string; // Legacy field
+  category: string; // Main category: tactical, camping, communication, survival, optics, protection, bags, medical, tools, lighting, clothing, maintenance, storage, electronics, other
+  subcategory?: string; // Specific type within category
   manufacturer?: string;
   model?: string;
   quantity: number;
+  condition?: string; // new, excellent, good, fair, poor
+  serialNumber?: string;
+  weightOz?: number; // Weight in ounces
+  dimensions?: string; // e.g., "10x5x3 inches"
+  color?: string;
+  material?: string; // Nylon, Cordura, Polyester, etc.
+  storageLocation?: string;
+  warrantyExpiration?: string; // ISO date
+  lastMaintenance?: string; // ISO date
   purchaseDate?: string; // ISO string
   purchasePrice?: number;
+  specifications?: GearSpecifications; // Category-specific specs
+  status?: string; // active, retired, loaned, repair, for_sale
   notes?: string;
   pictures?: string; // JSON string array of image URLs
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Category-specific specifications for gear items
+ */
+export interface GearSpecifications {
+  // Optics/Sights
+  magnification?: string;
+  objectiveLens?: string;
+  reticle?: string;
+  illuminated?: boolean;
+  turretType?: string;
+  mountType?: string;
+  
+  // Radios/Communication
+  frequency?: string;
+  channels?: number;
+  range?: string;
+  batteryType?: string;
+  waterproof?: string; // IP rating
+  encryption?: boolean;
+  
+  // Armor/Protection
+  protectionLevel?: string; // NIJ Level IIIA, III, IV
+  coverage?: string; // Front, back, sides
+  expirationDate?: string;
+  
+  // Camping/Survival
+  capacity?: string; // Tent capacity, pack capacity
+  temperature?: string; // Sleeping bag rating
+  waterResistant?: boolean;
+  setupTime?: string;
+  
+  // Medical
+  contents?: string[];
+  certifications?: string[];
+  
+  // Lights
+  lumens?: number;
+  runtime?: string;
+  beamDistance?: string;
+  
+  // Knives/Tools
+  bladeLength?: string;
+  bladeMaterial?: string;
+  handleMaterial?: string;
+  lockType?: string;
+  
+  [key: string]: any; // Allow additional custom fields
 }
 
 /**

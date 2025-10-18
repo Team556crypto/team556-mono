@@ -307,33 +307,32 @@ export const AddAmmoDrawerContent: React.FC<Props> = () => {
     )
   }
 
-  const renderInput = (field: keyof AmmoFormState, placeholder: string, keyboardType: 'default' | 'numeric' = 'default') => (
-    <View style={styles.inputRow}>
-      <Text style={styles.label}>{placeholder}</Text>
-      <TextInput
-        style={styles.inputStyle}
-        value={newAmmo[field] as string}
-        onChangeText={text => handleInputChange(field, text)}
-        placeholder={placeholder}
-        placeholderTextColor={colors.textTertiary}
-        keyboardType={keyboardType}
-      />
-      {fieldErrors[field] && <Text style={styles.errorTextBelow}>{fieldErrors[field]}</Text>}
-    </View>
-  )
+  const renderDetailRow = (
+    label: string,
+    field: keyof AmmoFormState,
+    placeholder: string,
+    keyboardType: 'default' | 'numeric' = 'default'
+  ) => {
+    const fieldValue = newAmmo[field]
+    const error = fieldErrors[field]
 
-  const renderSelect = (field: keyof AmmoFormState, label: string, options: { label: string; value: string }[]) => (
-    <View style={styles.inputRow}>
-      <Text style={styles.label}>{label}</Text>
-      <Select
-        items={options}
-        selectedValue={newAmmo[field] as string}
-        onValueChange={value => handleInputChange(field, value)}
-        placeholder={`Select ${label}...`}
-      />
-      {fieldErrors[field] && <Text style={styles.errorTextBelow}>{fieldErrors[field]}</Text>}
-    </View>
-  )
+    return (
+      <View style={styles.detailRowContainer}>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>{label}</Text>
+          <TextInput
+            style={styles.inputStyle}
+            value={fieldValue as string}
+            onChangeText={text => handleInputChange(field, text)}
+            placeholder={placeholder}
+            placeholderTextColor={colors.textTertiary}
+            keyboardType={keyboardType}
+          />
+        </View>
+        {error && <Text style={styles.errorTextBelow}>{error}</Text>}
+      </View>
+    )
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
@@ -355,11 +354,13 @@ export const AddAmmoDrawerContent: React.FC<Props> = () => {
             <MaterialCommunityIcons name="target" size={24} color={colors.primary} />
             <Text style={styles.sectionTitle}>Primary Details</Text>
           </View>
-          {renderInput('manufacturer', 'Manufacturer')}
-          {renderInput('caliber', 'Caliber')}
-          {renderInput('type', 'Type')}
-          {renderInput('grainWeight', 'Grain Weight', 'numeric')}
-          {renderInput('quantity', 'Quantity', 'numeric')}
+          <View style={styles.sectionContent}>
+            {renderDetailRow('Manufacturer', 'manufacturer', 'Manufacturer name')}
+            {renderDetailRow('Caliber', 'caliber', 'e.g., 5.56x45')}
+            {renderDetailRow('Type', 'type', 'e.g., FMJ, JHP')}
+            {renderDetailRow('Grain Weight', 'grainWeight', 'e.g., 55', 'numeric')}
+            {renderDetailRow('Quantity', 'quantity', 'Number of rounds', 'numeric')}
+          </View>
         </View>
       )}
 
@@ -369,16 +370,20 @@ export const AddAmmoDrawerContent: React.FC<Props> = () => {
             <MaterialCommunityIcons name="cash-multiple" size={24} color={colors.primary} />
             <Text style={styles.sectionTitle}>Purchase Information</Text>
           </View>
-          <TouchableOpacity onPress={() => showMode('purchaseDate')} style={styles.inputRow}>
-            <Text style={styles.label}>Purchase Date</Text>
-            <View style={styles.inputStyle}>
-              <Text style={styles.dateText}>
-                {newAmmo.purchaseDate ? new Date(newAmmo.purchaseDate).toLocaleDateString() : 'Select a date'}
-              </Text>
+          <View style={styles.sectionContent}>
+            <View style={styles.detailRowContainer}>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Purchase Date</Text>
+                <TouchableOpacity onPress={() => showMode('purchaseDate')} style={styles.dateContainer}>
+                  <Text style={[styles.dateText, newAmmo.purchaseDate ? {} : styles.placeholderText]}>
+                    {newAmmo.purchaseDate ? new Date(newAmmo.purchaseDate).toLocaleDateString() : 'Select a date'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {fieldErrors.purchaseDate && <Text style={styles.errorTextBelow}>{fieldErrors.purchaseDate}</Text>}
             </View>
-          </TouchableOpacity>
-          {fieldErrors.purchaseDate && <Text style={styles.errorTextBelow}>{fieldErrors.purchaseDate}</Text>}
-          {renderInput('purchasePrice', 'Purchase Price', 'numeric')}
+            {renderDetailRow('Purchase Price', 'purchasePrice', '$0.00', 'numeric')}
+          </View>
         </View>
       )}
 
@@ -388,21 +393,23 @@ export const AddAmmoDrawerContent: React.FC<Props> = () => {
             <MaterialCommunityIcons name="image-multiple" size={24} color={colors.primary} />
             <Text style={styles.sectionTitle}>Photos & Notes</Text>
           </View>
-          <TouchableOpacity onPress={pickImageAsync} style={styles.imagePicker}>
-            {selectedImageUri ? (
-              <Image source={{ uri: selectedImageUri }} style={styles.imagePreview} />
-            ) : (
-              <Text style={styles.imagePickerText}>Add Photo</Text>
-            )}
-          </TouchableOpacity>
-          <TextInput
-            style={styles.notesInput}
-            value={newAmmo.notes}
-            onChangeText={text => handleInputChange('notes', text)}
-            placeholder="Add notes..."
-            placeholderTextColor={colors.textTertiary}
-            multiline
-          />
+          <View style={styles.sectionContent}>
+            <TouchableOpacity onPress={pickImageAsync} style={styles.imagePicker}>
+              {selectedImageUri ? (
+                <Image source={{ uri: selectedImageUri }} style={styles.imagePreview} />
+              ) : (
+                <Text style={styles.imagePickerText}>Add Photo</Text>
+              )}
+            </TouchableOpacity>
+            <TextInput
+              style={styles.notesInput}
+              value={newAmmo.notes}
+              onChangeText={text => handleInputChange('notes', text)}
+              placeholder="Add notes..."
+              placeholderTextColor={colors.textTertiary}
+              multiline
+            />
+          </View>
         </View>
       )}
 

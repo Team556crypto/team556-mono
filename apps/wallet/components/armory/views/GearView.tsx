@@ -14,8 +14,8 @@ import { useDrawerStore } from '@/store/drawerStore';
 import { useGearStore } from '@/store/gearStore';
 
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
-// import { GearDetailsDrawerContent } from '@/components/drawers/armory/details/GearDetailsDrawerContent';
-// import { AddGearDrawerContent } from '@/components/drawers/armory/add/AddGearDrawerContent';
+import { GearDetailsDrawerContent } from '@/components/drawers/armory/details/GearDetailsDrawerContent';
+import { AddGearDrawerContent } from '@/components/drawers/armory/add/AddGearDrawerContent';
 import GearCard from '../cards/GearCard';
 import { viewStyles } from './styles';
 
@@ -59,11 +59,11 @@ export const GearView = () => {
   }, [token, hasAttemptedInitialFetch, isLoading, fetchInitialGears])
 
   const handleGearPress = (gear: Gear) => {
-    // openDrawer(<GearDetailsDrawerContent gear={gear} />, { maxHeight: '90%' });
+    openDrawer(<GearDetailsDrawerContent gear={gear} />, { maxHeight: '90%' });
   }
 
   const handleAddGear = () => {
-    // openDrawer(<AddGearDrawerContent />);
+    openDrawer(<AddGearDrawerContent />);
   }
 
   const handleDelete = (gearId: number) => {

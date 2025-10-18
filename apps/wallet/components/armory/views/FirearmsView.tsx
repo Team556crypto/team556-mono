@@ -68,29 +68,13 @@ export const FirearmsView = () => {
   }
 
   const handleDelete = (firearmId: number) => {
-    Alert.alert(
-      'Delete Firearm',
-      'Are you sure you want to delete this firearm? This action cannot be undone.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          onPress: async () => {
-            try {
-              await deleteFirearm(firearmId, token)
-            } catch (error) {
-              // Error is already handled in the store, but you could add specific UI feedback here if needed
-              Alert.alert('Error', 'Failed to delete firearm.');
-            }
-          },
-          style: 'destructive',
-        },
-      ],
-      { cancelable: false }
-    )
+    console.log('handleDelete called with firearmId:', firearmId);
+    if (confirm('Are you sure you want to delete this firearm? This action cannot be undone.')) {
+      deleteFirearm(firearmId, token).catch(error => {
+        console.error('Failed to delete firearm:', error);
+        alert('Failed to delete firearm.');
+      });
+    }
   }
 
   const renderItem = ({ item }: { item: Firearm }) => (

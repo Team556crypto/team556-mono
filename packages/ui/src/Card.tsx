@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Pressable, StyleProp, ViewStyle } from 'react-native';
+import { View, StyleSheet, Pressable, TouchableOpacity, StyleProp, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from './ThemeContext';
 import Text from './Text';
@@ -39,9 +39,15 @@ export default function Card({
       width,
       height,
       borderRadius: 16,
-      overflow: 'hidden',
       borderWidth: 1,
-      borderColor: colors.backgroundLight
+      borderColor: colors.backgroundLight,
+      position: 'relative'
+    },
+    cardContent: {
+      width: '100%',
+      height: '100%',
+      borderRadius: 16,
+      overflow: 'hidden'
     },
     cardGradient: {
       width: '100%',
@@ -108,10 +114,11 @@ export default function Card({
       position: 'absolute',
       top: 8,
       right: 8,
-      padding: 4,
-      borderRadius: 16,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      zIndex: 1,
+      padding: 8,
+      borderRadius: 20,
+      backgroundColor: 'transparent',
+      zIndex: 999,
+      elevation: 5,
     },
   });
 
@@ -146,30 +153,42 @@ export default function Card({
 
   return (
     <View style={[styles.card, containerStyle]}>
-      <Pressable
-        style={({ pressed }) => [{ width: '100%', height: '100%' }, { transform: [{ scale: pressed ? 0.98 : 1 }] }]}
-        onPress={onPress}
-      >
-        <LinearGradient colors={[colors.backgroundCard, colors.backgroundDark]} style={styles.cardGradient}>
-          <View style={styles.imageContainer}>{renderImage()}</View>
-          <View style={styles.infoContainer}>
-            <Text style={styles.name} numberOfLines={2} ellipsizeMode='tail'>
-              {title}
-            </Text>
-            {details
-              .filter((d): d is string => !!d)
-              .map((detail, index) => (
-                <Text key={index} style={styles.details} numberOfLines={1} ellipsizeMode='tail'>
-                  {detail}
-                </Text>
-              ))}
-          </View>
-        </LinearGradient>
-      </Pressable>
-      {onDelete && (
-        <Pressable style={styles.deleteButton} onPress={onDelete}>
-          <MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.text} />
+      <View style={styles.cardContent}>
+        <Pressable
+          style={({ pressed }) => [{ width: '100%', height: '100%' }, { transform: [{ scale: pressed ? 0.98 : 1 }] }]}
+          onPress={onPress}
+          disabled={false}
+        >
+          <LinearGradient colors={[colors.backgroundCard, colors.backgroundDark]} style={styles.cardGradient}>
+            <View style={styles.imageContainer}>{renderImage()}</View>
+            <View style={styles.infoContainer}>
+              <Text style={styles.name} numberOfLines={2} ellipsizeMode='tail'>
+                {title}
+              </Text>
+              {details
+                .filter((d): d is string => !!d)
+                .map((detail, index) => (
+                  <Text key={index} style={styles.details} numberOfLines={1} ellipsizeMode='tail'>
+                    {detail}
+                  </Text>
+                ))}
+            </View>
+          </LinearGradient>
         </Pressable>
+      </View>
+      {onDelete && (
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={(e) => {
+            console.log('DELETE BUTTON CLICKED!');
+            e?.stopPropagation?.();
+            onDelete();
+          }}
+          activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.error} />
+        </TouchableOpacity>
       )}
     </View>
   );

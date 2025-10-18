@@ -67,29 +67,13 @@ export const GearView = () => {
   }
 
   const handleDelete = (gearId: number) => {
-    Alert.alert(
-      'Delete Gear',
-      'Are you sure you want to delete this gear? This action cannot be undone.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          onPress: async () => {
-            try {
-              await deleteGear(gearId, token)
-            } catch (error) {
-              // Error is already handled in the store, but you could add specific UI feedback here if needed
-              Alert.alert('Error', 'Failed to delete gear.');
-            }
-          },
-          style: 'destructive',
-        },
-      ],
-      { cancelable: false }
-    )
+    console.log('handleDelete called with gearId:', gearId);
+    if (confirm('Are you sure you want to delete this gear? This action cannot be undone.')) {
+      deleteGear(gearId, token).catch(error => {
+        console.error('Failed to delete gear:', error);
+        alert('Failed to delete gear.');
+      });
+    }
   }
 
   const renderItem = ({ item }: { item: Gear }) => (
@@ -119,45 +103,32 @@ export const GearView = () => {
     )
   } else if (gears.length === 0) {
     content = (
-      // <EmptyState
-      //   icon={<MaterialCommunityIcons name='tent' size={80} color={colors.primary} />}
-      //   title='No Ammunition Yet'
-      //   subtitle='Get started by adding your first ammunition to your armory.'
-      //   buttonText='+ Add Ammunition'
-      //   onPress={handleAddGear}
-      // /> 
       <EmptyState
         icon={<MaterialCommunityIcons name='tent' size={80} color={colors.primary} />}
-        title='Coming Soon!'
-        subtitle='Gear is currently in development and will be available soon.'
+        title='No Gear Yet'
+        subtitle='Get started by adding your first gear to your armory.'
         buttonText='+ Add Gear'
         onPress={handleAddGear}
       />
     )
   } else {
+    const FlatList = require('react-native').FlatList;
     content = (
-      <EmptyState
-        icon={<MaterialCommunityIcons name='tent' size={80} color={colors.primary} />}
-        title='Coming Soon!'
-        subtitle='Gear is currently in development and will be available soon.'
-        buttonText='+ Add Gear'
-        onPress={handleAddGear}
+      <FlatList
+        key={numColumns}
+        data={gears}
+        renderItem={renderItem}
+        keyExtractor={item => item.id.toString()}
+        numColumns={numColumns}
+        style={styles.flatListContainer}
+        contentContainerStyle={styles.gridContent}
+        columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
+        ListHeaderComponent={
+          isLoading && gears.length > 0 ? (
+            <ActivityIndicator style={{ marginVertical: 20 }} size='large' color={colors.primary} />
+          ) : null
+        }
       />
-      // <FlatList
-      //   key={numColumns}
-      //   data={gears}
-      //   renderItem={renderItem}
-      //   keyExtractor={item => item.id.toString()}
-      //   numColumns={numColumns}
-      //   style={styles.flatListContainer}
-      //   contentContainerStyle={styles.gridContent}
-      //   columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
-      //   ListHeaderComponent={
-      //     isLoading && gears.length > 0 ? (
-      //       <ActivityIndicator style={{ marginVertical: 20 }} size='large' color={colors.primary} />
-      //     ) : null
-      //   }
-      // />
     )
   }
 

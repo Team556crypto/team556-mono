@@ -246,16 +246,31 @@ const SignUpScreen = () => {
             leftIcon={<Ionicons name='lock-closed-outline' size={20} color={Colors.icon} />}
           />
 
-          <Text style={styles.label}>Referral Code (Optional)</Text>
-          <Input
-            placeholder='Enter referral code'
-            value={referralCode}
-            onChangeText={setReferralCode}
-            autoCapitalize='characters'
-            style={[genericStyles.input, styles.input]}
-            placeholderTextColor={Colors.textSecondary}
-            leftIcon={<Ionicons name='people-outline' size={20} color={Colors.icon} />}
-          />
+          <View style={styles.referralContainer}>
+            <View style={styles.referralHeader}>
+              <Text style={styles.label}>Referral Code (Optional)</Text>
+              <Text style={styles.referralBenefit}>🎉 Get rewards when you sign up with a code</Text>
+            </View>
+            <Input
+              placeholder='Enter referral code'
+              value={referralCode}
+              onChangeText={setReferralCode}
+              autoCapitalize='characters'
+              style={[genericStyles.input, styles.input, styles.referralInput]}
+              placeholderTextColor={Colors.textSecondary}
+              leftIcon={<Ionicons name='gift-outline' size={20} color={Colors.primary} />}
+              rightIcon={
+                referralCode ? (
+                  <TouchableOpacity
+                    onPress={() => setReferralCode('')}
+                    style={styles.clearButton}
+                  >
+                    <Ionicons name='close-circle' size={20} color={Colors.textSecondary} />
+                  </TouchableOpacity>
+                ) : undefined
+              }
+            />
+          </View>
 
           <TouchableOpacity onPress={handleSignUp} disabled={isLoading} style={styles.signUpButtonContainer}>
             <View style={styles.signUpButton}>
@@ -558,6 +573,27 @@ const styles = StyleSheet.create({
     color: Colors.errorText,
     textAlign: 'center',
     fontSize: 13
+  },
+  // Referral Input Styles
+  referralContainer: {
+    marginBottom: 20,
+  },
+  referralHeader: {
+    marginBottom: 8,
+  },
+  referralBenefit: {
+    fontSize: 12,
+    color: Colors.secondary,
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  referralInput: {
+    backgroundColor: Colors.primarySubtle + '10',
+    borderWidth: 1,
+    borderColor: Colors.primary + '30',
+  },
+  clearButton: {
+    padding: 4,
   },
   backButtonMobile: {
     position: 'absolute',

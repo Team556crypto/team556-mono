@@ -185,7 +185,10 @@ export const AddGearDrawerContent: React.FC = () => {
       warrantyExpiration: newGear.warrantyExpiration ? new Date(newGear.warrantyExpiration).toISOString() : undefined,
       lastMaintenance: newGear.lastMaintenance ? new Date(newGear.lastMaintenance).toISOString() : undefined,
       specifications: Object.keys(newGear.specifications).length > 0 ? newGear.specifications : undefined,
-      pictures: newGear.pictures_base64 ? newGear.pictures_base64[0] : undefined,
+      // Backend expects pictures as a JSON stringified array
+      pictures: newGear.pictures_base64 && newGear.pictures_base64.length > 0
+        ? JSON.stringify(newGear.pictures_base64)
+        : undefined,
     }
 
     try {

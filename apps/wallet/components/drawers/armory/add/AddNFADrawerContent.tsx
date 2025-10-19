@@ -48,7 +48,7 @@ const initialNFAState: NFAFormState = {
 
 export const AddNFADrawerContent: React.FC = () => {
   const { colors } = useTheme()
-  const { addNFA, isLoading } = useNFAStore()
+  const { addNFAItem, isLoading } = useNFAStore()
   const { token } = useAuthStore()
   const { closeDrawer } = useDrawerStore()
 
@@ -187,7 +187,7 @@ export const AddNFADrawerContent: React.FC = () => {
     }
 
     try {
-      await addNFA(nfaData, token)
+      await addNFAItem(nfaData, token)
       closeDrawer()
       setNewNFA(initialNFAState)
       setSelectedImageUri(null)

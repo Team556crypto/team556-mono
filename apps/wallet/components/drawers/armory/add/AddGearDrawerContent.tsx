@@ -175,24 +175,49 @@ export const AddGearDrawerContent: React.FC = () => {
       return
     }
 
-    const gearData: CreateGearPayload = {
-      ...newGear,
+    // Prepare the payload for the API, converting types as needed (following firearm pattern)
+    const gearToSave: CreateGearPayload = {
+      // Required fields
+      name: newGear.name.trim(),
       type: newGear.category,
+      category: newGear.category,
       quantity: parseInt(newGear.quantity, 10),
-      purchasePrice: newGear.purchasePrice ? parseFloat(newGear.purchasePrice) : undefined,
-      weightOz: newGear.weightOz ? parseFloat(newGear.weightOz) : undefined,
+
+      // Optional string fields
+      subcategory: newGear.subcategory?.trim() || undefined,
+      manufacturer: newGear.manufacturer?.trim() || undefined,
+      model: newGear.model?.trim() || undefined,
+      condition: newGear.condition?.trim() || undefined,
+      serialNumber: newGear.serialNumber?.trim() || undefined,
+      dimensions: newGear.dimensions?.trim() || undefined,
+      color: newGear.color?.trim() || undefined,
+      material: newGear.material?.trim() || undefined,
+      storageLocation: newGear.storageLocation?.trim() || undefined,
+      status: newGear.status?.trim() || undefined,
+      notes: newGear.notes?.trim() || undefined,
+
+      // Date fields (convert to ISO string or undefined)
       purchaseDate: newGear.purchaseDate ? new Date(newGear.purchaseDate).toISOString() : undefined,
       warrantyExpiration: newGear.warrantyExpiration ? new Date(newGear.warrantyExpiration).toISOString() : undefined,
       lastMaintenance: newGear.lastMaintenance ? new Date(newGear.lastMaintenance).toISOString() : undefined,
-      specifications: Object.keys(newGear.specifications).length > 0 ? newGear.specifications : undefined,
-      // Backend expects pictures as a JSON stringified array
+
+      // Numeric fields (parse from string or set to undefined)
+      purchasePrice: newGear.purchasePrice ? parseFloat(newGear.purchasePrice) : undefined,
+      weightOz: newGear.weightOz ? parseFloat(newGear.weightOz) : undefined,
+
+      // Specifications (JSON string, only include if not empty)
+      specifications: Object.keys(newGear.specifications).length > 0 ? JSON.stringify(newGear.specifications) : undefined,
+
+      // Pictures field (JSON string array)
       pictures: newGear.pictures_base64 && newGear.pictures_base64.length > 0
         ? JSON.stringify(newGear.pictures_base64)
         : undefined,
     }
 
+    console.log('Gear data before API call:', JSON.stringify(gearToSave, null, 2))
+
     try {
-      await addGear(gearData, token)
+      await addGear(gearToSave, token)
       closeDrawer()
       setNewGear(initialGearState)
       setSelectedImageUri(null)

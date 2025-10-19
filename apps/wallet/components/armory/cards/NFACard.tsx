@@ -1,6 +1,6 @@
 import React from 'react';
 import Card from '@team556/ui/src/Card';
-import { NFA } from '@team556/ui/src/types'
+import { NFA, nfaTypeOptions } from '@team556/ui/src/types'
 
 interface NFACardProps {
   nfa: NFA;
@@ -29,16 +29,27 @@ export default function NFACard({
     }
   };
 
-  const getFirearmIcon = () => {
+  const getNFATypeLabel = () => {
+    const typeOption = nfaTypeOptions.find(option => option.value === nfa.type);
+    return typeOption ? typeOption.label : nfa.type || 'NFA Item';
+  };
+
+  const getNFAIcon = () => {
     const type = nfa.type?.toLowerCase() || '';
-    if (type.includes('pistol') || type.includes('handgun')) {
+    if (type.includes('suppressor')) {
+      return 'volume-off';
+    } else if (type.includes('sbr') || type.includes('rifle')) {
       return 'target';
-    } else if (type.includes('rifle') || type.includes('shotgun')) {
+    } else if (type.includes('sbs') || type.includes('shotgun')) {
       return 'crosshairs';
-    } else if (type.includes('nfa')) {
-      return 'shield';
+    } else if (type.includes('machine_gun')) {
+      return 'alarm-light';
+    } else if (type.includes('destructive')) {
+      return 'bomb';
+    } else if (type.includes('aow')) {
+      return 'pistol';
     }
-    return 'crosshairs-gps';
+    return 'shield-check';
   };
 
   return (
@@ -48,8 +59,8 @@ export default function NFACard({
       onPress={handlePress}
       onDelete={handleDelete}
       imageUri={nfa.picture}
-      iconName={getFirearmIcon()}
-      category={nfa.type || 'Firearm'}
+      iconName={getNFAIcon()}
+      category={getNFATypeLabel()}
       title={nfa.manufacturer}
       details={[
         `${nfa.manufacturer || ''} ${nfa.model_name || ''}`.trim(),

@@ -36,6 +36,7 @@ const initialNFAState: NFAFormState = {
   model_name: '',
   caliber: '',
   type: '',
+  serial_number: '',
   tax_stamp_type: '',
   tax_stamp_id_number: '',
   tax_stamp_submission_date: undefined,
@@ -173,6 +174,7 @@ export const AddNFADrawerContent: React.FC = () => {
       model_name: newNFA.model_name.trim(),
       caliber: newNFA.caliber.trim(),
       type: newNFA.type,
+      serial_number: newNFA.serial_number?.trim() || undefined,
       tax_stamp_type: newNFA.tax_stamp_type,
       tax_stamp_id_number: newNFA.tax_stamp_id_number.trim(),
       tax_stamp_submission_date: newNFA.tax_stamp_submission_date 
@@ -353,6 +355,7 @@ export const AddNFADrawerContent: React.FC = () => {
           <View style={styles.sectionContent}>
             {renderDetailRow('Manufacturer', 'manufacturer', 'Enter manufacturer')}
             {renderDetailRow('Model', 'model_name', 'Enter model name')}
+            {renderDetailRow('Serial Number', 'serial_number', 'Enter serial number')}
             {renderDetailRow('Caliber', 'caliber', 'Enter caliber')}
             {renderDetailRow('NFA Type', 'type', 'Select NFA Type', 'select', nfaTypeOptions)}
             {renderDetailRow('Tax Stamp Type', 'tax_stamp_type', 'Select Form Type', 'select', taxStampTypeOptions)}

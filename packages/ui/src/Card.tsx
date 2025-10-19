@@ -84,7 +84,7 @@ export default function Card({
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: 8,
-      backgroundColor: colors.backgroundDarker,
+      backgroundColor: 'transparent',
       borderWidth: 1,
       borderColor: colors.backgroundLight
     },

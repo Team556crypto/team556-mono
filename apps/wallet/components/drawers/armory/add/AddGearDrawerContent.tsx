@@ -140,7 +140,6 @@ export const AddGearDrawerContent: React.FC = () => {
 
   const validateStep3 = () => {
     const errors: Partial<Record<keyof GearFormState, string>> = {}
-    if (!newGear.purchaseDate) errors.purchaseDate = 'Purchase date is required.'
     if (newGear.purchasePrice && parseFloat(newGear.purchasePrice) < 0) {
       errors.purchasePrice = 'Purchase price cannot be negative.'
     }

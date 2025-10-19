@@ -1,6 +1,6 @@
 import React from 'react';
 import Card from '@team556/ui/src/Card';
-import { Document } from '@team556/ui/src/types'
+import { Document, documentTypeOptions } from '@team556/ui/src/types'
 
 interface DocumentCardProps {
   document: Document;
@@ -29,16 +29,27 @@ export default function DocumentCard({
     }
   };
 
-  const getFirearmIcon = () => {
+  const getDocumentTypeLabel = () => {
+    const typeOption = documentTypeOptions.find(option => option.value === document.type);
+    return typeOption ? typeOption.label : document.type || 'Document';
+  };
+
+  const getDocumentIcon = () => {
     const type = document.type?.toLowerCase() || '';
-    if (type.includes('pistol') || type.includes('handgun')) {
-      return 'target';
-    } else if (type.includes('rifle') || type.includes('shotgun')) {
-      return 'crosshairs';
-    } else if (type.includes('nfa')) {
-      return 'shield';
+    if (type.includes('concealed') || type.includes('carry') || type.includes('permit')) {
+      return 'card-account-details';
+    } else if (type.includes('insurance')) {
+      return 'shield-check';
+    } else if (type.includes('trust')) {
+      return 'account-group';
+    } else if (type.includes('training') || type.includes('certificate') || type.includes('safety')) {
+      return 'certificate';
+    } else if (type.includes('receipt') || type.includes('purchase')) {
+      return 'receipt';
+    } else if (type.includes('registration')) {
+      return 'file-document';
     }
-    return 'crosshairs-gps';
+    return 'file-document-outline';
   };
 
   return (
@@ -48,13 +59,13 @@ export default function DocumentCard({
       onPress={handlePress}
       onDelete={handleDelete}
       imageUri={document.attachments}
-      iconName={getFirearmIcon()}
-      category={document.type || 'Firearm'}
+      iconName={getDocumentIcon()}
+      category={getDocumentTypeLabel()}
       title={document.name}
       details={[
-        `${document.name || ''} ${document.type || ''}`.trim(),
-        document.expiration_date
-      ]}
+        document.document_number ? `#${document.document_number}` : '',
+        document.expiration_date ? `Expires: ${new Date(document.expiration_date).toLocaleDateString()}` : ''
+      ].filter(Boolean)}
     />
   );
 }

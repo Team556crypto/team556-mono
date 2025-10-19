@@ -16,6 +16,7 @@ type NFA struct {
 	ModelName               string     `gorm:"size:255;not null" json:"model_name"`
 	Caliber                 string     `gorm:"size:100;not null" json:"caliber"`
 	Type                    string     `gorm:"size:100;not null" json:"type"`
+	SerialNumber            *string    `gorm:"size:100" json:"serial_number,omitempty"`
 	Value                   *float64   `json:"value,omitempty"`
 	RoundCount              *int       `json:"round_count,omitempty"`
 	TaxStampType            string     `gorm:"size:100;not null" json:"tax_stamp_type"`

@@ -251,6 +251,7 @@ export interface NFA {
   model_name: string;
   caliber: string;
   type: string;
+  serial_number?: string;
   value?: number;
   round_count?: number;
   tax_stamp_type: string;

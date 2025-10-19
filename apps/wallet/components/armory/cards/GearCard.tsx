@@ -202,6 +202,7 @@
 import React from 'react';
 import Card from '@team556/ui/src/Card';
 import { Gear } from '@team556/ui/src/types';
+import { getCategoryLabel } from '@/constants/gear';
 
 interface GearCardProps {
   gear: Gear;
@@ -230,16 +231,34 @@ export default function GearCard({
     }
   };
 
+  const getGearTypeLabel = () => {
+    // Use category if available (newer gear items), fallback to type (legacy)
+    const categoryOrType = gear.category || gear.type || 'other';
+    return getCategoryLabel(categoryOrType);
+  };
+
   const getGearIcon = () => {
-    const type = gear.type?.toLowerCase() || '';
-    if (type.includes('pistol') || type.includes('handgun')) {
-      return 'target';
-    } else if (type.includes('rifle') || type.includes('shotgun')) {
-      return 'crosshairs';
-    } else if (type.includes('nfa')) {
-      return 'shield';
+    const categoryOrType = (gear.category || gear.type || '').toLowerCase();
+    if (categoryOrType.includes('optics') || categoryOrType.includes('scope')) {
+      return 'telescope';
+    } else if (categoryOrType.includes('protection') || categoryOrType.includes('armor')) {
+      return 'shield-half-full';
+    } else if (categoryOrType.includes('tactical')) {
+      return 'pistol';
+    } else if (categoryOrType.includes('communication')) {
+      return 'radio';
+    } else if (categoryOrType.includes('medical')) {
+      return 'medical-bag';
+    } else if (categoryOrType.includes('lighting')) {
+      return 'flashlight';
+    } else if (categoryOrType.includes('tools')) {
+      return 'toolbox';
+    } else if (categoryOrType.includes('bags')) {
+      return 'bag-personal';
+    } else if (categoryOrType.includes('camping')) {
+      return 'tent';
     }
-    return 'crosshairs-gps';
+    return 'cog';
   };
 
   return (
@@ -250,7 +269,7 @@ export default function GearCard({
       onDelete={handleDelete}
       imageUri={gear.pictures?.[0]}
       iconName={getGearIcon()}
-      category={gear.type || 'Gear'}
+      category={getGearTypeLabel()}
       title={gear.name}
       details={[
         `${gear.manufacturer || ''} ${gear.name || ''}`.trim(),

@@ -121,35 +121,29 @@ export const DocumentsView = () => {
     content = (
       <EmptyState
         icon={<Ionicons name='document-text' size={80} color={colors.primary} />}
-        title='No Documents Yet'
+        title='Add Documents Now'
         subtitle='Get started by adding your first document to your armory.'
         buttonText='+ Add Document'
         onPress={handleAddDocument}
       />
     )
   } else {
+    const FlatList = require('react-native').FlatList;
     content = (
-      // <FlatList
-      //   key={numColumns}
-      //   data={documents}
-      //   renderItem={renderItem}
-      //   keyExtractor={item => item.id.toString()}
-      //   numColumns={numColumns}
-      //   style={styles.flatListContainer}
-      //   contentContainerStyle={styles.gridContent}
-      //   columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
-      //   ListHeaderComponent={
-      //     isLoading && documents.length > 0 ? (
-      //       <ActivityIndicator style={{ marginVertical: 20 }} size='large' color={colors.primary} />
-      //     ) : null
-      //   }
-      // />
-      <EmptyState
-        icon={<Ionicons name='document-text' size={80} color={colors.primary} />}
-        title='Coming Soon!'
-        subtitle='Documents are currently in development and will be available soon.'
-        buttonText='+ Add Document'
-        onPress={handleAddDocument}
+      <FlatList
+        key={numColumns}
+        data={documents}
+        renderItem={renderItem}
+        keyExtractor={item => item.id.toString()}
+        numColumns={numColumns}
+        style={styles.flatListContainer}
+        contentContainerStyle={styles.gridContent}
+        columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
+        ListHeaderComponent={
+          isLoading && documents.length > 0 ? (
+            <ActivityIndicator style={{ marginVertical: 20 }} size='large' color={colors.primary} />
+          ) : null
+        }
       />
     )
   }
@@ -159,9 +153,11 @@ export const DocumentsView = () => {
       <View style={styles.header}>
         <View style={styles.headerTitleContainer}>
           <Text preset='h3' accessibilityRole='header'>
-            My Documents
+            {documents.length === 0 ? 'No Documents Added' : 'My Documents'}
           </Text>
-          <Text style={{ fontSize: 18, color: colors.textSecondary }}>{`(${documents.length})`}</Text>
+          {documents.length > 0 && (
+            <Text style={{ fontSize: 18, color: colors.textSecondary }}>{`(${documents.length})`}</Text>
+          )}
           {!isP1User && !canAddItem && documents.length >= 2 && (
             <Text style={styles.limitReachedText}>(Max 2 items)</Text>
           )}

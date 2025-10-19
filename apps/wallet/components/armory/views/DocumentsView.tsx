@@ -15,7 +15,7 @@ import { useDocumentStore } from '@/store/documentStore';
 
 import { Ionicons } from '@expo/vector-icons'
 // import { DocumentDetailsDrawerContent } from '@/components/drawers/DocumentDetailsDrawerContent';
-// import { AddDocumentDrawerContent } from '@/components/drawers/AddDocumentDrawerContent';
+import { AddDocumentDrawerContent } from '@/components/drawers/armory/add/AddDocumentDrawerContent';
 import DocumentCard from '../cards/DocumentCard';
 import { viewStyles } from './styles';
 
@@ -63,7 +63,7 @@ export const DocumentsView = () => {
   }
 
   const handleAddDocument = () => {
-    // openDrawer(<AddDocumentDrawerContent />);
+    openDrawer(<AddDocumentDrawerContent />, { maxHeight: '90%' });
   }
 
   const handleDelete = (documentId: number) => {
@@ -119,17 +119,10 @@ export const DocumentsView = () => {
     )
   } else if (documents.length === 0) {
     content = (
-      // <EmptyState
-      //   icon={<Ionicons name='document-text' size={80} color={colors.primary} />}
-      //   title='No Documents Yet'
-      //   subtitle='Get started by adding your first document to your armory.'
-      //   buttonText='+ Add Document'
-      //   onPress={handleAddDocument}
-      // />
       <EmptyState
         icon={<Ionicons name='document-text' size={80} color={colors.primary} />}
-        title='Coming Soon!'
-        subtitle='Documents are currently in development and will be available soon.'
+        title='No Documents Yet'
+        subtitle='Get started by adding your first document to your armory.'
         buttonText='+ Add Document'
         onPress={handleAddDocument}
       />

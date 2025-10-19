@@ -62,13 +62,13 @@ export const AddGearDrawerContent: React.FC = () => {
   const styles = armoryStyles(colors, SCREEN_WIDTH)
 
   const animatedProgressWidth = progressAnim.interpolate({
-    inputRange: [0, 3],
-    outputRange: [0, PROGRESS_BAR_RENDER_WIDTH]
+    inputRange: [0, 1, 2, 3],
+    outputRange: [0, PROGRESS_BAR_RENDER_WIDTH * 0.33, PROGRESS_BAR_RENDER_WIDTH * 0.66, PROGRESS_BAR_RENDER_WIDTH]
   })
 
   useEffect(() => {
     Animated.timing(progressAnim, {
-      toValue: currentStep,
+      toValue: currentStep - 1, // Subtract 1 so step 1 = 0% progress
       duration: 300,
       easing: Easing.out(Easing.ease),
       useNativeDriver: false

@@ -40,7 +40,7 @@ export const updateGear = async (
     return Promise.reject(new Error('Authentication token not provided.'))
   }
   return apiClient<Gear>({
-    method: 'PATCH',
+    method: 'PUT',
     endpoint: `/gear/${gearId}`,
     token,
     body: payload

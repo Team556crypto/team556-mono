@@ -35,20 +35,6 @@ export default function DocumentCard({
   };
 
   const getDocumentIcon = () => {
-    const type = document.type?.toLowerCase() || '';
-    if (type.includes('concealed') || type.includes('carry') || type.includes('permit')) {
-      return 'card-account-details';
-    } else if (type.includes('insurance')) {
-      return 'shield-check';
-    } else if (type.includes('trust')) {
-      return 'account-group';
-    } else if (type.includes('training') || type.includes('certificate') || type.includes('safety')) {
-      return 'certificate';
-    } else if (type.includes('receipt') || type.includes('purchase')) {
-      return 'receipt';
-    } else if (type.includes('registration')) {
-      return 'file-document';
-    }
     return 'file-document-outline';
   };
 

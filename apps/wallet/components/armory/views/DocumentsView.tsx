@@ -4,7 +4,8 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   useWindowDimensions,
-  Alert
+  Alert,
+  Platform
 } from 'react-native'
 import { useAuthStore } from '@/store/authStore'
 import { Text, Button, EmptyState } from '@team556/ui'
@@ -67,29 +68,34 @@ export const DocumentsView = () => {
   }
 
   const handleDelete = (documentId: number) => {
-    Alert.alert(
-      'Delete Document',
-      'Are you sure you want to delete this document? This action cannot be undone.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          onPress: async () => {
-            try {
-              await deleteDocument(documentId, token)
-            } catch (error) {
-              // Error is already handled in the store, but you could add specific UI feedback here if needed
-              Alert.alert('Error', 'Failed to delete document.');
-            }
-          },
-          style: 'destructive',
-        },
-      ],
-      { cancelable: false }
-    )
+    console.log('handleDelete called with documentId:', documentId);
+    
+    const performDelete = () => {
+      deleteDocument(documentId, token).catch(error => {
+        console.error('Failed to delete document:', error);
+        if (Platform.OS === 'web') {
+          alert('Failed to delete document.');
+        } else {
+          Alert.alert('Error', 'Failed to delete document.');
+        }
+      });
+    };
+
+    if (Platform.OS === 'web') {
+      if (confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
+        performDelete();
+      }
+    } else {
+      Alert.alert(
+        'Delete Document',
+        'Are you sure you want to delete this document? This action cannot be undone.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', onPress: performDelete, style: 'destructive' },
+        ],
+        { cancelable: false }
+      );
+    }
   }
 
   const renderItem = ({ item }: { item: Document }) => (

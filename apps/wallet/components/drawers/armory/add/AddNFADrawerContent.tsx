@@ -65,13 +65,13 @@ export const AddNFADrawerContent: React.FC = () => {
   const styles = armoryStyles(colors, SCREEN_WIDTH)
 
   const animatedProgressWidth = progressAnim.interpolate({
-    inputRange: [0, 3],
-    outputRange: [0, PROGRESS_BAR_RENDER_WIDTH]
+    inputRange: [0, 1, 2, 3],
+    outputRange: [0, PROGRESS_BAR_RENDER_WIDTH * 0.33, PROGRESS_BAR_RENDER_WIDTH * 0.66, PROGRESS_BAR_RENDER_WIDTH]
   })
 
   useEffect(() => {
     Animated.timing(progressAnim, {
-      toValue: currentStep,
+      toValue: currentStep - 1, // Subtract 1 so step 1 = 0% progress
       duration: 300,
       easing: Easing.out(Easing.ease),
       useNativeDriver: false
@@ -336,7 +336,7 @@ export const AddNFADrawerContent: React.FC = () => {
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <View style={styles.header}>
         <View style={styles.headerIconContainer}>
-          <MaterialCommunityIcons name="shield-check" size={40} color={colors.primary} />
+          <MaterialCommunityIcons name="crosshairs" size={40} color={colors.primary} />
         </View>
         <Text style={styles.title}>Add New NFA Item</Text>
         <Text style={styles.subtitle}>Register your NFA firearms with tax stamp details</Text>

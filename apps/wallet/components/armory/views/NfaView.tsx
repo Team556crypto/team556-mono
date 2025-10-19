@@ -4,7 +4,8 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   useWindowDimensions,
-  Alert
+  Alert,
+  Platform
 } from 'react-native'
 import { useAuthStore } from '@/store/authStore'
 import { Text, Button, EmptyState } from '@team556/ui'
@@ -66,30 +67,35 @@ export const NFAView = () => {
     openDrawer(<AddNFADrawerContent />);
   }
 
-  const handleDelete = (gearId: number) => {
-    Alert.alert(
-      'Delete Gear',
-      'Are you sure you want to delete this gear? This action cannot be undone.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          onPress: async () => {
-            try {
-              await deleteNFAItem(gearId, token)
-            } catch (error) {
-              // Error is already handled in the store, but you could add specific UI feedback here if needed
-              Alert.alert('Error', 'Failed to delete NFA.');
-            }
-          },
-          style: 'destructive',
-        },
-      ],
-      { cancelable: false }
-    )
+  const handleDelete = (nfaId: number) => {
+    console.log('handleDelete called with nfaId:', nfaId);
+    
+    const performDelete = () => {
+      deleteNFAItem(nfaId, token).catch(error => {
+        console.error('Failed to delete NFA item:', error);
+        if (Platform.OS === 'web') {
+          alert('Failed to delete NFA item.');
+        } else {
+          Alert.alert('Error', 'Failed to delete NFA item.');
+        }
+      });
+    };
+
+    if (Platform.OS === 'web') {
+      if (confirm('Are you sure you want to delete this NFA item? This action cannot be undone.')) {
+        performDelete();
+      }
+    } else {
+      Alert.alert(
+        'Delete NFA Item',
+        'Are you sure you want to delete this NFA item? This action cannot be undone.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', onPress: performDelete, style: 'destructive' },
+        ],
+        { cancelable: false }
+      );
+    }
   }
 
   const renderItem = ({ item }: { item: NFA }) => (
@@ -120,7 +126,7 @@ export const NFAView = () => {
   } else if (nfas.length === 0) {
     content = (
       <EmptyState
-        icon={<MaterialCommunityIcons name='shield-check' size={80} color={colors.primary} />}
+        icon={<MaterialCommunityIcons name='crosshairs' size={80} color={colors.primary} />}
         title='No NFA Items Yet'
         subtitle='Get started by adding your first NFA item to your armory.'
         buttonText='+ Add NFA Item'

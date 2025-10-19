@@ -21,7 +21,7 @@ export default function DigitalArmoryScreen() {
     { label: 'Firearms', icon: <MaterialCommunityIcons name='pistol' size={16} color={selectedCategory === 'Firearms' ? colors.background : colors.primary} /> },
     { label: 'Ammo', icon: <MaterialCommunityIcons name='ammunition' size={16} color={selectedCategory === 'Ammo' ? colors.background : colors.primary} /> },
     { label: 'Gear', icon: <MaterialCommunityIcons name='tent' size={16} color={selectedCategory === 'Gear' ? colors.background : colors.primary} /> },
-    { label: 'NFA', icon: <MaterialCommunityIcons name='file-certificate-outline' size={16} color={selectedCategory === 'NFA' ? colors.background : colors.primary} /> },
+    { label: 'NFA', icon: <MaterialCommunityIcons name='crosshairs' size={16} color={selectedCategory === 'NFA' ? colors.background : colors.primary} /> },
     { label: 'Documents', icon: <Ionicons name='document-text' size={16} color={selectedCategory === 'Documents' ? colors.background : colors.primary} /> },
   ];
   

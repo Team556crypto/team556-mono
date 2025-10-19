@@ -226,10 +226,18 @@ export type CreateDocumentPayload = {
 export type UpdateDocumentPayload = { id: number } & Partial<CreateDocumentPayload>;
 
 export const documentTypeOptions = [
-  { label: 'License', value: 'license' },
-  { label: 'Permit', value: 'permit' },
-  { label: 'Registration', value: 'registration' },
-  { label: 'Insurance', value: 'insurance' },
+  { label: 'Concealed Carry License', value: 'concealed_carry_license' },
+  { label: 'Open Carry Permit', value: 'open_carry_permit' },
+  { label: 'Firearms Insurance', value: 'firearms_insurance' },
+  { label: 'Gun Trust', value: 'gun_trust' },
+  { label: 'State Permit to Purchase', value: 'state_permit_purchase' },
+  { label: 'Firearms Safety Certificate', value: 'firearms_safety_certificate' },
+  { label: 'Training Certificate', value: 'training_certificate' },
+  { label: 'Background Check Approval', value: 'background_check_approval' },
+  { label: 'Purchase Receipt', value: 'purchase_receipt' },
+  { label: 'Appraisal Document', value: 'appraisal_document' },
+  { label: 'Warranty Card', value: 'warranty_card' },
+  { label: 'State Registration', value: 'state_registration' },
   { label: 'Other', value: 'other' },
 ];
 

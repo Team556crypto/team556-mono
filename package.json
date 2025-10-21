@@ -54,12 +54,19 @@
   ],
   "dependencies": {
     "@solana/spl-token": "^0.3.8",
-    "expo-linear-gradient": "^14.1.4"
+    "expo-linear-gradient": "^14.1.4",
+    "metro": "^0.82.0",
+    "metro-config": "^0.82.0",
+    "metro-resolver": "^0.82.0",
+    "metro-transform-worker": "0.82.5"
   },
   "resolutions": {
-    "metro": "0.81.0",
-    "metro-resolver": "0.81.0",
-    "metro-config": "0.81.0",
-    "metro-transform-worker": "0.81.0"
+    "metro": "0.82.5",
+    "metro-resolver": "0.82.5",
+    "metro-config": "0.82.5",
+    "metro-transform-worker": "0.82.5",
+    "expo-modules-autolinking": "~2.1.0",
+    "@expo/config-plugins": "~10.1.1",
+    "@expo/metro-config": "~0.20.0"
   }
 }

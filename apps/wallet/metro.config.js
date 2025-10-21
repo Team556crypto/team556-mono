@@ -10,7 +10,10 @@ const projectRoot = __dirname;
 // Root of the monorepo
 const workspaceRoot = path.resolve(projectRoot, '../..');
 
-const config = getDefaultConfig(projectRoot);
+const config = getDefaultConfig(projectRoot, {
+  // Enable package.json exports by default for SDK 53
+  unstable_enablePackageExports: true
+});
 
 // Configure SVG transformer
 // Source: https://github.com/kristerkari/react-native-svg-transformer#step-3-configure-metro
@@ -45,7 +48,11 @@ config.resolver = {
 };
 
 // 1. Watch all files within the monorepo
-config.watchFolders = [workspaceRoot];
+// Preserve default watchFolders and add workspace root
+config.watchFolders = [
+  ...config.watchFolders,
+  workspaceRoot
+].filter((folder, index, arr) => arr.indexOf(folder) === index); // Remove duplicates
 
 // 2. Let Metro know where to resolve packages
 config.resolver.nodeModulesPaths = [
@@ -54,6 +61,6 @@ config.resolver.nodeModulesPaths = [
 ];
 
 // 3. Force Metro to resolve dependencies in workspace root
-config.resolver.disableHierarchicalLookup = true;
+// config.resolver.disableHierarchicalLookup = true; // Removed per SDK 53 compatibility
 
 module.exports = config;

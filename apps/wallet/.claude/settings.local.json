@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:expo.dev)",
+      "Bash(npm i:*)",
+      "WebFetch(domain:docs.expo.dev)",
+      "Bash(yarn remove:*)",
+      "Bash(yarn install:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -17,15 +17,15 @@
     "@turbo/gen": "^2.5.0",
     "@types/minimatch": "^6.0.0",
     "@types/node": "^22.14.0",
-    "@types/react": "19.1.0",
-    "@types/react-dom": "19.1.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "eslint": "^9.24.0",
-    "typescript": "5.8.2"
+    "typescript": "~5.8.3"
   },
   "dependencies": {
-    "expo-image": "^2.1.7",
+    "expo-image": "~2.4.1",
     "react": "*",
-    "react-dom": "^19.1.0"
+    "react-dom": "19.0.0"
   },
   "main": "index.ts",
   "types": "index.ts",

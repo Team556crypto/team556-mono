@@ -1,13 +1,15 @@
 import React from 'react'
 import { View, TouchableOpacity, Text, StyleSheet, Dimensions, Platform } from 'react-native'
-import { BottomTabBarProps } from '@react-navigation/bottom-tabs'
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useRouter } from 'expo-router'
 import { excludedRoutes } from '@/constants/Global'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 
 import { Colors } from '@/constants/Colors'
 
 export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const router = useRouter()
   const insets = useSafeAreaInsets()
   const { isTabletOrLarger } = useBreakpoint()
 
@@ -49,7 +51,8 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
             })
 
             if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name)
+              // Use expo-router's router.push instead of navigation.navigate
+              router.push(`/(tabs)/${route.name}` as any)
             }
           }
 

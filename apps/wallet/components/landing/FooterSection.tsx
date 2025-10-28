@@ -3,7 +3,6 @@ import { View, StyleSheet, Platform, Pressable, Image, Linking, TouchableOpacity
 import { Text } from '@team556/ui'
 import { Colors } from '@/constants/Colors'
 import { Feather, FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons'
-import { useTheme } from '@react-navigation/native'
 import LogoSvg from '@/assets/images/logo-wide.svg'
 import SolanaSvg from '@/assets/images/solana.svg'
 import { useBreakpoint } from '../../hooks/useBreakpoint'

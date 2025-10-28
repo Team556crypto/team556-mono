@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import { DarkTheme, ThemeProvider } from '@react-navigation/native'
 import { useFonts } from 'expo-font'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
@@ -46,23 +45,26 @@ const UpdatingView = () => (
   </View>
 );
 
-function InitialLayout() {
-    const { isUpdatePending } = Updates.useUpdates()
+export default function RootLayout() {
+  const [loaded, error] = useFonts({
+    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf')
+  })
+
+  const { isUpdatePending } = Updates.useUpdates()
   const [isShowingUpdate, setIsShowingUpdate] = useState(false)
 
-    useEffect(() => {
+  useEffect(() => {
     if (isUpdatePending) {
       setIsShowingUpdate(true);
-      // Wait for 1 second before reloading to show the updating view
       setTimeout(() => {
         Updates.reloadAsync();
       }, 1000);
     }
   }, [isUpdatePending]);
 
+  const { isAuthenticated, isLoading, user, initializeAuth } = useAuthStore()
   const router = useRouter()
   const segments = useSegments()
-  const { isAuthenticated, isLoading, user, initializeAuth } = useAuthStore()
 
   useEffect(() => {
     // Initialize auth state from secure storage
@@ -118,44 +120,6 @@ function InitialLayout() {
     // Add router to dependency array as it's used inside the effect
   }, [isAuthenticated, isLoading, user, segments, router])
 
-  // While loading the auth state, show a loading indicator or splash screen
-  if (isShowingUpdate) {
-    return <UpdatingView />;
-  }
-
-  if (isLoading) {
-    // Return a loading component instead of null
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size='large' color={Colors.tint} />
-      </View>
-    )
-  }
-
-  // Once loading is complete, render the main stack navigator
-  return (
-    <Stack>
-      <Stack.Screen name='login' options={{ headerShown: false, title: 'Login - Team556 Wallet' }} />
-      <Stack.Screen name='(tabs)' options={{ headerShown: false, title: 'Team556 Wallet' }} />
-      <Stack.Screen name='onboarding' options={{ headerShown: false, title: 'Onboarding - Team556 Wallet' }} />
-      <Stack.Screen name='privacy' options={{ headerShown: false, title: 'Privacy Policy - Team556 Wallet' }} />
-      <Stack.Screen name='terms' options={{ headerShown: false, title: 'Terms of Service - Team556 Wallet' }} />
-      {/* <Stack.Screen name='auth' options={{ headerShown: false }} /> */}
-      {/* Explicitly define screens from the auth group if the group setting doesn't take effect */}
-      <Stack.Screen name='auth/ForgotPasswordScreen' options={{ headerShown: false, title: 'Forgot Password - Team556 Wallet' }} />
-      <Stack.Screen name='auth/ResetPasswordScreen' options={{ headerShown: false, title: 'Reset Password - Team556 Wallet' }} />
-      <Stack.Screen name='+not-found' options={{ title: 'Page Not Found - Team556 Wallet' }} />
-      <Stack.Screen name='signin' options={{ headerShown: false, title: 'Sign In - Team556 Wallet' }} />
-      <Stack.Screen name='signup' options={{ headerShown: false, title: 'Sign Up - Team556 Wallet' }} />
-    </Stack>
-  )
-}
-
-export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf')
-  })
-
   // --- BEGIN: Call Web Overscroll Prevention --- 
   useEffect(() => {
     preventWebOverscroll();
@@ -182,7 +146,7 @@ export default function RootLayout() {
     }
   }, [loaded])
 
-  // Prevent rendering until fonts are loaded
+  // While loading fonts or updates, show a loading indicator
   if (!loaded) {
     return (
       <View style={styles.loadingContainer}>
@@ -191,24 +155,44 @@ export default function RootLayout() {
     )
   }
 
-  // Render the initial layout which handles auth logic
+  if (isShowingUpdate) {
+    return <UpdatingView />;
+  }
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size='large' color={Colors.tint} />
+      </View>
+    )
+  }
+
+  // Render the main stack navigator with drawer and toast
   return (
     <GestureHandlerRootView style={styles.container}>
-      <ThemeProvider value={DarkTheme}>
-        <InitialLayout />
-        <Toast />
-        {/* Drawer positioned at the root level, state from Zustand */}
-        <Drawer
-          isVisible={isDrawerVisible}
-          onClose={closeDrawer} // closeDrawer action from Zustand store
-          maxHeight={drawerMaxHeight}
-          minHeight={drawerMinHeight}
-          colors={Colors} // Pass colors if your Drawer uses them
-        >
-          {drawerContent}
-        </Drawer>
-        <StatusBar style='light' />
-      </ThemeProvider>
+      <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
+        <Stack.Screen name='login' options={{ title: 'Login - Team556 Wallet' }} />
+        <Stack.Screen name='(tabs)' options={{ title: 'Team556 Wallet' }} />
+        <Stack.Screen name='onboarding' options={{ title: 'Onboarding - Team556 Wallet' }} />
+        <Stack.Screen name='privacy' options={{ title: 'Privacy Policy - Team556 Wallet' }} />
+        <Stack.Screen name='terms' options={{ title: 'Terms of Service - Team556 Wallet' }} />
+        <Stack.Screen name='auth/ForgotPasswordScreen' options={{ title: 'Forgot Password - Team556 Wallet' }} />
+        <Stack.Screen name='auth/ResetPasswordScreen' options={{ title: 'Reset Password - Team556 Wallet' }} />
+        <Stack.Screen name='+not-found' options={{ title: 'Page Not Found - Team556 Wallet' }} />
+        <Stack.Screen name='signin' options={{ title: 'Sign In - Team556 Wallet' }} />
+        <Stack.Screen name='signup' options={{ title: 'Sign Up - Team556 Wallet' }} />
+      </Stack>
+      <Toast />
+      <Drawer
+        isVisible={isDrawerVisible}
+        onClose={closeDrawer}
+        maxHeight={drawerMaxHeight}
+        minHeight={drawerMinHeight}
+        colors={Colors}
+      >
+        {drawerContent}
+      </Drawer>
+      <StatusBar style='light' />
     </GestureHandlerRootView>
   )
 }

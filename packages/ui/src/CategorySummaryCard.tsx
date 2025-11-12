@@ -18,7 +18,7 @@ export const CategorySummaryCard = ({ icon, title, count, totalValue, onPress }:
       padding: 16,
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.backgroundCard,
+      backgroundColor: colors.background,
       borderRadius: 8,
       shadowColor: colors.black,
       shadowOffset: { width: 0, height: 2 },

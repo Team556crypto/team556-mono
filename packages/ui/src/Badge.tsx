@@ -13,7 +13,7 @@ export interface BadgeProps extends Omit<PressableProps, 'style'> {
 export const Badge = ({ label, isActive, style, icon, ...rest }: BadgeProps) => {
   const { colors } = useTheme()
 
-  const backgroundColor = isActive ? colors.primary : colors.backgroundCard
+  const backgroundColor = isActive ? colors.primary : colors.background
   const textColor = isActive ? colors.background : colors.text
   const textWeight = isActive ? 'bold' : '500'
 

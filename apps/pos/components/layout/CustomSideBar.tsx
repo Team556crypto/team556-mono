@@ -1,12 +1,15 @@
 import React from 'react'
 import { View, TouchableOpacity, Text, StyleSheet, Dimensions, Platform } from 'react-native'
-import { BottomTabBarProps } from '@react-navigation/bottom-tabs'
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useRouter, usePathname } from 'expo-router'
 import LogoWideSvg from '@/assets/images/logo-wide.svg'
 import { excludedRoutes } from '@/constants/Global'
 import { Colors } from '@/constants/Colors'
 
 export function CustomSideBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const router = useRouter()
+  const pathname = usePathname()
   const insets = useSafeAreaInsets()
 
   return (
@@ -46,7 +49,8 @@ export function CustomSideBar({ state, descriptors, navigation }: BottomTabBarPr
             })
 
             if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name)
+              // Use expo-router's router.push instead of navigation.navigate
+              router.push(`/(tabs)/${route.name}` as any)
             }
           }
 

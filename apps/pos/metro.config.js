@@ -4,6 +4,8 @@ const path = require('path');
 
 // Get list of built-in Node.js modules
 const nodeCoreModules = require('node:module').builtinModules;
+const fs = require('fs');
+const { resolve } = require('metro-resolver');
 
 // Find the project and workspace root directories
 const projectRoot = __dirname;
@@ -21,13 +23,41 @@ config.transformer = {
   ...config.transformer, // Keep existing transformer config
   babelTransformerPath: require.resolve('react-native-svg-transformer'),
 };
+function resolveModulePath(pkg) {
+  const local = path.resolve(projectRoot, 'node_modules', pkg);
+  const root = path.resolve(workspaceRoot, 'node_modules', pkg);
+  if (fs.existsSync(local)) return local;
+  return root;
+}
+
+const aliasPaths = {
+  '@react-navigation/native': resolveModulePath('@react-navigation/native'),
+  '@react-navigation/native-stack': resolveModulePath('@react-navigation/native-stack'),
+  '@react-navigation/bottom-tabs': resolveModulePath('@react-navigation/bottom-tabs'),
+  '@react-navigation/elements': resolveModulePath('@react-navigation/elements'),
+  'expo-router': resolveModulePath('expo-router'),
+  react: resolveModulePath('react'),
+  'react-dom': resolveModulePath('react-dom'),
+};
+
+function customResolveRequest(context, moduleName, platform) {
+  if (aliasPaths[moduleName]) {
+    return resolve(context, aliasPaths[moduleName], platform);
+  }
+  return resolve(context, moduleName, platform);
+}
+
 config.resolver = {
   ...config.resolver, // Keep existing resolver config
   assetExts: config.resolver.assetExts.filter((ext) => ext !== 'svg'), // Remove svg from assetExts
   sourceExts: [...config.resolver.sourceExts, 'svg'], // Add svg to sourceExts
   // 4. Ignore the shared node_modules to prevent duplicate module instances.
-  blockList: [/\/packages\/ui\/node_modules\/.*/],
-
+  blockList: [
+    /\/packages\/ui\/node_modules\/.*/,
+    /@react-navigation\/bottom-tabs\/node_modules\/.*@react-navigation\/native/,
+    /@react-navigation\/native-stack\/node_modules\/.*@react-navigation\/native/,
+  ],
+  resolveRequest: customResolveRequest,
   extraNodeModules: nodeCoreModules.reduce((acc, moduleName) => {
     // Map core modules to their browser/react-native equivalents
     if (moduleName === 'buffer') {
@@ -42,9 +72,8 @@ config.resolver = {
     } else if (moduleName === 'process') {
       acc['process'] = path.resolve(projectRoot, 'node_modules/process');
     }
-    // Add mappings for other Node modules if needed (e.g., path, http)
     return acc;
-  }, {}),
+  }, aliasPaths),
 };
 
 // 1. Watch all files within the monorepo

@@ -55,8 +55,21 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
   // Helper function to normalize transaction types and detect Team556 Pay transactions
   normalizeTransactions: (transactions: Transaction[]): Transaction[] => {
+    // Filter out dust transactions (very small receive transactions)
+    const filteredTransactions = transactions.filter(transaction => {
+      // Only filter Receive transactions
+      if (transaction.type.toLowerCase() === 'receive') {
+        const amount = parseFloat(transaction.amount);
+        // Filter out transactions less than 0.001 SOL (dust threshold)
+        // You can adjust this threshold as needed
+        if (!isNaN(amount) && Math.abs(amount) < 0.001) {
+          return false; // Filter out this transaction
+        }
+      }
+      return true; // Keep all other transactions
+    });
     
-    return transactions.map(transaction => {
+    return filteredTransactions.map(transaction => {
       // Create a copy of the transaction to avoid mutating the original
       const normalizedTransaction = { ...transaction };
       

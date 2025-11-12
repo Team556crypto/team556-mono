@@ -1,6 +1,6 @@
 import React from 'react'
 import { Platform, useWindowDimensions } from 'react-native'
-import { BottomTabBarProps } from '@react-navigation/bottom-tabs'
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 
 import { CustomTabBar } from './CustomTabBar'
 import { CustomSideBar } from './CustomSideBar'

@@ -69,6 +69,9 @@ export * from './documents';
 // Export all functions from nfa.ts
 export * from './nfa';
 
+// Export all functions from armory.ts
+export * from './armory';
+
 // Export all functions from referrals.ts
 export * from './referrals';
 

@@ -8,6 +8,8 @@ import { useNFAStore } from '@/store/nfaStore';
 import { CategorySummaryCard, Text, Button } from '@team556/ui';
 import { useTheme } from '@team556/ui';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useArmoryStore } from '@/store/armoryStore';
+import { useEffect } from 'react';
 
 interface AllItemsViewProps {
   onCategorySelect: (category: string) => void;
@@ -16,12 +18,20 @@ interface AllItemsViewProps {
 const AllItemsView: React.FC<AllItemsViewProps> = ({ onCategorySelect }) => {
   const { colors } = useTheme();
 
+  // Use armory store for counts
+  const armoryStore = useArmoryStore();
+  
   // Use destructuring to call each hook only once
   const firearmStore = useFirearmStore();
   const ammoStore = useAmmoStore();
   const gearStore = useGearStore();
   const documentStore = useDocumentStore();
   const nfaStore = useNFAStore();
+
+  // Fetch armory counts when component mounts
+  useEffect(() => {
+    armoryStore.fetchCounts();
+  }, []);
 
   // Extract values safely
   const firearms = firearmStore.firearms || [];
@@ -32,7 +42,7 @@ const AllItemsView: React.FC<AllItemsViewProps> = ({ onCategorySelect }) => {
 
   // Consolidating loading and error states
   const isLoading = firearmStore.isLoading || ammoStore.isLoading || gearStore.isLoading || documentStore.isLoading || nfaStore.isLoading;
-  const error = firearmStore.error || ammoStore.error || gearStore.error || documentStore.error || nfaStore.error;
+  const error = firearmStore.error || ammoStore.error || gearStore.error || documentStore.error || nfaStore.error || armoryStore.error;
 
   const handleClearError = () => {
     firearmStore.setError(null);
@@ -40,21 +50,23 @@ const AllItemsView: React.FC<AllItemsViewProps> = ({ onCategorySelect }) => {
     gearStore.setError(null);
     documentStore.setError(null);
     nfaStore.setError(null);
+    armoryStore.setError(null);
+    armoryStore.fetchCounts();
   };
 
   // Calculate summaries
-  const firearmCount = firearms.length;
+  const firearmCount = armoryStore.counts?.firearms ?? firearms.length;
   const firearmValue = firearms.reduce((sum, item) => sum + Number(item.value || 0), 0);
 
-  const ammoCount = ammo.length;
+  const ammoCount = armoryStore.counts?.ammo ?? ammo.length;
   const ammoValue = ammo.reduce((sum, item) => sum + Number(item.purchasePrice || 0), 0);
 
-  const gearCount = gear.length;
+  const gearCount = armoryStore.counts?.gear ?? gear.length;
   const gearValue = gear.reduce((sum, item) => sum + Number(item.purchasePrice || 0), 0);
 
-  const documentCount = documents.length;
+  const documentCount = armoryStore.counts?.documents ?? documents.length;
 
-  const nfaCount = nfaItems.length;
+  const nfaCount = armoryStore.counts?.nfa ?? nfaItems.length;
   const nfaValue = nfaItems.reduce((sum, item) => sum + Number(item.value || 0), 0);
 
   // Define styles before any early returns

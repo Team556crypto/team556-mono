@@ -76,6 +76,9 @@ func SetupRoutes(app *fiber.App, db *gorm.DB, cfg *config.Config, emailClient *e
 	auth.Post("/verify-email", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.VerifyEmail)
 	auth.Post("/resend-verification", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.ResendVerificationEmail)
 	auth.Post("/delete-account", middleware.AuthMiddleware(cfg.JWTSecret), authHandler.DeleteAccount)
+	
+	// Armory counts endpoint
+	api.Get("/armory/counts", middleware.AuthMiddleware(cfg.JWTSecret), handlers.GetArmoryCountsHandler(db))
 
 	// Security routes under /me
 	me := api.Group("/me", middleware.AuthMiddleware(cfg.JWTSecret))

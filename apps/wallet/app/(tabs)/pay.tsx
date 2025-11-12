@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, View, Button, Text, Alert, Platform, TextInput } from 'react-native';
+import { StyleSheet, ScrollView, View, Button, Text, Alert, Platform, TextInput, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import Head from 'expo-router/head';
 import { Colors } from '@/constants/Colors';
@@ -423,58 +423,79 @@ export default function PayScreen() {
   // This is the main QR scanner / manual input screen
   return (
     <ScreenLayout 
-      title='Pay with TEAM' 
+      title='Pay' 
       headerIcon={<Ionicons name='card' size={24} color={Colors.primary} />}
       contentContainerStyle={styles.contentContainer}
     >
       <Head>
         <title>Pay with TEAM | Team556 Wallet</title>
       </Head>
-        <Text style={styles.welcomeTitle}>Welcome to Team556 Pay</Text>
-        <Text style={styles.welcomeTagline}>
-            Use Team556 to pay at your favorite firearm business that accepts Team556.
-        </Text>
-        
-        {Platform.OS !== 'web' && (
-          <View style={styles.scannerOuterContainer}>
-            <CameraView
-            onBarcodeScanned={scanned ? undefined : handleBarCodeScanned} 
-            barcodeScannerSettings={{
-              barcodeTypes: ['qr'], 
-            }}
-            style={styles.cameraView}
-          />
-        </View>
-        )}
 
-        <Text style={styles.manualInputLabel}>Or enter/paste Team556 Pay URL:</Text>
-        <View style={styles.inputContainer}>
+      {/* Welcome Section - Card Style */}
+      <View style={styles.welcomeCard}>
+        <View style={styles.welcomeIconContainer}>
+          <Ionicons name='card-outline' size={32} color={Colors.primary} />
+        </View>
+        <Text style={styles.welcomeTitle}>Team556 Pay</Text>
+        <Text style={styles.welcomeTagline}>
+          Pay at your favorite firearm businesses that accept Team556
+        </Text>
+      </View>
+
+      {/* Scanner Section */}
+      {Platform.OS !== 'web' && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name='qr-code-outline' size={20} color={Colors.text} />
+            <Text style={styles.sectionTitle}>Scan QR Code</Text>
+          </View>
+          <View style={styles.scannerCard}>
+            <CameraView
+              onBarcodeScanned={scanned ? undefined : handleBarCodeScanned} 
+              barcodeScannerSettings={{
+                barcodeTypes: ['qr'], 
+              }}
+              style={styles.cameraView}
+            />
+          </View>
+        </View>
+      )}
+
+      {/* Manual Input Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Ionicons name='link-outline' size={20} color={Colors.text} />
+          <Text style={styles.sectionTitle}>Enter Payment URL</Text>
+        </View>
+        <View style={styles.inputCard}>
           <TextInput
             style={styles.textInput}
-            placeholder="(Team556 Pay URL)"
-            placeholderTextColor={Colors.textSecondary} 
+            placeholder="Paste Team556 Pay URL here"
+            placeholderTextColor={Colors.textTertiary} 
             value={manualUrlInput}
             onChangeText={setManualUrlInput}
             autoCapitalize="none"
             autoCorrect={false}
+            multiline={false}
           />
-          <View style={styles.submitButtonContainer}>
-            <Button title="Submit" onPress={handleSubmitManualUrl} color={Colors.primary}/>
-          </View>
+          <TouchableOpacity 
+            style={styles.submitButton} 
+            onPress={handleSubmitManualUrl}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.submitButtonText}>Continue</Text>
+            <Ionicons name='arrow-forward' size={18} color={Colors.text} />
+          </TouchableOpacity>
         </View>
+      </View>
     </ScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flex: 1,
-    backgroundColor: Colors.background, 
-  },
   contentContainer: {
-    flexGrow: 1,
-    alignItems: 'center',     
-    paddingVertical: 20,
+    paddingTop: 8,
+    paddingBottom: 20,
   },
   centered: { 
     flex: 1,
@@ -495,61 +516,99 @@ const styles = StyleSheet.create({
     color: Colors.error, 
     textAlign: 'center',
   },
+  // Welcome Card
+  welcomeCard: {
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.backgroundLight,
+    padding: 24,
+    borderRadius: 12,
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  welcomeIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Colors.backgroundLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   welcomeTitle: { 
     fontSize: 24,
     fontWeight: 'bold',
     color: Colors.text, 
     textAlign: 'center',
-    marginBottom: 10,
-  },
-  welcomeTagline: { 
-    fontSize: 16,
-    color: Colors.textSecondary, 
-    textAlign: 'center',
-    marginBottom: 20, 
-    paddingHorizontal: 20, 
-  },
-  scannerOuterContainer: { 
-    width: '90%',
-    aspectRatio: 1, 
-    maxWidth: 400, 
-    overflow: 'hidden', 
-    borderRadius: 10, 
-    marginBottom: 20,
-    borderWidth: 1, 
-    borderColor: Colors.secondary, 
-  },
-  cameraView: {
-    flex: 1, 
-  },
-  manualInputLabel: {
-    fontSize: 16,
-    color: Colors.text,
-    marginTop: 15,
     marginBottom: 8,
   },
-  inputContainer: {
-    flexDirection: 'column', 
-    alignItems: 'center', 
-    width: '90%',
-    maxWidth: 450,
-    marginBottom: 20,
+  welcomeTagline: { 
+    fontSize: 14,
+    color: Colors.textSecondary, 
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  // Section Styles
+  section: {
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text,
+  },
+  // Scanner Card
+  scannerCard: {
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.backgroundLight,
+    borderRadius: 12,
+    overflow: 'hidden',
+    aspectRatio: 1,
+  },
+  cameraView: {
+    flex: 1,
+  },
+  // Input Card
+  inputCard: {
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.backgroundLight,
+    padding: 16,
+    borderRadius: 12,
   },
   textInput: {
-    width: '100%', 
-    height: 45,
-    borderColor: Colors.secondary, 
+    height: 50,
     borderWidth: 1,
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    marginBottom: 15, 
-    color: Colors.text, 
-    backgroundColor: Colors.backgroundLight, 
+    borderColor: Colors.backgroundLight,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+    color: Colors.text,
+    backgroundColor: Colors.backgroundDark,
+    fontSize: 14,
   },
-  submitButtonContainer: { 
-    width: '60%', 
-    maxWidth: 250, 
+  submitButton: {
+    backgroundColor: Colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 8,
+    gap: 8,
   },
+  submitButtonText: {
+    color: Colors.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Legacy confirmation styles (kept for drawer components)
   confirmTitle: {
     fontSize: 22,
     fontWeight: 'bold',

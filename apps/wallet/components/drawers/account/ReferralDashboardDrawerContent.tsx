@@ -316,28 +316,28 @@ export default function ReferralDashboardDrawerContent({ onClose }: ReferralDash
           <Text style={styles.sectionTitle}>Performance Overview</Text>
 
           <View style={styles.statsGrid}>
-            <View style={[styles.statCard, { backgroundColor: Colors.backgroundCard }]}>
+            <View style={styles.statCard}>
               <View style={[styles.statIcon, { backgroundColor: Colors.primarySubtle }]}>
                 <Ionicons name="people-outline" size={20} color={Colors.primary} />
               </View>
               <Text style={styles.statValue}>{stats?.total_referrals || 0}</Text>
               <Text style={styles.statLabel}>Total Signups</Text>
             </View>
-            <View style={[styles.statCard, { backgroundColor: Colors.backgroundCard }]}>
+            <View style={styles.statCard}>
               <View style={[styles.statIcon, { backgroundColor: Colors.success + '20' }]}>
                 <Ionicons name="wallet-outline" size={20} color={Colors.success} />
               </View>
               <Text style={styles.statValue}>{stats?.wallet_created_referrals || 0}</Text>
               <Text style={styles.statLabel}>Wallets Created</Text>
             </View>
-            <View style={[styles.statCard, { backgroundColor: Colors.backgroundCard }]}>
+            <View style={styles.statCard}>
               <View style={[styles.statIcon, { backgroundColor: Colors.secondarySubtle }]}>
                 <Ionicons name="trending-up-outline" size={20} color={Colors.secondary} />
               </View>
               <Text style={styles.statValue}>{stats?.team556_holding_referrals || 0}</Text>
               <Text style={styles.statLabel}>Hold Team556</Text>
             </View>
-            <View style={[styles.statCard, { backgroundColor: Colors.backgroundCard }]}>
+            <View style={styles.statCard}>
               <View style={[styles.statIcon, { backgroundColor: Colors.tint + '20' }]}>
                 <Ionicons name="pie-chart-outline" size={20} color={Colors.tint} />
               </View>
@@ -554,7 +554,7 @@ export default function ReferralDashboardDrawerContent({ onClose }: ReferralDash
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.backgroundDarker,
+
   },
   scrollView: {
     flex: 1,
@@ -1023,7 +1023,7 @@ const styles = StyleSheet.create({
   howItWorksCard: {
     borderLeftWidth: 4,
     borderLeftColor: Colors.primary,
-    backgroundColor: Colors.backgroundCard,
+    backgroundColor: Colors.background,
   },
   stepsContainer: {
     gap: 20,

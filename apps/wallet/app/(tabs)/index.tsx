@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from 'react'
-import { StyleSheet, View, TouchableOpacity, Platform, ScrollView } from 'react-native'
+import { StyleSheet, View, TouchableOpacity, Platform, ScrollView, AppState } from 'react-native'
 import { Text } from '@team556/ui'
 import { Colors } from '@/constants/Colors'
 import { useAuthStore } from '@/store/authStore'
@@ -51,19 +51,52 @@ export default function HomeScreen() {
     }
   }, [token, fetchSolBalance, fetchTeamBalance])
 
-  // Start/Stop polling based on component mount/unmount and token presence
+  // Start/Stop polling based on app state (active/background) and visibility
   useEffect(() => {
-    if (token) {
-      startPolling()
-    } else {
-      stopPolling() // Ensure polling is stopped if no token on mount
+    if (!token) {
+      stopPolling()
+      return
     }
 
-    // Cleanup function to stop polling when the component unmounts
+    // Handle mobile app state changes (iOS/Android)
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        startPolling()
+      } else {
+        stopPolling()
+      }
+    })
+
+    // Handle web visibility changes (all browsers)
+    if (Platform.OS === 'web') {
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+          startPolling()
+        } else {
+          stopPolling()
+        }
+      }
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+
+      // Cleanup function
+      return () => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
+        subscription.remove()
+        stopPolling()
+      }
+    }
+
+    // Start polling if currently active (mobile)
+    if (AppState.currentState === 'active') {
+      startPolling()
+    }
+
+    // Cleanup function for non-web platforms
     return () => {
+      subscription.remove()
       stopPolling()
     }
-  }, [token, startPolling, stopPolling]) // Re-run if token changes
+  }, [token, startPolling, stopPolling])
 
   useEffect(() => {
     loadData()

@@ -34,6 +34,14 @@
     "build:wallet-web": "cd apps/wallet && npx expo export --platform web --clear && cd ../..",
     "deploy:wallet-web": "cd apps/wallet && flyctl deploy && cd ../..",
     "deploy:wallet-web:full": "yarn build:wallet-web && yarn deploy:wallet-web",
+    "scale-down:solana-api": "flyctl scale count 0 -a team556-solana-api",
+    "scale-down:main-api": "flyctl scale count 0 -a team556-main-api",
+    "scale-down:wallet-web": "cd apps/wallet && flyctl scale count 0 && cd ../..",
+    "scale-down:all": "yarn scale-down:solana-api && yarn scale-down:main-api && yarn scale-down:wallet-web",
+    "scale-up:solana-api": "flyctl scale count 2 -a team556-solana-api",
+    "scale-up:main-api": "flyctl scale count 2 -a team556-main-api",
+    "scale-up:wallet-web": "cd apps/wallet && flyctl scale count 1 && cd ../..",
+    "scale-up:all": "yarn scale-up:solana-api && yarn scale-up:main-api && yarn scale-up:wallet-web",
     "clean": "rm -rf node_modules yarn.lock apps/wallet/node_modules apps/wallet/yarn.lock && yarn"
   },
   "devDependencies": {

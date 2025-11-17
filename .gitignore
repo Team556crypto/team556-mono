@@ -11,6 +11,8 @@ yard.lock
 .env
 .env.development
 .env.production
+env.development
+env.production
 
 # Testing
 coverage

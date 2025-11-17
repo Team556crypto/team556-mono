@@ -2,7 +2,7 @@
   "expo": {
     "name": "Team556 Digital Armory",
     "slug": "team556-digital-armory",
-    "version": "1.0.2",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
@@ -20,6 +20,7 @@
       }
     },
     "android": {
+      "versionCode": 4,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0F0F0F"

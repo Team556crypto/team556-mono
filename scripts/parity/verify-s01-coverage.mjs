@@ -5,6 +5,8 @@ import path from 'node:path'
 
 const EXPECTED_FAMILIES = ['wallet', 'pos', 'landing', 'wp-plugin']
 const SURFACE_ID_PATTERN = /^[a-z0-9-]+__[a-z0-9-]+__[a-z0-9-]+$/
+const TRACKER_STATUS_PATTERN = /^[a-z0-9][a-z0-9-_]*$/
+const REGISTRY_ID_PATTERN = /^[a-z][a-z0-9_]*$/
 
 function parseArgs(argv) {
   const parsed = {}
@@ -66,7 +68,7 @@ function parseScalar(rawValue) {
 function parseInlineKeyValue(raw, lineNumber) {
   const delimiterIndex = raw.indexOf(':')
   if (delimiterIndex <= 0) {
-    throw new Error(`YAML parse error at line ${lineNumber}: expected key:value pair`) 
+    throw new Error(`YAML parse error at line ${lineNumber}: expected key:value pair`)
   }
 
   const key = raw.slice(0, delimiterIndex).trim()
@@ -146,7 +148,7 @@ function parseTrackerYaml(content) {
       continue
     }
 
-    throw new Error(`YAML parse error at line ${lineNumber}: unsupported syntax`) 
+    throw new Error(`YAML parse error at line ${lineNumber}: unsupported syntax`)
   }
 
   return result
@@ -265,6 +267,14 @@ function validateTracker(tracker) {
       malformedRows.push(`${row.surface_id} (invalid surface_id format)`)
     }
 
+    if (!TRACKER_STATUS_PATTERN.test(row.status)) {
+      malformedRows.push(`${row.surface_id} (invalid status token: ${row.status})`)
+    }
+
+    if (!TRACKER_STATUS_PATTERN.test(row.coverage_state)) {
+      malformedRows.push(`${row.surface_id} (invalid coverage_state token: ${row.coverage_state})`)
+    }
+
     if (seenIds.has(row.surface_id)) {
       duplicates.push(row.surface_id)
     }
@@ -351,6 +361,258 @@ function verifyInventoryParity(census, tracker, phase) {
   return { errors, summary }
 }
 
+function extractFirstJsonCodeBlock(markdown, fileLabel) {
+  const match = /```json\s*\n([\s\S]*?)\n```/.exec(markdown)
+  if (!match) {
+    return {
+      value: null,
+      errors: [`${fileLabel} is missing a machine-readable JSON code block.`]
+    }
+  }
+
+  try {
+    const value = JSON.parse(match[1])
+    return { value, errors: [] }
+  } catch (error) {
+    return {
+      value: null,
+      errors: [`${fileLabel} JSON block failed to parse: ${error instanceof Error ? error.message : String(error)}`]
+    }
+  }
+}
+
+function parseCapabilityTaxonomy(markdown) {
+  const { value, errors } = extractFirstJsonCodeBlock(markdown, 'Capability taxonomy')
+  const registryErrors = [...errors]
+  const capabilityIds = new Set()
+
+  if (value && Array.isArray(value.capabilities)) {
+    for (const item of value.capabilities) {
+      const id = typeof item?.id === 'string' ? item.id.trim() : ''
+      if (!id) {
+        registryErrors.push('Capability taxonomy contains capability rows without id.')
+        continue
+      }
+      if (!REGISTRY_ID_PATTERN.test(id)) {
+        registryErrors.push(`Capability ID has invalid format: ${id}`)
+      }
+      capabilityIds.add(id)
+    }
+  } else {
+    const fallbackMatches = markdown.match(/\bcap_[a-z0-9_]+\b/g) ?? []
+    for (const id of fallbackMatches) {
+      capabilityIds.add(id)
+    }
+    if (capabilityIds.size === 0) {
+      registryErrors.push('Capability taxonomy did not expose any capability IDs.')
+    }
+  }
+
+  return {
+    capabilityIds,
+    errors: registryErrors
+  }
+}
+
+function parseJourneyMatrix(markdown) {
+  const { value, errors } = extractFirstJsonCodeBlock(markdown, 'Persona journey matrix')
+  const registryErrors = [...errors]
+  const personaIds = new Set()
+  const journeyIds = new Set()
+  const allowedPersonasByJourney = new Map()
+
+  if (value && Array.isArray(value.personas) && Array.isArray(value.journeys)) {
+    for (const persona of value.personas) {
+      const id = typeof persona?.id === 'string' ? persona.id.trim() : ''
+      if (!id) {
+        registryErrors.push('Persona matrix contains persona rows without id.')
+        continue
+      }
+      if (!REGISTRY_ID_PATTERN.test(id)) {
+        registryErrors.push(`Persona ID has invalid format: ${id}`)
+      }
+      personaIds.add(id)
+    }
+
+    for (const journey of value.journeys) {
+      const id = typeof journey?.id === 'string' ? journey.id.trim() : ''
+      const primaryPersonaId = typeof journey?.primary_persona_id === 'string'
+        ? journey.primary_persona_id.trim()
+        : ''
+      const allowedRaw = Array.isArray(journey?.allowed_persona_ids)
+        ? journey.allowed_persona_ids
+        : []
+
+      if (!id) {
+        registryErrors.push('Persona matrix contains journey rows without id.')
+        continue
+      }
+      if (!REGISTRY_ID_PATTERN.test(id)) {
+        registryErrors.push(`Journey ID has invalid format: ${id}`)
+      }
+
+      journeyIds.add(id)
+
+      const allowed = new Set()
+      for (const maybePersonaId of allowedRaw) {
+        if (typeof maybePersonaId === 'string' && maybePersonaId.trim().length > 0) {
+          allowed.add(maybePersonaId.trim())
+        }
+      }
+      if (primaryPersonaId) {
+        allowed.add(primaryPersonaId)
+      }
+
+      if (allowed.size > 0) {
+        allowedPersonasByJourney.set(id, allowed)
+      }
+    }
+  } else {
+    const personaFallback = markdown.match(/\bpersona_[a-z0-9_]+\b/g) ?? []
+    const journeyFallback = markdown.match(/\bjrn_[a-z0-9_]+\b/g) ?? []
+    for (const id of personaFallback) personaIds.add(id)
+    for (const id of journeyFallback) journeyIds.add(id)
+  }
+
+  if (personaIds.size === 0) {
+    registryErrors.push('Persona journey matrix did not expose any persona IDs.')
+  }
+  if (journeyIds.size === 0) {
+    registryErrors.push('Persona journey matrix did not expose any journey IDs.')
+  }
+
+  return {
+    personaIds,
+    journeyIds,
+    allowedPersonasByJourney,
+    errors: registryErrors
+  }
+}
+
+function parseDelimitedIds(rawValue) {
+  if (typeof rawValue !== 'string') {
+    return []
+  }
+
+  return rawValue
+    .split(/[|,]/)
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0)
+}
+
+function verifyPersonaMappings(tracker, capabilityRegistry, journeyRegistry) {
+  const errors = []
+
+  const missingCapability = []
+  const missingPersona = []
+  const missingJourney = []
+
+  const invalidCapabilityRefs = []
+  const invalidPersonaRefs = []
+  const invalidJourneyRefs = []
+  const invalidJourneyPersonaPairs = []
+  const invalidSecondaryPersonaRefs = []
+
+  let rowsWithMultiplePersonas = 0
+
+  for (let index = 0; index < tracker.surfaces.length; index += 1) {
+    const row = tracker.surfaces[index]
+    const rowId = typeof row?.surface_id === 'string' && row.surface_id.trim().length > 0
+      ? row.surface_id
+      : `<row-${index + 1}>`
+
+    const capabilityId = typeof row?.capability_id === 'string' ? row.capability_id.trim() : ''
+    const personaId = typeof row?.persona_id === 'string' ? row.persona_id.trim() : ''
+    const journeyId = typeof row?.journey_id === 'string' ? row.journey_id.trim() : ''
+
+    if (!capabilityId) {
+      missingCapability.push(rowId)
+    }
+    if (!personaId) {
+      missingPersona.push(rowId)
+    }
+    if (!journeyId) {
+      missingJourney.push(rowId)
+    }
+
+    if (capabilityId && !capabilityRegistry.capabilityIds.has(capabilityId)) {
+      invalidCapabilityRefs.push(`${rowId} -> ${capabilityId}`)
+    }
+
+    if (personaId && !journeyRegistry.personaIds.has(personaId)) {
+      invalidPersonaRefs.push(`${rowId} -> ${personaId}`)
+    }
+
+    if (journeyId && !journeyRegistry.journeyIds.has(journeyId)) {
+      invalidJourneyRefs.push(`${rowId} -> ${journeyId}`)
+    }
+
+    const secondaryPersonaIds = parseDelimitedIds(
+      typeof row?.persona_secondary_ids === 'string' ? row.persona_secondary_ids : row?.persona_ids
+    )
+
+    if (secondaryPersonaIds.length > 0) {
+      rowsWithMultiplePersonas += 1
+      if (!personaId) {
+        missingPersona.push(`${rowId} (primary required when secondary personas exist)`)
+      }
+      for (const secondaryPersonaId of secondaryPersonaIds) {
+        if (!journeyRegistry.personaIds.has(secondaryPersonaId)) {
+          invalidSecondaryPersonaRefs.push(`${rowId} -> ${secondaryPersonaId}`)
+        }
+      }
+    }
+
+    const allowedPersonas = journeyRegistry.allowedPersonasByJourney.get(journeyId)
+    if (personaId && journeyId && allowedPersonas && !allowedPersonas.has(personaId)) {
+      invalidJourneyPersonaPairs.push(`${rowId} -> ${personaId} not allowed for ${journeyId}`)
+    }
+  }
+
+  if (missingCapability.length > 0) {
+    errors.push(`Rows missing capability_id: ${missingCapability.join(', ')}`)
+  }
+  if (missingPersona.length > 0) {
+    errors.push(`Rows missing persona_id: ${missingPersona.join(', ')}`)
+  }
+  if (missingJourney.length > 0) {
+    errors.push(`Rows missing journey_id: ${missingJourney.join(', ')}`)
+  }
+
+  if (invalidCapabilityRefs.length > 0) {
+    errors.push(`Rows with invalid capability references: ${invalidCapabilityRefs.join('; ')}`)
+  }
+  if (invalidPersonaRefs.length > 0) {
+    errors.push(`Rows with invalid persona references: ${invalidPersonaRefs.join('; ')}`)
+  }
+  if (invalidJourneyRefs.length > 0) {
+    errors.push(`Rows with invalid journey references: ${invalidJourneyRefs.join('; ')}`)
+  }
+  if (invalidJourneyPersonaPairs.length > 0) {
+    errors.push(`Rows with invalid persona↔journey pairings: ${invalidJourneyPersonaPairs.join('; ')}`)
+  }
+  if (invalidSecondaryPersonaRefs.length > 0) {
+    errors.push(`Rows with invalid secondary persona references: ${invalidSecondaryPersonaRefs.join('; ')}`)
+  }
+
+  const summary = {
+    capability_registry_count: capabilityRegistry.capabilityIds.size,
+    persona_registry_count: journeyRegistry.personaIds.size,
+    journey_registry_count: journeyRegistry.journeyIds.size,
+    rows_missing_capability: missingCapability.length,
+    rows_missing_persona: missingPersona.length,
+    rows_missing_journey: missingJourney.length,
+    rows_with_multiple_personas: rowsWithMultiplePersonas,
+    invalid_capability_references: invalidCapabilityRefs.length,
+    invalid_persona_references: invalidPersonaRefs.length,
+    invalid_journey_references: invalidJourneyRefs.length,
+    invalid_journey_persona_pairs: invalidJourneyPersonaPairs.length,
+    invalid_secondary_persona_references: invalidSecondaryPersonaRefs.length
+  }
+
+  return { errors, summary }
+}
+
 function verifyPhaseArguments(args) {
   const phase = args.phase || 'inventory'
   const errors = []
@@ -362,7 +624,7 @@ function verifyPhaseArguments(args) {
 
   const requiredByPhase = {
     inventory: ['tracker', 'census'],
-    personas: ['tracker', 'census', 'taxonomy', 'journeys'],
+    personas: ['tracker', 'taxonomy', 'journeys'],
     final: ['tracker', 'census', 'taxonomy', 'journeys', 'evidence', 'report']
   }
 
@@ -374,7 +636,7 @@ function verifyPhaseArguments(args) {
 
   const mustExistByPhase = {
     inventory: ['tracker', 'census'],
-    personas: ['tracker', 'census', 'taxonomy', 'journeys'],
+    personas: ['tracker', 'taxonomy', 'journeys'],
     final: ['tracker', 'census', 'taxonomy', 'journeys', 'evidence']
   }
 
@@ -405,14 +667,6 @@ function run() {
     process.exit(1)
   }
 
-  let census
-  try {
-    census = JSON.parse(readText(args.census))
-  } catch (error) {
-    console.error(`[s01-verify] Failed to parse census JSON: ${error instanceof Error ? error.message : String(error)}`)
-    process.exit(1)
-  }
-
   let tracker
   try {
     tracker = parseTrackerYaml(readText(args.tracker))
@@ -421,32 +675,64 @@ function run() {
     process.exit(1)
   }
 
-  const censusErrors = validateCensus(census)
-  const trackerErrors = validateTracker(tracker)
+  let census = null
+  if (args.census) {
+    try {
+      census = JSON.parse(readText(args.census))
+    } catch (error) {
+      console.error(`[s01-verify] Failed to parse census JSON: ${error instanceof Error ? error.message : String(error)}`)
+      process.exit(1)
+    }
+  }
 
-  const allErrors = [...censusErrors, ...trackerErrors]
+  const trackerErrors = validateTracker(tracker)
+  const censusErrors = census ? validateCensus(census) : []
+
+  const allErrors = [...trackerErrors, ...censusErrors]
 
   let summary = {
     phase,
-    census_count: 0,
-    tracker_count: 0,
-    covered_count: 0,
+    census_count: census?.surfaces?.length ?? 0,
+    tracker_count: Array.isArray(tracker?.surfaces) ? tracker.surfaces.length : 0,
+    covered_count: Array.isArray(tracker?.surfaces) ? tracker.surfaces.length : 0,
     missing_surface_ids: [],
     extra_surface_ids: [],
-    census_family_counts: {},
-    tracker_family_counts: {},
+    census_family_counts: census?.surfaces ? countByFamily(census.surfaces) : {},
+    tracker_family_counts: tracker?.surfaces ? countByFamily(tracker.surfaces) : {},
     coverage_status: 'fail'
   }
 
-  if (allErrors.length === 0) {
+  if (trackerErrors.length === 0 && census) {
     const parity = verifyInventoryParity(census, tracker, phase)
-    summary = parity.summary
+    summary = {
+      ...summary,
+      ...parity.summary
+    }
     allErrors.push(...parity.errors)
+  }
+
+  if (trackerErrors.length === 0 && (phase === 'personas' || phase === 'final')) {
+    const taxonomyText = readText(args.taxonomy)
+    const journeysText = readText(args.journeys)
+
+    const capabilityRegistry = parseCapabilityTaxonomy(taxonomyText)
+    const journeyRegistry = parseJourneyMatrix(journeysText)
+
+    allErrors.push(...capabilityRegistry.errors, ...journeyRegistry.errors)
+
+    const personaCheck = verifyPersonaMappings(tracker, capabilityRegistry, journeyRegistry)
+    allErrors.push(...personaCheck.errors)
+
+    summary = {
+      ...summary,
+      ...personaCheck.summary
+    }
   }
 
   const exitCode = allErrors.length === 0 ? 0 : 1
   const report = {
     ...summary,
+    coverage_status: exitCode === 0 ? 'pass' : 'fail',
     exit_code: exitCode
   }
 

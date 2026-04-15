@@ -1,0 +1,515 @@
+{
+  "schema_version": 1,
+  "scope": "m001-s01",
+  "families": [
+    "wallet",
+    "pos",
+    "landing",
+    "wp-plugin"
+  ],
+  "surface_count": 62,
+  "family_counts": {
+    "wallet": 16,
+    "pos": 17,
+    "landing": 12,
+    "wp-plugin": 17
+  },
+  "surfaces": [
+    {
+      "surface_id": "landing__component__wallet-components-landing-backgroundeffects",
+      "family": "landing",
+      "surface_kind": "component",
+      "relative_path": "apps/wallet/components/landing/BackgroundEffects.tsx",
+      "source_glob": "apps/wallet/components/landing/**/*.{ts,tsx}",
+      "source_root": "apps/wallet/components/landing"
+    },
+    {
+      "surface_id": "landing__component__wallet-components-landing-ctasection",
+      "family": "landing",
+      "surface_kind": "component",
+      "relative_path": "apps/wallet/components/landing/CtaSection.tsx",
+      "source_glob": "apps/wallet/components/landing/**/*.{ts,tsx}",
+      "source_root": "apps/wallet/components/landing"
+    },
+    {
+      "surface_id": "landing__component__wallet-components-landing-dashboardmockup",
+      "family": "landing",
+      "surface_kind": "component",
+      "relative_path": "apps/wallet/components/landing/DashboardMockup.tsx",
+      "source_glob": "apps/wallet/components/landing/**/*.{ts,tsx}",
+      "source_root": "apps/wallet/components/landing"
+    },
+    {
+      "surface_id": "landing__component__wallet-components-landing-featuressection",
+      "family": "landing",
+      "surface_kind": "component",
+      "relative_path": "apps/wallet/components/landing/FeaturesSection.tsx",
+      "source_glob": "apps/wallet/components/landing/**/*.{ts,tsx}",
+      "source_root": "apps/wallet/components/landing"
+    },
+    {
+      "surface_id": "landing__component__wallet-components-landing-footersection",
+      "family": "landing",
+      "surface_kind": "component",
+      "relative_path": "apps/wallet/components/landing/FooterSection.tsx",
+      "source_glob": "apps/wallet/components/landing/**/*.{ts,tsx}",
+      "source_root": "apps/wallet/components/landing"
+    },
+    {
+      "surface_id": "landing__component__wallet-components-landing-herosection",
+      "family": "landing",
+      "surface_kind": "component",
+      "relative_path": "apps/wallet/components/landing/HeroSection.tsx",
+      "source_glob": "apps/wallet/components/landing/**/*.{ts,tsx}",
+      "source_root": "apps/wallet/components/landing"
+    },
+    {
+      "surface_id": "landing__component__wallet-components-landing-howitworkssection",
+      "family": "landing",
+      "surface_kind": "component",
+      "relative_path": "apps/wallet/components/landing/HowItWorksSection.tsx",
+      "source_glob": "apps/wallet/components/landing/**/*.{ts,tsx}",
+      "source_root": "apps/wallet/components/landing"
+    },
+    {
+      "surface_id": "landing__component__wallet-components-landing-index",
+      "family": "landing",
+      "surface_kind": "component",
+      "relative_path": "apps/wallet/components/landing/index.ts",
+      "source_glob": "apps/wallet/components/landing/**/*.{ts,tsx}",
+      "source_root": "apps/wallet/components/landing"
+    },
+    {
+      "surface_id": "landing__component__wallet-components-landing-landingheader",
+      "family": "landing",
+      "surface_kind": "component",
+      "relative_path": "apps/wallet/components/landing/LandingHeader.tsx",
+      "source_glob": "apps/wallet/components/landing/**/*.{ts,tsx}",
+      "source_root": "apps/wallet/components/landing"
+    },
+    {
+      "surface_id": "landing__component__wallet-components-landing-scrolltotop",
+      "family": "landing",
+      "surface_kind": "component",
+      "relative_path": "apps/wallet/components/landing/ScrollToTop.tsx",
+      "source_glob": "apps/wallet/components/landing/**/*.{ts,tsx}",
+      "source_root": "apps/wallet/components/landing"
+    },
+    {
+      "surface_id": "landing__component__wallet-components-landing-statssection",
+      "family": "landing",
+      "surface_kind": "component",
+      "relative_path": "apps/wallet/components/landing/StatsSection.tsx",
+      "source_glob": "apps/wallet/components/landing/**/*.{ts,tsx}",
+      "source_root": "apps/wallet/components/landing"
+    },
+    {
+      "surface_id": "landing__component__wallet-components-landing-testimonialssection",
+      "family": "landing",
+      "surface_kind": "component",
+      "relative_path": "apps/wallet/components/landing/TestimonialsSection.tsx",
+      "source_glob": "apps/wallet/components/landing/**/*.{ts,tsx}",
+      "source_root": "apps/wallet/components/landing"
+    },
+    {
+      "surface_id": "pos__route__pos-app-layout",
+      "family": "pos",
+      "surface_kind": "route",
+      "relative_path": "apps/pos/app/_layout.tsx",
+      "source_glob": "apps/pos/app/**/*.tsx",
+      "source_root": "apps/pos/app"
+    },
+    {
+      "surface_id": "pos__route__pos-app-tabs-layout",
+      "family": "pos",
+      "surface_kind": "route",
+      "relative_path": "apps/pos/app/(tabs)/_layout.tsx",
+      "source_glob": "apps/pos/app/**/*.tsx",
+      "source_root": "apps/pos/app"
+    },
+    {
+      "surface_id": "pos__route__pos-app-tabs-analytics",
+      "family": "pos",
+      "surface_kind": "route",
+      "relative_path": "apps/pos/app/(tabs)/analytics.tsx",
+      "source_glob": "apps/pos/app/**/*.tsx",
+      "source_root": "apps/pos/app"
+    },
+    {
+      "surface_id": "pos__route__pos-app-tabs-dashboard",
+      "family": "pos",
+      "surface_kind": "route",
+      "relative_path": "apps/pos/app/(tabs)/dashboard.tsx",
+      "source_glob": "apps/pos/app/**/*.tsx",
+      "source_root": "apps/pos/app"
+    },
+    {
+      "surface_id": "pos__route__pos-app-tabs-distributors",
+      "family": "pos",
+      "surface_kind": "route",
+      "relative_path": "apps/pos/app/(tabs)/distributors.tsx",
+      "source_glob": "apps/pos/app/**/*.tsx",
+      "source_root": "apps/pos/app"
+    },
+    {
+      "surface_id": "pos__route__pos-app-tabs-index",
+      "family": "pos",
+      "surface_kind": "route",
+      "relative_path": "apps/pos/app/(tabs)/index.tsx",
+      "source_glob": "apps/pos/app/**/*.tsx",
+      "source_root": "apps/pos/app"
+    },
+    {
+      "surface_id": "pos__route__pos-app-tabs-inventory",
+      "family": "pos",
+      "surface_kind": "route",
+      "relative_path": "apps/pos/app/(tabs)/inventory.tsx",
+      "source_glob": "apps/pos/app/**/*.tsx",
+      "source_root": "apps/pos/app"
+    },
+    {
+      "surface_id": "pos__route__pos-app-tabs-pos",
+      "family": "pos",
+      "surface_kind": "route",
+      "relative_path": "apps/pos/app/(tabs)/pos.tsx",
+      "source_glob": "apps/pos/app/**/*.tsx",
+      "source_root": "apps/pos/app"
+    },
+    {
+      "surface_id": "pos__route__pos-app-tabs-settings",
+      "family": "pos",
+      "surface_kind": "route",
+      "relative_path": "apps/pos/app/(tabs)/settings.tsx",
+      "source_glob": "apps/pos/app/**/*.tsx",
+      "source_root": "apps/pos/app"
+    },
+    {
+      "surface_id": "pos__route__pos-app-not-found",
+      "family": "pos",
+      "surface_kind": "route",
+      "relative_path": "apps/pos/app/+not-found.tsx",
+      "source_glob": "apps/pos/app/**/*.tsx",
+      "source_root": "apps/pos/app"
+    },
+    {
+      "surface_id": "pos__route__pos-app-auth-forgotpasswordscreen",
+      "family": "pos",
+      "surface_kind": "route",
+      "relative_path": "apps/pos/app/auth/ForgotPasswordScreen.tsx",
+      "source_glob": "apps/pos/app/**/*.tsx",
+      "source_root": "apps/pos/app"
+    },
+    {
+      "surface_id": "pos__route__pos-app-auth-resetpasswordscreen",
+      "family": "pos",
+      "surface_kind": "route",
+      "relative_path": "apps/pos/app/auth/ResetPasswordScreen.tsx",
+      "source_glob": "apps/pos/app/**/*.tsx",
+      "source_root": "apps/pos/app"
+    },
+    {
+      "surface_id": "pos__route__pos-app-login",
+      "family": "pos",
+      "surface_kind": "route",
+      "relative_path": "apps/pos/app/login.tsx",
+      "source_glob": "apps/pos/app/**/*.tsx",
+      "source_root": "apps/pos/app"
+    },
+    {
+      "surface_id": "pos__route__pos-app-privacy",
+      "family": "pos",
+      "surface_kind": "route",
+      "relative_path": "apps/pos/app/privacy.tsx",
+      "source_glob": "apps/pos/app/**/*.tsx",
+      "source_root": "apps/pos/app"
+    },
+    {
+      "surface_id": "pos__route__pos-app-signin",
+      "family": "pos",
+      "surface_kind": "route",
+      "relative_path": "apps/pos/app/signin.tsx",
+      "source_glob": "apps/pos/app/**/*.tsx",
+      "source_root": "apps/pos/app"
+    },
+    {
+      "surface_id": "pos__route__pos-app-signup",
+      "family": "pos",
+      "surface_kind": "route",
+      "relative_path": "apps/pos/app/signup.tsx",
+      "source_glob": "apps/pos/app/**/*.tsx",
+      "source_root": "apps/pos/app"
+    },
+    {
+      "surface_id": "pos__route__pos-app-terms",
+      "family": "pos",
+      "surface_kind": "route",
+      "relative_path": "apps/pos/app/terms.tsx",
+      "source_glob": "apps/pos/app/**/*.tsx",
+      "source_root": "apps/pos/app"
+    },
+    {
+      "surface_id": "wallet__route__wallet-app-layout",
+      "family": "wallet",
+      "surface_kind": "route",
+      "relative_path": "apps/wallet/app/_layout.tsx",
+      "source_glob": "apps/wallet/app/**/*.tsx",
+      "source_root": "apps/wallet/app"
+    },
+    {
+      "surface_id": "wallet__route__wallet-app-tabs-layout",
+      "family": "wallet",
+      "surface_kind": "route",
+      "relative_path": "apps/wallet/app/(tabs)/_layout.tsx",
+      "source_glob": "apps/wallet/app/**/*.tsx",
+      "source_root": "apps/wallet/app"
+    },
+    {
+      "surface_id": "wallet__route__wallet-app-tabs-digital-armory",
+      "family": "wallet",
+      "surface_kind": "route",
+      "relative_path": "apps/wallet/app/(tabs)/digital-armory.tsx",
+      "source_glob": "apps/wallet/app/**/*.tsx",
+      "source_root": "apps/wallet/app"
+    },
+    {
+      "surface_id": "wallet__route__wallet-app-tabs-index",
+      "family": "wallet",
+      "surface_kind": "route",
+      "relative_path": "apps/wallet/app/(tabs)/index.tsx",
+      "source_glob": "apps/wallet/app/**/*.tsx",
+      "source_root": "apps/wallet/app"
+    },
+    {
+      "surface_id": "wallet__route__wallet-app-tabs-pay",
+      "family": "wallet",
+      "surface_kind": "route",
+      "relative_path": "apps/wallet/app/(tabs)/pay.tsx",
+      "source_glob": "apps/wallet/app/**/*.tsx",
+      "source_root": "apps/wallet/app"
+    },
+    {
+      "surface_id": "wallet__route__wallet-app-tabs-redeem-dashboard",
+      "family": "wallet",
+      "surface_kind": "route",
+      "relative_path": "apps/wallet/app/(tabs)/redeem_dashboard.tsx",
+      "source_glob": "apps/wallet/app/**/*.tsx",
+      "source_root": "apps/wallet/app"
+    },
+    {
+      "surface_id": "wallet__route__wallet-app-tabs-settings",
+      "family": "wallet",
+      "surface_kind": "route",
+      "relative_path": "apps/wallet/app/(tabs)/settings.tsx",
+      "source_glob": "apps/wallet/app/**/*.tsx",
+      "source_root": "apps/wallet/app"
+    },
+    {
+      "surface_id": "wallet__route__wallet-app-not-found",
+      "family": "wallet",
+      "surface_kind": "route",
+      "relative_path": "apps/wallet/app/+not-found.tsx",
+      "source_glob": "apps/wallet/app/**/*.tsx",
+      "source_root": "apps/wallet/app"
+    },
+    {
+      "surface_id": "wallet__route__wallet-app-auth-forgotpasswordscreen",
+      "family": "wallet",
+      "surface_kind": "route",
+      "relative_path": "apps/wallet/app/auth/ForgotPasswordScreen.tsx",
+      "source_glob": "apps/wallet/app/**/*.tsx",
+      "source_root": "apps/wallet/app"
+    },
+    {
+      "surface_id": "wallet__route__wallet-app-auth-resetpasswordscreen",
+      "family": "wallet",
+      "surface_kind": "route",
+      "relative_path": "apps/wallet/app/auth/ResetPasswordScreen.tsx",
+      "source_glob": "apps/wallet/app/**/*.tsx",
+      "source_root": "apps/wallet/app"
+    },
+    {
+      "surface_id": "wallet__route__wallet-app-login",
+      "family": "wallet",
+      "surface_kind": "route",
+      "relative_path": "apps/wallet/app/login.tsx",
+      "source_glob": "apps/wallet/app/**/*.tsx",
+      "source_root": "apps/wallet/app"
+    },
+    {
+      "surface_id": "wallet__route__wallet-app-onboarding",
+      "family": "wallet",
+      "surface_kind": "route",
+      "relative_path": "apps/wallet/app/onboarding.tsx",
+      "source_glob": "apps/wallet/app/**/*.tsx",
+      "source_root": "apps/wallet/app"
+    },
+    {
+      "surface_id": "wallet__route__wallet-app-privacy",
+      "family": "wallet",
+      "surface_kind": "route",
+      "relative_path": "apps/wallet/app/privacy.tsx",
+      "source_glob": "apps/wallet/app/**/*.tsx",
+      "source_root": "apps/wallet/app"
+    },
+    {
+      "surface_id": "wallet__route__wallet-app-signin",
+      "family": "wallet",
+      "surface_kind": "route",
+      "relative_path": "apps/wallet/app/signin.tsx",
+      "source_glob": "apps/wallet/app/**/*.tsx",
+      "source_root": "apps/wallet/app"
+    },
+    {
+      "surface_id": "wallet__route__wallet-app-signup",
+      "family": "wallet",
+      "surface_kind": "route",
+      "relative_path": "apps/wallet/app/signup.tsx",
+      "source_glob": "apps/wallet/app/**/*.tsx",
+      "source_root": "apps/wallet/app"
+    },
+    {
+      "surface_id": "wallet__route__wallet-app-terms",
+      "family": "wallet",
+      "surface_kind": "route",
+      "relative_path": "apps/wallet/app/terms.tsx",
+      "source_glob": "apps/wallet/app/**/*.tsx",
+      "source_root": "apps/wallet/app"
+    },
+    {
+      "surface_id": "wp-plugin__admin-php__wp-plugin-includes-admin-class-team556-pay-admin",
+      "family": "wp-plugin",
+      "surface_kind": "admin-php",
+      "relative_path": "apps/wp-plugin/includes/admin/class-team556-pay-admin.php",
+      "source_glob": "apps/wp-plugin/includes/admin/**/*.php",
+      "source_root": "apps/wp-plugin/includes/admin"
+    },
+    {
+      "surface_id": "wp-plugin__admin-php__wp-plugin-includes-admin-class-team556-pay-dashboard",
+      "family": "wp-plugin",
+      "surface_kind": "admin-php",
+      "relative_path": "apps/wp-plugin/includes/admin/class-team556-pay-dashboard.php",
+      "source_glob": "apps/wp-plugin/includes/admin/**/*.php",
+      "source_root": "apps/wp-plugin/includes/admin"
+    },
+    {
+      "surface_id": "wp-plugin__admin-php__wp-plugin-includes-admin-class-team556-pay-settings",
+      "family": "wp-plugin",
+      "surface_kind": "admin-php",
+      "relative_path": "apps/wp-plugin/includes/admin/class-team556-pay-settings.php",
+      "source_glob": "apps/wp-plugin/includes/admin/**/*.php",
+      "source_root": "apps/wp-plugin/includes/admin"
+    },
+    {
+      "surface_id": "wp-plugin__admin-php__wp-plugin-includes-admin-class-team556-pay-transactions-list-table",
+      "family": "wp-plugin",
+      "surface_kind": "admin-php",
+      "relative_path": "apps/wp-plugin/includes/admin/class-team556-pay-transactions-list-table.php",
+      "source_glob": "apps/wp-plugin/includes/admin/**/*.php",
+      "source_root": "apps/wp-plugin/includes/admin"
+    },
+    {
+      "surface_id": "wp-plugin__admin-php__wp-plugin-includes-admin-class-team556-pay-welcome",
+      "family": "wp-plugin",
+      "surface_kind": "admin-php",
+      "relative_path": "apps/wp-plugin/includes/admin/class-team556-pay-welcome.php",
+      "source_glob": "apps/wp-plugin/includes/admin/**/*.php",
+      "source_root": "apps/wp-plugin/includes/admin"
+    },
+    {
+      "surface_id": "wp-plugin__block-js__wp-plugin-src-index",
+      "family": "wp-plugin",
+      "surface_kind": "block-js",
+      "relative_path": "apps/wp-plugin/src/index.js",
+      "source_glob": "apps/wp-plugin/src/**/*.js",
+      "source_root": "apps/wp-plugin/src"
+    },
+    {
+      "surface_id": "wp-plugin__bootstrap__wp-plugin-team556-pay",
+      "family": "wp-plugin",
+      "surface_kind": "bootstrap",
+      "relative_path": "apps/wp-plugin/team556-pay.php",
+      "source_glob": "apps/wp-plugin/team556-pay.php",
+      "source_root": "apps/wp-plugin"
+    },
+    {
+      "surface_id": "wp-plugin__checkout-php__wp-plugin-includes-class-team556-pay-gateway-blocks",
+      "family": "wp-plugin",
+      "surface_kind": "checkout-php",
+      "relative_path": "apps/wp-plugin/includes/class-team556-pay-gateway-blocks.php",
+      "source_glob": "apps/wp-plugin/includes/class-team556-pay{,-gateway,-gateway-blocks,-shortcode}.php",
+      "source_root": "apps/wp-plugin/includes"
+    },
+    {
+      "surface_id": "wp-plugin__checkout-php__wp-plugin-includes-class-team556-pay-gateway",
+      "family": "wp-plugin",
+      "surface_kind": "checkout-php",
+      "relative_path": "apps/wp-plugin/includes/class-team556-pay-gateway.php",
+      "source_glob": "apps/wp-plugin/includes/class-team556-pay{,-gateway,-gateway-blocks,-shortcode}.php",
+      "source_root": "apps/wp-plugin/includes"
+    },
+    {
+      "surface_id": "wp-plugin__checkout-php__wp-plugin-includes-class-team556-pay-shortcode",
+      "family": "wp-plugin",
+      "surface_kind": "checkout-php",
+      "relative_path": "apps/wp-plugin/includes/class-team556-pay-shortcode.php",
+      "source_glob": "apps/wp-plugin/includes/class-team556-pay{,-gateway,-gateway-blocks,-shortcode}.php",
+      "source_root": "apps/wp-plugin/includes"
+    },
+    {
+      "surface_id": "wp-plugin__checkout-php__wp-plugin-includes-class-team556-pay",
+      "family": "wp-plugin",
+      "surface_kind": "checkout-php",
+      "relative_path": "apps/wp-plugin/includes/class-team556-pay.php",
+      "source_glob": "apps/wp-plugin/includes/class-team556-pay{,-gateway,-gateway-blocks,-shortcode}.php",
+      "source_root": "apps/wp-plugin/includes"
+    },
+    {
+      "surface_id": "wp-plugin__frontend-js__wp-plugin-assets-js-admin",
+      "family": "wp-plugin",
+      "surface_kind": "frontend-js",
+      "relative_path": "apps/wp-plugin/assets/js/admin.js",
+      "source_glob": "apps/wp-plugin/assets/js/**/*.js",
+      "source_root": "apps/wp-plugin/assets/js"
+    },
+    {
+      "surface_id": "wp-plugin__frontend-js__wp-plugin-assets-js-blocks-index",
+      "family": "wp-plugin",
+      "surface_kind": "frontend-js",
+      "relative_path": "apps/wp-plugin/assets/js/blocks/index.js",
+      "source_glob": "apps/wp-plugin/assets/js/**/*.js",
+      "source_root": "apps/wp-plugin/assets/js"
+    },
+    {
+      "surface_id": "wp-plugin__frontend-js__wp-plugin-assets-js-frontend",
+      "family": "wp-plugin",
+      "surface_kind": "frontend-js",
+      "relative_path": "apps/wp-plugin/assets/js/frontend.js",
+      "source_glob": "apps/wp-plugin/assets/js/**/*.js",
+      "source_root": "apps/wp-plugin/assets/js"
+    },
+    {
+      "surface_id": "wp-plugin__frontend-js__wp-plugin-assets-js-team556-pay-admin",
+      "family": "wp-plugin",
+      "surface_kind": "frontend-js",
+      "relative_path": "apps/wp-plugin/assets/js/team556-pay-admin.js",
+      "source_glob": "apps/wp-plugin/assets/js/**/*.js",
+      "source_root": "apps/wp-plugin/assets/js"
+    },
+    {
+      "surface_id": "wp-plugin__frontend-js__wp-plugin-assets-js-team556-pay",
+      "family": "wp-plugin",
+      "surface_kind": "frontend-js",
+      "relative_path": "apps/wp-plugin/assets/js/team556-pay.js",
+      "source_glob": "apps/wp-plugin/assets/js/**/*.js",
+      "source_root": "apps/wp-plugin/assets/js"
+    },
+    {
+      "surface_id": "wp-plugin__frontend-js__wp-plugin-assets-js-team556-public",
+      "family": "wp-plugin",
+      "surface_kind": "frontend-js",
+      "relative_path": "apps/wp-plugin/assets/js/team556-public.js",
+      "source_glob": "apps/wp-plugin/assets/js/**/*.js",
+      "source_root": "apps/wp-plugin/assets/js"
+    }
+  ]
+}
